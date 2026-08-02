@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "OneLife",
-    "slug": "OneLife",
+    "slug": "onelife",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -37,6 +37,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "41821a70-b1e6-48b0-a8d5-1f0c8941056f"
+      }
+    },
+    "owner": "rmrs-team"
   }
 }

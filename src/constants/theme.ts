@@ -1,40 +1,49 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * OneLife design tokens — colors, spacing, and typography pulled directly
+ * from the approved UX mockups. Single source of truth for all screens.
  */
-
-import '@/global.css';
 
 import { Platform } from 'react-native';
 
 export const Colors = {
-  light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
-  },
-  dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
-  },
+  background: '#F5F4F0',
+  surface: '#FFFFFF',
+  surfaceMuted: '#F7F6F2',
+  border: '#E5E3DC',
+
+  textPrimary: '#1C1C1E',
+  textSecondary: '#7A7870',
+  textMuted: '#9C9A91',
+
+  accent: '#1D9E75',
+  accentLight: '#EAF3F0',
+  accentGradientStart: '#34C77B',
+
+  medicineBg: '#FDF1EC',
+  medicineAccent: '#F6D9CC',
+  medicineText: '#9C7B6B',
+
+  plannerBg: '#EEF2FB',
+  plannerAccent: '#D9E3F7',
+
+  danger: '#D85A30',
+  warningBg: '#FDF1EC',
+  warningText: '#9C4B2E',
+
+  womensHealthAccent: '#B23D6C',
+  womensHealthBg: '#FDEEF3',
+
+  waterBlue: '#1C6FC9',
+  activityOrange: '#D68B4A',
 } as const;
 
-export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
+export type ThemeColor = keyof typeof Colors;
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
     sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
     serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
     rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: 'ui-monospace',
   },
   default: {
@@ -52,13 +61,25 @@ export const Fonts = Platform.select({
 });
 
 export const Spacing = {
-  half: 2,
-  one: 4,
-  two: 8,
-  three: 16,
-  four: 24,
-  five: 32,
-  six: 64,
+  xs: 4,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 32,
+} as const;
+
+export const Radius = {
+  sm: 10,
+  md: 14,
+  lg: 18,
+  pill: 999,
+} as const;
+
+export const Typography = {
+  title: { fontSize: 22, fontWeight: '700' as const },
+  heading: { fontSize: 17, fontWeight: '700' as const },
+  body: { fontSize: 14, fontWeight: '400' as const },
+  caption: { fontSize: 12, fontWeight: '500' as const },
 } as const;
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
