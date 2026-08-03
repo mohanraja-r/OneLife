@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import OnboardingProgress from './OnboardingProgress';
 import OptionCard from './OptionCard';
 import ContinueButton from './ContinueButton';
-import { onboardingState, Goal } from './_state';
-import { Colors, Spacing } from '../../constants/theme';
+import { onboardingState, Goal } from './state';
+import { onboardingStyles as s } from './onboardingStyles';
 
 const OPTIONS: { value: Goal; emoji: string; title: string }[] = [
   { value: 'lose_weight', emoji: '🏃', title: 'Lose Weight' },
@@ -26,27 +26,24 @@ export default function GoalScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <OnboardingProgress step={6} />
-      <Text style={styles.title}>What's your primary goal?</Text>
+    <SafeAreaView style={s.container}>
+      <OnboardingProgress step={5} />
+      <Text style={s.title}>What's your primary goal?</Text>
 
-      {OPTIONS.map((o) => (
-        <OptionCard
-          key={o.value}
-          emoji={o.emoji}
-          title={o.title}
-          selected={selected === o.value}
-          onPress={() => setSelected(o.value)}
-        />
-      ))}
+      <View style={s.options}>
+        {OPTIONS.map((o) => (
+          <OptionCard
+            key={o.value}
+            emoji={o.emoji}
+            title={o.title}
+            selected={selected === o.value}
+            onPress={() => setSelected(o.value)}
+          />
+        ))}
+      </View>
 
       <View style={{ flex: 1 }} />
       <ContinueButton onPress={handleContinue} disabled={!selected} />
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background, padding: Spacing.lg },
-  title: { fontSize: 26, fontWeight: '800', color: Colors.textPrimary, marginBottom: Spacing.lg },
-});

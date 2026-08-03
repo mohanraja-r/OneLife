@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { Text, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import OnboardingProgress from './OnboardingProgress';
 import OptionCard from './OptionCard';
 import ContinueButton from './ContinueButton';
-import { onboardingState } from './_state';
-import { Colors, Spacing } from '../../constants/theme';
+import { onboardingState } from './state';
+import { onboardingStyles as s } from './onboardingStyles';
 
 const SOURCES = [
   { value: 'instagram', emoji: '📷', title: 'Instagram' },
@@ -30,18 +30,18 @@ export default function ReferralSourceScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <OnboardingProgress step={13} />
-      <Text style={styles.title}>Where did you hear about us?</Text>
+    <SafeAreaView style={s.container}>
+      <OnboardingProgress step={12} />
+      <Text style={s.title}>Where did you hear about us?</Text>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        {SOURCES.map((s) => (
+        {SOURCES.map((so) => (
           <OptionCard
-            key={s.value}
-            emoji={s.emoji}
-            title={s.title}
-            selected={selected === s.value}
-            onPress={() => setSelected(s.value)}
+            key={so.value}
+            emoji={so.emoji}
+            title={so.title}
+            selected={selected === so.value}
+            onPress={() => setSelected(so.value)}
           />
         ))}
       </ScrollView>
@@ -50,8 +50,3 @@ export default function ReferralSourceScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background, padding: Spacing.lg },
-  title: { fontSize: 24, fontWeight: '800', color: Colors.textPrimary, marginBottom: Spacing.lg },
-});

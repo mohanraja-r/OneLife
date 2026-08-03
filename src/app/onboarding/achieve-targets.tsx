@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { Text, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import OnboardingProgress from './OnboardingProgress';
 import OptionCard from './OptionCard';
 import ContinueButton from './ContinueButton';
-import { onboardingState } from './_state';
-import { Colors, Spacing } from '../../constants/theme';
+import { onboardingState } from './state';
+import { onboardingStyles as s } from './onboardingStyles';
 
 const OPTIONS = [
   { value: 'eat_healthier', emoji: '❤️', title: 'Eat healthier' },
@@ -32,10 +32,10 @@ export default function AchieveTargetsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <OnboardingProgress step={10} />
-      <Text style={styles.title}>What would you like OneLife to help you with?</Text>
-      <Text style={styles.hint}>Select all that apply</Text>
+    <SafeAreaView style={s.container}>
+      <OnboardingProgress step={9} />
+      <Text style={s.title}>What would you like OneLife to help you with?</Text>
+      <Text style={s.hint}>Select all that apply</Text>
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {OPTIONS.map((o) => (
@@ -54,9 +54,3 @@ export default function AchieveTargetsScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background, padding: Spacing.lg },
-  title: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary, marginBottom: Spacing.xs },
-  hint: { fontSize: 13, color: Colors.textMuted, marginBottom: Spacing.lg },
-});

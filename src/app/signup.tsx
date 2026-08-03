@@ -84,13 +84,19 @@ export default function SignUpScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { flex: 1, justifyContent: 'center', padding: Spacing.lg },
-  title: { ...Typography.title, fontSize: 32, color: Colors.textPrimary, textAlign: 'center' },
+  title: {
+    ...Typography.title,
+    fontSize: 50,
+    color: Colors.textPrimary,
+    textAlign: 'center',
+  },
   subtitle: {
     ...Typography.body,
     color: Colors.textSecondary,
     textAlign: 'center',
     marginBottom: Spacing.xl,
     marginTop: Spacing.xs,
+    fontSize: 18,
   },
   input: {
     backgroundColor: Colors.surface,

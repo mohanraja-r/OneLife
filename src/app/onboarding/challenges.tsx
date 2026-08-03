@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import OnboardingProgress from './OnboardingProgress';
 import OptionCard from './OptionCard';
 import ContinueButton from './ContinueButton';
-import { onboardingState } from './_state';
-import { Colors, Spacing } from '../../constants/theme';
+import { onboardingState } from './state';
+import { onboardingStyles as s } from './onboardingStyles';
 
 const OPTIONS = [
   { value: 'lack_of_consistency', emoji: '✅', title: 'Lack of consistency' },
@@ -31,30 +31,29 @@ export default function ChallengesScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <OnboardingProgress step={7} />
-      <Text style={styles.title}>What's holding you back?</Text>
-      <Text style={styles.hint}>Select all that apply</Text>
+    <SafeAreaView style={s.container}>
+      <OnboardingProgress step={6} />
+      <Text style={s.title}>What's holding you back?</Text>
+      <Text style={s.hint}>Select all that apply</Text>
 
-      {OPTIONS.map((o) => (
-        <OptionCard
-          key={o.value}
-          emoji={o.emoji}
-          title={o.title}
-          selected={selected.includes(o.value)}
-          onPress={() => toggle(o.value)}
-          multiSelect
-        />
-      ))}
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {OPTIONS.map((o) => (
+          <OptionCard
+            key={o.value}
+            emoji={o.emoji}
+            title={o.title}
+            selected={selected.includes(o.value)}
+            onPress={() => toggle(o.value)}
+            multiSelect
+          />
+        ))}
+      </ScrollView>
 
       <View style={{ flex: 1 }} />
-      <ContinueButton onPress={handleContinue} disabled={selected.length === 0} />
+      <ContinueButton
+        onPress={handleContinue}
+        disabled={selected.length === 0}
+      />
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background, padding: Spacing.lg },
-  title: { fontSize: 26, fontWeight: '800', color: Colors.textPrimary, marginBottom: Spacing.xs },
-  hint: { fontSize: 13, color: Colors.textMuted, marginBottom: Spacing.lg },
-});
