@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { Text, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import OnboardingProgress from './OnboardingProgress';
 import OptionCard from './OptionCard';
 import ContinueButton from './ContinueButton';
-import { onboardingState, EatingStyle } from './_state';
-import { Colors, Spacing } from '../../constants/theme';
+import { onboardingState, EatingStyle } from './state';
+import { onboardingStyles as s } from './onboardingStyles';
 
 const OPTIONS: { value: EatingStyle; emoji: string; title: string }[] = [
   { value: 'balanced', emoji: '🍽️', title: 'Balanced' },
@@ -29,9 +29,9 @@ export default function EatingStyleScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <OnboardingProgress step={8} />
-      <Text style={styles.title}>Do you follow a specific diet?</Text>
+    <SafeAreaView style={s.container}>
+      <OnboardingProgress step={7} />
+      <Text style={s.title}>Do you follow a specific diet?</Text>
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {OPTIONS.map((o) => (
@@ -49,8 +49,3 @@ export default function EatingStyleScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background, padding: Spacing.lg },
-  title: { fontSize: 26, fontWeight: '800', color: Colors.textPrimary, marginBottom: Spacing.lg },
-});

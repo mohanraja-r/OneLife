@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import OnboardingProgress from './OnboardingProgress';
 import ContinueButton from './ContinueButton';
-import { onboardingState } from './_state';
-import { Colors, Spacing, Radius } from '../../constants/theme';
+import { onboardingState } from './state';
+import { onboardingStyles as s } from './onboardingStyles';
+import { Colors, Spacing } from '../../constants/theme';
 
 export default function ReferralScreen() {
   const [code, setCode] = useState(onboardingState.referralCode ?? '');
@@ -16,12 +17,12 @@ export default function ReferralScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <OnboardingProgress step={12} />
-      <Text style={styles.title}>Got a referral code?</Text>
+    <SafeAreaView style={s.container}>
+      <OnboardingProgress step={11} />
+      <Text style={s.title}>Got a referral code?</Text>
 
       <TextInput
-        style={styles.input}
+        style={s.input}
         placeholder="Referral Code"
         placeholderTextColor={Colors.textMuted}
         autoCapitalize="characters"
@@ -31,23 +32,9 @@ export default function ReferralScreen() {
 
       <View style={{ flex: 1 }} />
       <ContinueButton onPress={proceed} />
-      <TouchableOpacity style={styles.skipButton} onPress={proceed}>
-        <Text style={styles.skipText}>Skip</Text>
+      <TouchableOpacity style={{ alignItems: 'center', paddingVertical: Spacing.md }} onPress={proceed}>
+        <Text style={{ color: Colors.textMuted, fontSize: 15, fontWeight: '600' }}>Skip</Text>
       </TouchableOpacity>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background, padding: Spacing.lg },
-  title: { fontSize: 26, fontWeight: '800', color: Colors.textPrimary, marginBottom: Spacing.lg },
-  input: {
-    backgroundColor: Colors.surfaceMuted,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    fontSize: 16,
-    color: Colors.textPrimary,
-  },
-  skipButton: { alignItems: 'center', paddingVertical: Spacing.md },
-  skipText: { color: Colors.textMuted, fontSize: 14, fontWeight: '600' },
-});

@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import OnboardingProgress from './OnboardingProgress';
 import OptionCard from './OptionCard';
 import ContinueButton from './ContinueButton';
-import { onboardingState, Gender } from './_state';
-import { Colors, Spacing } from '../../constants/theme';
+import { onboardingState, Gender } from './state';
+import { onboardingStyles as s } from './onboardingStyles';
 
 const OPTIONS: { value: Gender; emoji: string; title: string }[] = [
   { value: 'man', emoji: '👨', title: 'Male' },
@@ -25,12 +25,12 @@ export default function GenderScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={s.container}>
       <OnboardingProgress step={1} />
-      <Text style={styles.title}>Tell us about yourself</Text>
-      <Text style={styles.question}>What's your gender?</Text>
+      <Text style={s.title}>Tell us about yourself</Text>
+      <Text style={s.question}>What's your gender?</Text>
 
-      <View style={styles.options}>
+      <View style={s.options}>
         {OPTIONS.map((o) => (
           <OptionCard
             key={o.value}
@@ -47,10 +47,3 @@ export default function GenderScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background, padding: Spacing.lg },
-  title: { fontSize: 26, fontWeight: '800', color: Colors.textPrimary, marginBottom: Spacing.xs },
-  question: { fontSize: 15, color: Colors.textSecondary, marginBottom: Spacing.lg },
-  options: {},
-});

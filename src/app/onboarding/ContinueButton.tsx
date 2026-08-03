@@ -27,5 +27,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   // buttonDisabled: { opacity: 0.35 },
-  text: { color: 'white', fontSize: 16, fontWeight: '700' },
+  text: { color: 'white', fontSize: 20, fontWeight: '700' },
 });

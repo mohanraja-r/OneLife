@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import OnboardingProgress from './OnboardingProgress';
 import ContinueButton from './ContinueButton';
 import { onboardingState } from './state';
-import { Colors, Spacing, Radius } from '../../constants/theme';
+import { onboardingStyles as s } from './onboardingStyles';
 
 function calculateAge(dob: Date): number {
   const today = new Date();
@@ -25,16 +25,16 @@ export default function DateOfBirthScreen() {
 
   const handleContinue = () => {
     onboardingState.dateOfBirth = date.toISOString().slice(0, 10);
-    // Height and Weight are now a single combined screen — see height-weight.tsx
+    // Height and Weight are a single combined screen — see height-weight.tsx
     router.push('/onboarding/height-weight');
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={s.container}>
       <OnboardingProgress step={2} />
-      <Text style={styles.title}>When were you born?</Text>
+      <Text style={s.title}>When were you born?</Text>
 
-      <View style={styles.pickerWrapper}>
+      <View style={s.pickerWrapper}>
         <DateTimePicker
           value={date}
           mode="date"
@@ -44,8 +44,8 @@ export default function DateOfBirthScreen() {
         />
       </View>
 
-      <View style={styles.agePreview}>
-        <Text style={styles.agePreviewText}>Age: {age} Years</Text>
+      <View style={s.agePreview}>
+        <Text style={s.agePreviewText}>Age: {age} Years</Text>
       </View>
 
       <View style={{ flex: 1 }} />
@@ -53,17 +53,3 @@ export default function DateOfBirthScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background, padding: Spacing.lg },
-  title: { fontSize: 26, fontWeight: '800', color: Colors.textPrimary, marginBottom: Spacing.lg },
-  pickerWrapper: { alignItems: 'center', marginBottom: Spacing.md },
-  agePreview: {
-    alignSelf: 'center',
-    backgroundColor: Colors.accentLight,
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
-  },
-  agePreviewText: { color: '#0F6E56', fontSize: 15, fontWeight: '700' },
-});

@@ -21,6 +21,6 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background, padding: Spacing.lg, justifyContent: 'space-between' },
   content: { flex: 1, justifyContent: 'center' },
-  title: { fontSize: 30, fontWeight: '800', color: Colors.textPrimary, marginBottom: Spacing.sm },
-  subtitle: { fontSize: 16, color: Colors.textSecondary, lineHeight: 22 },
+  title: { fontSize: 40, fontWeight: '600', color: Colors.textPrimary, marginBottom: Spacing.sm },
+  subtitle: { fontSize: 18, color: Colors.textSecondary, lineHeight: 22 },
 });
