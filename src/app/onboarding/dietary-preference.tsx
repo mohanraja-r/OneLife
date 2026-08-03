@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { onboardingState, resetOnboardingState, DietaryPreference } from './state';
+import { onboardingState, resetOnboardingState, DietaryPreference } from './_state';
 import { supabase } from '../../services/supabase';
 import { Colors, Spacing, Radius, Typography } from '../../constants/theme';
 

@@ -1,10 +1,10 @@
-import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
-import { Colors } from '../constants/theme';
+import { View, ActivityIndicator } from 'react-native';
+import { Redirect } from 'expo-router';
 import { supabase } from '../services/supabase';
+import { Colors } from '../constants/theme';
 
-type RouteDecision = 'loading' | 'signup' | 'onboarding' | 'home';
+type RouteDecision = 'loading' | 'onboarding' | 'home';
 
 export default function Index() {
   const [decision, setDecision] = useState<RouteDecision>('loading');
@@ -17,19 +17,19 @@ export default function Index() {
     const { data: sessionData } = await supabase.auth.getSession();
 
     if (!sessionData.session) {
-      setDecision('signup');
+      // No account yet — always start at the beginning of the 16-screen
+      // onboarding flow (account creation now happens at the END, screen 16).
+      setDecision('onboarding');
       return;
     }
 
-    // Session exists — check whether onboarding has been completed
-    // (a profiles row exists with a goal set).
     const { data: profile } = await supabase
       .from('profiles')
-      .select('id, goal')
+      .select('id, onboarding_completed_at')
       .eq('id', sessionData.session.user.id)
       .maybeSingle();
 
-    if (!profile || !profile.goal) {
+    if (!profile || !profile.onboarding_completed_at) {
       setDecision('onboarding');
     } else {
       setDecision('home');
@@ -38,20 +38,12 @@ export default function Index() {
 
   if (decision === 'loading') {
     return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-          backgroundColor: Colors.background,
-        }}
-      >
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background }}>
         <ActivityIndicator color={Colors.accent} />
       </View>
     );
   }
 
-  if (decision === 'signup') return <Redirect href="/signup" />;
-  if (decision === 'onboarding') return <Redirect href="/onboarding/goal" />;
+  if (decision === 'onboarding') return <Redirect href="/onboarding/welcome" />;
   return <Redirect href="/(tabs)/home" />;
 }

@@ -5,36 +5,35 @@ import { router } from 'expo-router';
 import OnboardingProgress from './OnboardingProgress';
 import OptionCard from './OptionCard';
 import ContinueButton from './ContinueButton';
-import { onboardingState, Goal } from './_state';
+import { onboardingState, WorkoutFrequency } from './_state';
 import { Colors, Spacing } from '../../constants/theme';
 
-const OPTIONS: { value: Goal; emoji: string; title: string }[] = [
-  { value: 'lose_weight', emoji: '🏃', title: 'Lose Weight' },
-  { value: 'maintain', emoji: '⚖️', title: 'Maintain Weight' },
-  { value: 'gain_weight', emoji: '💪', title: 'Gain Weight' },
-  { value: 'improve_health', emoji: '❤️', title: 'Improve Overall Health' },
-  { value: 'build_muscle', emoji: '🏋️', title: 'Build Muscle' },
+const OPTIONS: { value: WorkoutFrequency; emoji: string; title: string; subtitle: string }[] = [
+  { value: 'rarely', emoji: '🏠', title: 'Rarely', subtitle: '0–2 times/week' },
+  { value: 'sometimes', emoji: '💪', title: 'Sometimes', subtitle: '3–5 times/week' },
+  { value: 'frequently', emoji: '🔥', title: 'Frequently', subtitle: '6+ times/week' },
 ];
 
-export default function GoalScreen() {
-  const [selected, setSelected] = useState<Goal | null>(onboardingState.goal ?? null);
+export default function WorkoutFrequencyScreen() {
+  const [selected, setSelected] = useState<WorkoutFrequency | null>(onboardingState.workoutFrequency ?? null);
 
   const handleContinue = () => {
     if (!selected) return;
-    onboardingState.goal = selected;
-    router.push('/onboarding/challenges');
+    onboardingState.workoutFrequency = selected;
+    router.push('/onboarding/goal');
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <OnboardingProgress step={6} />
-      <Text style={styles.title}>What's your primary goal?</Text>
+      <OnboardingProgress step={5} />
+      <Text style={styles.title}>How often do you work out?</Text>
 
       {OPTIONS.map((o) => (
         <OptionCard
           key={o.value}
           emoji={o.emoji}
           title={o.title}
+          subtitle={o.subtitle}
           selected={selected === o.value}
           onPress={() => setSelected(o.value)}
         />

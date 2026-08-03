@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, Image, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -76,10 +76,14 @@ export default function ScanPrescriptionScreen() {
             : undefined,
         });
 
-        const granted = await requestNotificationPermission();
-        if (granted) {
-          for (const time of timesForFrequency) {
-            await scheduleMedicineReminder(saved.name, saved.dosage, time);
+        // Notifications disabled on Android for now — see add-medicine.tsx
+        // for the same guard and reasoning.
+        if (Platform.OS !== 'android') {
+          const granted = await requestNotificationPermission();
+          if (granted) {
+            for (const time of timesForFrequency) {
+              await scheduleMedicineReminder(saved.name, saved.dosage, time);
+            }
           }
         }
       }

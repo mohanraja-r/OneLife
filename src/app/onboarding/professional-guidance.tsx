@@ -5,30 +5,31 @@ import { router } from 'expo-router';
 import OnboardingProgress from './OnboardingProgress';
 import OptionCard from './OptionCard';
 import ContinueButton from './ContinueButton';
-import { onboardingState, Goal } from './_state';
+import { onboardingState, ProfessionalGuidance } from './_state';
 import { Colors, Spacing } from '../../constants/theme';
 
-const OPTIONS: { value: Goal; emoji: string; title: string }[] = [
-  { value: 'lose_weight', emoji: '🏃', title: 'Lose Weight' },
-  { value: 'maintain', emoji: '⚖️', title: 'Maintain Weight' },
-  { value: 'gain_weight', emoji: '💪', title: 'Gain Weight' },
-  { value: 'improve_health', emoji: '❤️', title: 'Improve Overall Health' },
-  { value: 'build_muscle', emoji: '🏋️', title: 'Build Muscle' },
+const OPTIONS: { value: ProfessionalGuidance; emoji: string; title: string }[] = [
+  { value: 'personal_trainer', emoji: '👨‍⚕️', title: 'Personal Trainer' },
+  { value: 'dietitian', emoji: '🥗', title: 'Registered Dietitian' },
+  { value: 'both', emoji: '👨‍⚕️', title: 'Both' },
+  { value: 'neither', emoji: '❌', title: 'Neither' },
 ];
 
-export default function GoalScreen() {
-  const [selected, setSelected] = useState<Goal | null>(onboardingState.goal ?? null);
+export default function ProfessionalGuidanceScreen() {
+  const [selected, setSelected] = useState<ProfessionalGuidance | null>(
+    onboardingState.professionalGuidance ?? null
+  );
 
   const handleContinue = () => {
     if (!selected) return;
-    onboardingState.goal = selected;
-    router.push('/onboarding/challenges');
+    onboardingState.professionalGuidance = selected;
+    router.push('/onboarding/achieve-targets');
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <OnboardingProgress step={6} />
-      <Text style={styles.title}>What's your primary goal?</Text>
+      <OnboardingProgress step={9} />
+      <Text style={styles.title}>Do you currently work with a professional?</Text>
 
       {OPTIONS.map((o) => (
         <OptionCard
@@ -48,5 +49,5 @@ export default function GoalScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background, padding: Spacing.lg },
-  title: { fontSize: 26, fontWeight: '800', color: Colors.textPrimary, marginBottom: Spacing.lg },
+  title: { fontSize: 24, fontWeight: '800', color: Colors.textPrimary, marginBottom: Spacing.lg },
 });
