@@ -1,5 +1,8 @@
-// In-memory onboarding state across all screens. Persisted to Supabase
-// only at the very end (after account creation on the final screen).
+// In-memory onboarding state across all 16 screens. Persisted to Supabase
+// only at the very end (after account creation on screen 16), matching the
+// original "don't write partial profiles" principle — now the account
+// itself doesn't exist until the end either, so nothing can be written
+// until then anyway.
 
 export type Gender = 'woman' | 'man' | 'non_binary' | 'unspecified';
 export type HeightUnit = 'cm' | 'ft_in';
@@ -12,7 +15,7 @@ export type ProfessionalGuidance = 'personal_trainer' | 'dietitian' | 'both' | '
 
 interface OnboardingState {
   gender?: Gender;
-  dateOfBirth?: string;
+  dateOfBirth?: string; // YYYY-MM-DD
   heightValue?: number;
   heightUnit?: HeightUnit;
   weightValue?: number;
@@ -35,8 +38,8 @@ export function resetOnboardingState() {
   Object.keys(onboardingState).forEach((key) => delete (onboardingState as any)[key]);
 }
 
-// Updated from 13 to 12 — Height and Weight are now a single combined step.
-// Steps: Gender(1), DOB(2), Height&Weight(3), Workout(4), Goal(5),
-// Challenges(6), Eating Style(7), Professional Guidance(8), Achieve
-// Targets(9), Previous Apps(10), Referral Code(11), Referral Source(12).
-export const TOTAL_STEPS = 12;
+// Total step count for the progress bar. Screen 1 (Welcome) and Screen 15
+// (plan generation) and Screen 16 (sign-in) are not counted as data-entry
+// steps — the progress bar covers screens 2–14 (13 steps). Adjust freely if
+// you'd rather count all 16.
+export const TOTAL_STEPS = 13;

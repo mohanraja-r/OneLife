@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { onboardingState, ActivityLevel } from './state';
+import { onboardingState, ActivityLevel } from './_state';
 import { Colors, Spacing, Radius, Typography } from '../../constants/theme';
 
 const ACTIVITY_LEVELS: { value: ActivityLevel; label: string }[] = [

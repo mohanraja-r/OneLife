@@ -26,10 +26,15 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <AppHeader title="OneLife" />
+      <AppHeader />
 
       <ScrollView contentContainerStyle={styles.content}>
-        <TouchableOpacity style={styles.chatBar}>
+        <TouchableOpacity
+          style={styles.chatBar}
+          onPress={() => {
+            /* navigate to /ai-assistant */
+          }}
+        >
           <Text style={styles.chatBarText}>Ask OneLife anything...</Text>
         </TouchableOpacity>
 
@@ -52,6 +57,15 @@ export default function HomeScreen() {
             '❌ Not connected — check .env values'}
         </Text>
       </ScrollView>
+
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => {
+          /* navigate to /add-medicine or a meal-log flow */
+        }}
+      >
+        <Text style={styles.fabIcon}>+</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -106,4 +120,21 @@ const styles = StyleSheet.create({
     marginTop: Spacing.md,
   },
   placeholderNote: { color: Colors.textMuted, fontSize: 13 },
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.accent,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  fabIcon: { color: 'white', fontSize: 28, lineHeight: 28 },
 });

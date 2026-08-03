@@ -89,6 +89,13 @@ export default function MedicineScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <AppHeader title="Medicine" />
+      <View style={styles.header}>
+        <Text style={styles.title}>Medicines</Text>
+        <TouchableOpacity style={styles.addButton} onPress={showAddOptions}>
+          <Text style={styles.addButtonText}>+</Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
