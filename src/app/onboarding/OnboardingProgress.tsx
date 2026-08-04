@@ -23,9 +23,9 @@ export default function OnboardingProgress({ step, onBack }: Props) {
         <View style={styles.track}>
           <View style={[styles.fill, { width: `${progress * 100}%` }]} />
         </View>
-        <Text style={styles.stepLabel}>
+        {/* <Text style={styles.stepLabel}>
           Step {step} of {TOTAL_STEPS}
-        </Text>
+        </Text> */}
       </View>
     </View>
   );
