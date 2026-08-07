@@ -1,0 +1,42 @@
+import { ReactNode } from 'react';
+import { ViewStyle } from 'react-native';
+import { MotiPressable } from 'moti/interactions';
+import * as Haptics from 'expo-haptics';
+
+interface AnimatedPressableProps {
+  children: ReactNode;
+  onPress?: () => void;
+  style?: ViewStyle | ViewStyle[];
+  haptic?: boolean;
+}
+
+// Wraps any element with a subtle press-scale animation (0.96 on press-in,
+// spring back on release) plus optional light haptic tick. Use this instead
+// of a plain TouchableOpacity anywhere a tap should feel responsive —
+// cards, buttons, day pills, list rows.
+export default function AnimatedPressable({
+  children,
+  onPress,
+  style,
+  haptic = true,
+}: AnimatedPressableProps) {
+  return (
+    <MotiPressable
+      onPress={() => {
+        if (haptic) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        onPress?.();
+      }}
+      animate={({ pressed }) => {
+        'worklet';
+        return {
+          scale: pressed ? 0.96 : 1,
+          opacity: pressed ? 0.85 : 1,
+        };
+      }}
+      transition={{ type: 'timing', duration: 120 }}
+      style={style as any}
+    >
+      {children}
+    </MotiPressable>
+  );
+}

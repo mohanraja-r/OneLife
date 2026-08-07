@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  avatarFallbackText: { color: '#2F7A1E', fontSize: 12, fontWeight: '700' },
+  avatarFallbackText: { color: Colors.accent, fontSize: 12, fontWeight: '700' },
   menuIcon: {
     width: 32,
     height: 32,
