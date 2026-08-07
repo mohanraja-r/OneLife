@@ -1,5 +1,13 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Alert,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
@@ -7,13 +15,18 @@ import {
   updateMedicine,
   deleteMedicine,
   getMedicineById,
-  FoodRelation,
-  DurationType,
 } from '../services/medicine';
-import { requestNotificationPermission, scheduleMedicineReminder } from '../services/notifications';
 import { Colors, Spacing, Radius } from '../constants/theme';
 
-const FREQUENCIES = ['Once daily', 'Twice daily', 'Three times daily', 'Custom'];
+type FoodRelation = 'before' | 'after' | 'any';
+type DurationType = 'ongoing' | 'course';
+
+const FREQUENCIES = [
+  'Once daily',
+  'Twice daily',
+  'Three times daily',
+  'Custom',
+];
 const FOOD_RELATIONS: { value: FoodRelation; label: string }[] = [
   { value: 'before', label: 'Before food' },
   { value: 'after', label: 'After food' },
@@ -54,7 +67,8 @@ export default function AddMedicineScreen() {
     updated[index] = value;
     setTimes(updated);
   };
-  const removeTime = (index: number) => setTimes(times.filter((_, i) => i !== index));
+  const removeTime = (index: number) =>
+    setTimes(times.filter((_, i) => i !== index));
 
   const canSave = name.trim() && dosage.trim() && times.length > 0;
 
@@ -62,44 +76,59 @@ export default function AddMedicineScreen() {
     if (!canSave) return;
     setSaving(true);
     try {
-      const input = { name, dosage, frequency, times, foodRelation, durationType };
-      const medicine = isEditing
-        ? await updateMedicine(medicineId!, input)
-        : await addMedicine(input);
-
-      if (Platform.OS !== 'android') {
-        const granted = await requestNotificationPermission();
-        if (granted) {
-          for (const time of times) {
-            await scheduleMedicineReminder(medicine.name, medicine.dosage, time);
-          }
-        }
+      const input = {
+        name,
+        dosage,
+        frequency,
+        times,
+        foodRelation,
+        durationType,
+      };
+      if (isEditing) {
+        await updateMedicine(medicineId!, input);
+      } else {
+        await addMedicine(input);
       }
+
+      // TODO(notifications): reminders are not wired up yet. Once implemented,
+      // schedule one local notification per entry in `times` here (and cancel
+      // the previous ones when editing). Removed deliberately — see
+      // scan-prescription.tsx for the other call site that needs it.
 
       router.back();
     } catch (err: any) {
-      Alert.alert('Error saving medicine', err.message ?? 'Something went wrong');
+      Alert.alert(
+        'Error saving medicine',
+        err.message ?? 'Something went wrong'
+      );
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = () => {
-    Alert.alert('Delete medicine?', `This removes ${name} and its dose history. This can't be undone.`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteMedicine(medicineId!);
-            router.back();
-          } catch (err: any) {
-            Alert.alert('Error deleting medicine', err.message ?? 'Something went wrong');
-          }
+    Alert.alert(
+      'Delete medicine?',
+      `This removes ${name} and its dose history. This can't be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteMedicine(medicineId!);
+              router.back();
+            } catch (err: any) {
+              Alert.alert(
+                'Error deleting medicine',
+                err.message ?? 'Something went wrong'
+              );
+            }
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   if (loadingExisting) {
@@ -116,9 +145,12 @@ export default function AddMedicineScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={styles.cancel}>Cancel</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{isEditing ? 'Edit Medicine' : 'Add Medicine'}</Text>
+        <Text style={styles.headerTitle}>
+          {isEditing ? 'Edit Medicine' : 'Add Medicine'}
+        </Text>
         <TouchableOpacity onPress={handleSave} disabled={!canSave || saving}>
-          <Text style={[styles.save, (!canSave || saving) && styles.saveDisabled]}>
+          <Text
+            style={[styles.save, (!canSave || saving) && styles.saveDisabled]}>
             {saving ? 'Saving...' : 'Save'}
           </Text>
         </TouchableOpacity>
@@ -143,14 +175,18 @@ export default function AddMedicineScreen() {
             placeholder="500mg"
             placeholderTextColor={Colors.textMuted}
             value={dosage.split(',')[0]?.trim() ?? ''}
-            onChangeText={(v) => setDosage(`${v}, ${dosage.split(',')[1]?.trim() ?? '1 tablet'}`)}
+            onChangeText={(v) =>
+              setDosage(`${v}, ${dosage.split(',')[1]?.trim() ?? '1 tablet'}`)
+            }
           />
           <TextInput
             style={[styles.input, styles.dosageInput]}
             placeholder="1 tablet"
             placeholderTextColor={Colors.textMuted}
             value={dosage.split(',')[1]?.trim() ?? ''}
-            onChangeText={(v) => setDosage(`${dosage.split(',')[0]?.trim() ?? ''}, ${v}`)}
+            onChangeText={(v) =>
+              setDosage(`${dosage.split(',')[0]?.trim() ?? ''}, ${v}`)
+            }
           />
         </View>
 
@@ -160,9 +196,14 @@ export default function AddMedicineScreen() {
             <TouchableOpacity
               key={f}
               style={[styles.chip, frequency === f && styles.chipActive]}
-              onPress={() => setFrequency(f)}
-            >
-              <Text style={[styles.chipText, frequency === f && styles.chipTextActive]}>{f}</Text>
+              onPress={() => setFrequency(f)}>
+              <Text
+                style={[
+                  styles.chipText,
+                  frequency === f && styles.chipTextActive,
+                ]}>
+                {f}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -181,7 +222,9 @@ export default function AddMedicineScreen() {
               />
             </View>
             {times.length > 1 && (
-              <TouchableOpacity onPress={() => removeTime(index)} style={styles.removeTime}>
+              <TouchableOpacity
+                onPress={() => removeTime(index)}
+                style={styles.removeTime}>
                 <Text style={styles.removeTimeText}>✕</Text>
               </TouchableOpacity>
             )}
@@ -196,10 +239,16 @@ export default function AddMedicineScreen() {
           {FOOD_RELATIONS.map((f) => (
             <TouchableOpacity
               key={f.value}
-              style={[styles.chip, foodRelation === f.value && styles.chipActive]}
-              onPress={() => setFoodRelation(f.value)}
-            >
-              <Text style={[styles.chipText, foodRelation === f.value && styles.chipTextActive]}>
+              style={[
+                styles.chip,
+                foodRelation === f.value && styles.chipActive,
+              ]}
+              onPress={() => setFoodRelation(f.value)}>
+              <Text
+                style={[
+                  styles.chipText,
+                  foodRelation === f.value && styles.chipTextActive,
+                ]}>
                 {f.label}
               </Text>
             </TouchableOpacity>
@@ -209,18 +258,30 @@ export default function AddMedicineScreen() {
         <Text style={styles.label}>DURATION</Text>
         <View style={styles.chipRow}>
           <TouchableOpacity
-            style={[styles.chip, durationType === 'ongoing' && styles.chipActive]}
-            onPress={() => setDurationType('ongoing')}
-          >
-            <Text style={[styles.chipText, durationType === 'ongoing' && styles.chipTextActive]}>
+            style={[
+              styles.chip,
+              durationType === 'ongoing' && styles.chipActive,
+            ]}
+            onPress={() => setDurationType('ongoing')}>
+            <Text
+              style={[
+                styles.chipText,
+                durationType === 'ongoing' && styles.chipTextActive,
+              ]}>
               Ongoing
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.chip, durationType === 'course' && styles.chipActive]}
-            onPress={() => setDurationType('course')}
-          >
-            <Text style={[styles.chipText, durationType === 'course' && styles.chipTextActive]}>
+            style={[
+              styles.chip,
+              durationType === 'course' && styles.chipActive,
+            ]}
+            onPress={() => setDurationType('course')}>
+            <Text
+              style={[
+                styles.chipText,
+                durationType === 'course' && styles.chipTextActive,
+              ]}>
               Set end date
             </Text>
           </TouchableOpacity>
@@ -272,7 +333,12 @@ const styles = StyleSheet.create({
   },
   dosageRow: { flexDirection: 'row', gap: Spacing.sm },
   dosageInput: { flex: 1 },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginBottom: Spacing.md },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
   chip: {
     borderWidth: 1.5,
     borderColor: Colors.border,
@@ -280,10 +346,18 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
   },
-  chipActive: { borderColor: Colors.accent, backgroundColor: Colors.accentLight },
+  chipActive: {
+    borderColor: Colors.accent,
+    backgroundColor: Colors.accentLight,
+  },
   chipText: { fontSize: 13, fontWeight: '600', color: Colors.textPrimary },
   chipTextActive: { color: '#0F6E56' },
-  timeRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm },
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
   timeInputWrapper: {
     flex: 1,
     flexDirection: 'row',
@@ -295,10 +369,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
   },
   clockIcon: { fontSize: 14 },
-  timeInput: { flex: 1, paddingVertical: Spacing.sm + 4, fontSize: 15, color: Colors.textPrimary },
+  timeInput: {
+    flex: 1,
+    paddingVertical: Spacing.sm + 4,
+    fontSize: 15,
+    color: Colors.textPrimary,
+  },
   removeTime: { padding: Spacing.sm },
   removeTimeText: { color: Colors.danger, fontSize: 16 },
-  addTime: { color: Colors.accent, fontSize: 13, fontWeight: '600', marginBottom: Spacing.md },
-  deleteButton: { marginTop: Spacing.lg, padding: Spacing.md, alignItems: 'center' },
+  addTime: {
+    color: Colors.accent,
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: Spacing.md,
+  },
+  deleteButton: {
+    marginTop: Spacing.lg,
+    padding: Spacing.md,
+    alignItems: 'center',
+  },
   deleteButtonText: { color: Colors.danger, fontSize: 14, fontWeight: '600' },
 });
