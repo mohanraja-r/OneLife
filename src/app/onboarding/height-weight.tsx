@@ -21,7 +21,7 @@ import {
   Spacing,
   Typography,
 } from '../../constants/theme';
-import ContinueButton from './ContinueButton';
+import PrimaryButton from '../../components/PrimaryButton';
 import OnboardingProgress from './OnboardingProgress';
 import { onboardingStyles as s } from './onboardingStyles';
 import { HeightUnit, WeightUnit, onboardingState } from './state';
@@ -209,7 +209,11 @@ export default function HeightWeightScreen() {
           from={{ opacity: 0, scale: 0.85 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ type: 'timing', duration: Motion.slow }}
-          style={[s.iconTile, styles.iconTile, { backgroundColor: screenAccent.tint }]}>
+          style={[
+            s.iconTile,
+            styles.iconTile,
+            { backgroundColor: screenAccent.tint },
+          ]}>
           <Ruler size={32} color={screenAccent.main} strokeWidth={2} />
         </MotiView>
 
@@ -326,7 +330,7 @@ export default function HeightWeightScreen() {
       </ScrollView>
 
       <View style={s.footer}>
-        <ContinueButton onPress={handleContinue} accent={screenAccent} />
+        <PrimaryButton onPress={handleContinue} accent={screenAccent} />
       </View>
     </SafeAreaView>
   );

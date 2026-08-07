@@ -1,65 +1,169 @@
-import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { Colors, Spacing } from '../../constants/theme';
+import { Check, HeartPulse, Loader } from 'lucide-react-native';
+import { MotiView } from 'moti';
+import { useEffect, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  Accents,
+  Colors,
+  Motion,
+  Radius,
+  Spacing,
+  Typography,
+} from '../../constants/theme';
+import { onboardingStyles as s } from './onboardingStyles';
+
+const accent = Accents.violet;
 
 const STEPS = [
-  'Analyzing your goals',
-  'Preparing your dashboard',
-  'Building healthy routines',
-  'Setting recommendations',
+  'Analyzing your inputs',
+  'Understanding your goals',
+  'Building your plan',
 ];
 
+/** Milliseconds each checklist line takes to tick over. */
+const STEP_DURATION = 900;
+
 export default function CreatingPlanScreen() {
-  const [visibleSteps, setVisibleSteps] = useState(0);
-  const spin = useState(new Animated.Value(0))[0];
+  const [completed, setCompleted] = useState(0);
 
   useEffect(() => {
-    Animated.loop(
-      Animated.timing(spin, { toValue: 1, duration: 1500, easing: Easing.linear, useNativeDriver: true })
-    ).start();
-
     const interval = setInterval(() => {
-      setVisibleSteps((prev) => {
-        if (prev >= STEPS.length) {
+      setCompleted((prev) => {
+        const next = prev + 1;
+        if (next >= STEPS.length) {
           clearInterval(interval);
-          setTimeout(() => router.replace('/onboarding/create-account'), 500);
-          return prev;
+          setTimeout(
+            () => router.replace('/onboarding/create-account'),
+            STEP_DURATION
+          );
         }
-        return prev + 1;
+        return Math.min(next, STEPS.length);
       });
-    }, 600);
+    }, STEP_DURATION);
 
     return () => clearInterval(interval);
   }, []);
 
-  const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
-
   return (
-    <SafeAreaView style={styles.container}>
-      <Animated.Text style={[styles.brain, { transform: [{ rotate }] }]}>🧠</Animated.Text>
-      <Text style={styles.title}>Creating your personalized plan...</Text>
+    <SafeAreaView style={s.container}>
+      <View style={s.content}>
+        {/* Pulsing ring behind the heart, echoing the reference's halo. */}
+        <MotiView
+          from={{ opacity: 0.35, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1.06 }}
+          transition={{
+            type: 'timing',
+            duration: 900,
+            loop: true,
+            repeatReverse: true,
+          }}
+          style={[styles.ring, { borderColor: accent.main }]}>
+          <View style={[styles.ringInner, { backgroundColor: accent.tint }]}>
+            <HeartPulse size={40} color={accent.main} strokeWidth={2} />
+          </View>
+        </MotiView>
 
-      <View style={styles.steps}>
-        {STEPS.map((step, i) => (
-          <Text key={step} style={[styles.step, i < visibleSteps && styles.stepDone]}>
-            {i < visibleSteps ? '✔' : '○'} {step}
-          </Text>
-        ))}
+        <Text style={s.title}>Creating your personalized plan</Text>
+        <Text style={s.subtitle}>
+          Please wait while we customize your experience just for you.
+        </Text>
+
+        <View style={styles.checklist}>
+          {STEPS.map((label, index) => {
+            const done = index < completed;
+            return (
+              <MotiView
+                key={label}
+                animate={{ opacity: done ? 1 : 0.45 }}
+                transition={{ type: 'timing', duration: Motion.fast }}
+                style={styles.checkRow}>
+                <View
+                  style={[
+                    styles.checkCircle,
+                    {
+                      backgroundColor: done
+                        ? accent.main
+                        : Colors.surfaceSunken,
+                    },
+                  ]}>
+                  {done && (
+                    <Check
+                      size={14}
+                      color={Colors.textInverse}
+                      strokeWidth={3}
+                    />
+                  )}
+                </View>
+                <Text style={styles.checkLabel}>{label}</Text>
+              </MotiView>
+            );
+          })}
+
+          <View style={styles.checkRow}>
+            <MotiView
+              from={{ rotate: '0deg' }}
+              animate={{ rotate: '360deg' }}
+              transition={{ type: 'timing', duration: 1200, loop: true }}
+              style={styles.checkCircle}>
+              <Loader
+                size={14}
+                color={Colors.textSecondary}
+                strokeWidth={2.5}
+              />
+            </MotiView>
+            <Text style={[styles.checkLabel, styles.checkLabelMuted]}>
+              Almost done…
+            </Text>
+          </View>
+        </View>
       </View>
-
-      <Text style={styles.almost}>Almost Ready...</Text>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center', padding: Spacing.lg },
-  brain: { fontSize: 56, marginBottom: Spacing.lg },
-  title: { fontSize: 19, fontWeight: '700', color: Colors.textPrimary, marginBottom: Spacing.xl, textAlign: 'center' },
-  steps: { alignSelf: 'stretch', gap: Spacing.md, marginBottom: Spacing.xl },
-  step: { fontSize: 14, color: Colors.textMuted },
-  stepDone: { color: Colors.accent, fontWeight: '600' },
-  almost: { fontSize: 13, color: Colors.textMuted },
+  ring: {
+    width: 112,
+    height: 112,
+    borderRadius: Radius.round,
+    borderWidth: 3,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.xxl,
+  },
+  ringInner: {
+    width: 88,
+    height: 88,
+    borderRadius: Radius.round,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checklist: {
+    alignSelf: 'stretch',
+    gap: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
+  },
+  checkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  checkCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: Radius.round,
+    backgroundColor: Colors.surfaceSunken,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkLabel: {
+    ...Typography.optionLabel,
+    color: Colors.textPrimary,
+  },
+  checkLabelMuted: {
+    fontWeight: '500',
+    color: Colors.textSecondary,
+  },
 });

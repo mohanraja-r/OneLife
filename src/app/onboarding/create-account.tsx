@@ -1,17 +1,36 @@
+import { router } from 'expo-router';
+import type { LucideIcon } from 'lucide-react-native';
+// lucide v1 dropped brand marks — Globe stands in for Google.
+import { Apple, Globe, Mail, ShieldCheck } from 'lucide-react-native';
+import { MotiView } from 'moti';
 import { useState } from 'react';
 import {
-  View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  Alert,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import {
+  Accents,
+  Colors,
+  Motion,
+  Radius,
+  Shadow,
+  Spacing,
+  Typography,
+} from '../../constants/theme';
 import { supabase } from '../../services/supabase';
-import { onboardingState, resetOnboardingState } from './_state';
-import { Colors, Spacing, Radius, Typography } from '../../constants/theme';
+import PrimaryButton from '../../components/PrimaryButton';
+import { onboardingStyles as s } from './onboardingStyles';
+import { onboardingState, resetOnboardingState } from './state';
+
+const accent = Accents.violet;
 
 // Estimates daily calorie/macro targets from the collected onboarding data.
 // Rough v1 formula — refine later once real usage data exists.
@@ -20,7 +39,7 @@ function estimateTargets(
   weightKg: number,
   age: number,
   workoutFrequency: string,
-  goal: string,
+  goal: string
 ) {
   const bmr = 10 * weightKg + 6.25 * heightCm - 5 * age + 5;
   const activityMultiplier =
@@ -38,6 +57,7 @@ function estimateTargets(
   };
 }
 
+/** Returns whole years elapsed since a YYYY-MM-DD date of birth. */
 function calculateAge(dob: string): number {
   const birth = new Date(dob);
   const today = new Date();
@@ -47,7 +67,31 @@ function calculateAge(dob: string): number {
   return age;
 }
 
+/** Outlined social sign-in row, matching the reference's secondary buttons. */
+function SocialButton({
+  icon: Icon,
+  label,
+  onPress,
+}: {
+  icon: LucideIcon;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      style={styles.socialButton}
+      onPress={onPress}
+      activeOpacity={0.85}
+      accessibilityRole="button"
+      accessibilityLabel={label}>
+      <Icon size={20} color={Colors.textPrimary} strokeWidth={2} />
+      <Text style={styles.socialLabel}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
 export default function CreateAccountScreen() {
+  const [showEmailForm, setShowEmailForm] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [saving, setSaving] = useState(false);
@@ -78,7 +122,7 @@ export default function CreateAccountScreen() {
       weightValue ?? 70,
       age,
       workoutFrequency ?? 'sometimes',
-      goal ?? 'maintain',
+      goal ?? 'maintain'
     );
 
     const { error } = await supabase.from('profiles').upsert({
@@ -111,6 +155,10 @@ export default function CreateAccountScreen() {
   };
 
   const handleEmailSignUp = async () => {
+    if (!showEmailForm) {
+      setShowEmailForm(true);
+      return;
+    }
     if (!email || !password) {
       Alert.alert('Missing info', 'Please enter both email and password.');
       return;
@@ -126,7 +174,7 @@ export default function CreateAccountScreen() {
         // can write to RLS-protected tables. Can't save the profile yet.
         Alert.alert(
           'Check your email',
-          'We sent a confirmation link. Please verify your email, then log in to finish setup.',
+          'We sent a confirmation link. Please verify your email, then log in to finish setup.'
         );
         resetOnboardingState();
         router.replace('/signup');
@@ -149,128 +197,138 @@ export default function CreateAccountScreen() {
   const handleOAuth = (provider: 'google' | 'apple') => {
     Alert.alert(
       'Coming soon',
-      `${provider === 'google' ? 'Google' : 'Apple'} sign-in setup is a follow-up step.`,
+      `${provider === 'google' ? 'Google' : 'Apple'} sign-in setup is a follow-up step.`
     );
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Your personalized plan is ready!</Text>
-        <Text style={styles.subtitle}>
-          Create an account to save your progress.
-        </Text>
+    <SafeAreaView style={s.container}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          style={s.scroll}
+          contentContainerStyle={s.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+          <MotiView
+            from={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: 'timing', duration: Motion.slow }}
+            style={[s.iconTile, { backgroundColor: Accents.green.tint }]}>
+            <ShieldCheck size={32} color={Accents.green.main} strokeWidth={2} />
+          </MotiView>
 
-        <TouchableOpacity
-          style={styles.oauthButton}
-          onPress={() => handleOAuth('google')}
-        >
-          <Text style={styles.oauthText}>🟢 Continue with Google</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.oauthButton}
-          onPress={() => handleOAuth('apple')}
-        >
-          <Text style={styles.oauthText}>🍎 Continue with Apple</Text>
-        </TouchableOpacity>
-
-        <View style={styles.divider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>or</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor={Colors.textMuted}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor={Colors.textMuted}
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
-
-        <TouchableOpacity
-          style={styles.emailButton}
-          onPress={handleEmailSignUp}
-          disabled={saving}
-        >
-          <Text style={styles.emailButtonText}>
-            {saving ? 'Creating account...' : '📧 Continue with Email'}
+          <Text style={s.title}>Create your account</Text>
+          <Text style={s.subtitle}>
+            Let&apos;s save your plan and start your journey to a healthier you.
           </Text>
-        </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.push('/signup')}>
-          <Text style={styles.loginLink}>Already have an account? Log In</Text>
-        </TouchableOpacity>
-      </View>
+          <View style={s.options}>
+            {showEmailForm && (
+              <MotiView
+                from={{ opacity: 0, translateY: 12 }}
+                animate={{ opacity: 1, translateY: 0 }}
+                transition={{ type: 'timing', duration: Motion.base }}
+                style={styles.form}>
+                <TextInput
+                  style={s.input}
+                  placeholder="Email"
+                  placeholderTextColor={Colors.textMuted}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="email-address"
+                  value={email}
+                  onChangeText={setEmail}
+                  accessibilityLabel="Email"
+                />
+                <TextInput
+                  style={s.input}
+                  placeholder="Password"
+                  placeholderTextColor={Colors.textMuted}
+                  secureTextEntry
+                  value={password}
+                  onChangeText={setPassword}
+                  accessibilityLabel="Password"
+                />
+              </MotiView>
+            )}
+
+            <PrimaryButton
+              label={
+                saving
+                  ? 'Creating account…'
+                  : showEmailForm
+                    ? 'Create account'
+                    : 'Sign up with Email'
+              }
+              accent={accent}
+              icon={Mail}
+              hideArrow
+              disabled={saving}
+              onPress={handleEmailSignUp}
+            />
+
+            <SocialButton
+              icon={Globe}
+              label="Continue with Google"
+              onPress={() => handleOAuth('google')}
+            />
+            <SocialButton
+              icon={Apple}
+              label="Continue with Apple"
+              onPress={() => handleOAuth('apple')}
+            />
+          </View>
+
+          <View style={styles.loginRow}>
+            <Text style={styles.loginPrompt}>Already have an account? </Text>
+            <TouchableOpacity
+              onPress={() => router.push('/signup')}
+              hitSlop={8}>
+              <Text style={styles.loginLink}>Log in</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  content: { flex: 1, justifyContent: 'center', padding: Spacing.lg },
-  title: {
-    ...Typography.title,
-    fontSize: 24,
-    color: Colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: Spacing.xs,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: Spacing.xl,
-  },
-  oauthButton: {
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    borderRadius: Radius.pill,
-    padding: Spacing.md,
-    alignItems: 'center',
+  form: {
+    gap: Spacing.md,
     marginBottom: Spacing.sm,
   },
-  oauthText: { fontSize: 15, fontWeight: '600', color: Colors.textPrimary },
-  divider: {
+  socialButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    marginVertical: Spacing.md,
-  },
-  dividerLine: { flex: 1, height: 1, backgroundColor: Colors.border },
-  dividerText: { fontSize: 12, color: Colors.textMuted },
-  input: {
+    justifyContent: 'center',
+    gap: Spacing.md,
     backgroundColor: Colors.surface,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: Colors.border,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
-    fontSize: 15,
+    borderRadius: Radius.xl,
+    paddingVertical: Spacing.lg,
+    ...Shadow.card,
+  },
+  socialLabel: {
+    ...Typography.optionLabel,
     color: Colors.textPrimary,
   },
-  emailButton: {
-    backgroundColor: Colors.textPrimary,
-    borderRadius: Radius.pill,
-    padding: Spacing.md,
+  loginRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: Spacing.xs,
+    paddingBottom: Spacing.xxl,
   },
-  emailButtonText: { color: 'white', fontSize: 15, fontWeight: '700' },
+  loginPrompt: {
+    ...Typography.caption,
+    color: Colors.textSecondary,
+  },
   loginLink: {
-    textAlign: 'center',
-    color: Colors.accent,
-    marginTop: Spacing.lg,
-    fontSize: 13,
+    ...Typography.caption,
+    fontWeight: '700',
+    color: accent.main,
   },
 });
