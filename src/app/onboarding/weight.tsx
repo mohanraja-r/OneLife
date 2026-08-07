@@ -1,15 +1,30 @@
-import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import OnboardingProgress from './OnboardingProgress';
+import { Weight } from 'lucide-react-native';
+import { MotiView } from 'moti';
+import { useState } from 'react';
+import {
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Accents, Colors, Motion, Typography } from '../../constants/theme';
 import ContinueButton from './ContinueButton';
-import { onboardingState, WeightUnit } from './_state';
-import { Colors, Spacing, Radius } from '../../constants/theme';
+import OnboardingProgress from './OnboardingProgress';
+import { onboardingStyles as s } from './onboardingStyles';
+import { WeightUnit, onboardingState } from './_state';
+
+const accent = Accents.amber;
 
 export default function WeightScreen() {
-  const [unit, setUnit] = useState<WeightUnit>(onboardingState.weightUnit ?? 'kg');
-  const [weight, setWeight] = useState(onboardingState.weightValue ? String(onboardingState.weightValue) : '');
+  const [unit, setUnit] = useState<WeightUnit>(
+    onboardingState.weightUnit ?? 'kg'
+  );
+  const [weight, setWeight] = useState(
+    onboardingState.weightValue ? String(onboardingState.weightValue) : ''
+  );
 
   const handleContinue = () => {
     onboardingState.weightUnit = unit;
@@ -19,54 +34,89 @@ export default function WeightScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <OnboardingProgress step={4} />
-      <Text style={styles.title}>What's your current weight?</Text>
+    <SafeAreaView style={s.container}>
+      <OnboardingProgress step={4} accent={accent} />
 
-      <View style={styles.unitToggle}>
-        <TouchableOpacity
-          style={[styles.unitOption, unit === 'kg' && styles.unitOptionActive]}
-          onPress={() => setUnit('kg')}
-        >
-          <Text style={[styles.unitText, unit === 'kg' && styles.unitTextActive]}>KG</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.unitOption, unit === 'lb' && styles.unitOptionActive]}
-          onPress={() => setUnit('lb')}
-        >
-          <Text style={[styles.unitText, unit === 'lb' && styles.unitTextActive]}>LB</Text>
-        </TouchableOpacity>
+      <View style={s.content}>
+        <MotiView
+          from={{ opacity: 0, scale: 0.85 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: 'timing', duration: Motion.slow }}
+          style={[s.iconTile, { backgroundColor: accent.tint }]}>
+          <Weight size={32} color={accent.main} strokeWidth={2} />
+        </MotiView>
+
+        <Text style={s.title}>What&apos;s your weight?</Text>
+        <Text style={s.subtitle}>
+          This helps us track your progress accurately.
+        </Text>
+
+        <View style={s.unitToggle}>
+          {(['kg', 'lb'] as WeightUnit[]).map((u) => {
+            const active = unit === u;
+            return (
+              <TouchableOpacity
+                key={u}
+                style={[
+                  s.unitOption,
+                  active && { backgroundColor: accent.tint },
+                ]}
+                onPress={() => setUnit(u)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}>
+                <Text
+                  style={[
+                    s.unitText,
+                    active && s.unitTextActive,
+                    active && { color: accent.dark },
+                  ]}>
+                  {u}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <View style={s.readout}>
+          <TextInput
+            style={styles.readoutInput}
+            placeholder={unit === 'kg' ? '68' : '150'}
+            placeholderTextColor={Colors.textMuted}
+            keyboardType="decimal-pad"
+            maxLength={5}
+            value={weight}
+            onChangeText={setWeight}
+            accessibilityLabel={`Weight in ${unit}`}
+          />
+          <Text style={s.readoutUnit}>{unit}</Text>
+        </View>
+
+        <View style={[styles.underline, { backgroundColor: accent.main }]} />
       </View>
 
-      <TextInput
-        style={styles.input}
-        placeholder={unit === 'kg' ? 'e.g. 68' : 'e.g. 150'}
-        placeholderTextColor={Colors.textMuted}
-        keyboardType="numeric"
-        value={weight}
-        onChangeText={setWeight}
-      />
-
-      <View style={{ flex: 1 }} />
-      <ContinueButton onPress={handleContinue} disabled={!weight} />
+      <View style={s.footer}>
+        <ContinueButton
+          onPress={handleContinue}
+          disabled={!weight}
+          accent={accent}
+        />
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background, padding: Spacing.lg },
-  title: { fontSize: 26, fontWeight: '800', color: Colors.textPrimary, marginBottom: Spacing.lg },
-  unitToggle: { flexDirection: 'row', backgroundColor: '#F2F0F5', borderRadius: Radius.pill, padding: 4, marginBottom: Spacing.lg },
-  unitOption: { flex: 1, paddingVertical: Spacing.sm + 2, borderRadius: Radius.pill, alignItems: 'center' },
-  unitOptionActive: { backgroundColor: 'white' },
-  unitText: { fontSize: 13, fontWeight: '600', color: Colors.textMuted },
-  unitTextActive: { color: Colors.textPrimary },
-  input: {
-    backgroundColor: Colors.surfaceMuted,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    fontSize: 18,
+  readoutInput: {
+    ...Typography.displayNumber,
     color: Colors.textPrimary,
     textAlign: 'center',
+    minWidth: 110,
+    padding: 0,
+  },
+  // Accent rule under the readout, echoing the reference's measuring scale.
+  underline: {
+    width: 72,
+    height: 4,
+    borderRadius: 2,
   },
 });

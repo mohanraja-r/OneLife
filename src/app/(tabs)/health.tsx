@@ -2,10 +2,12 @@ import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing, Typography } from '../../constants/theme';
 import AppHeader from '../../components/AppHeader';
+import FloatingNav from '../../components/FloatingNav';
 export default function HealthScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <AppHeader title="Health" />
+      <FloatingNav />
     </SafeAreaView>
   );
 }

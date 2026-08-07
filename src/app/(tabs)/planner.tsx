@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import AppHeader from '../../components/AppHeader';
+import FloatingNav from '../../components/FloatingNav';
 import { Colors, Radius, Spacing } from '../../constants/theme';
 import {
   getTasksForDate,
@@ -103,7 +104,7 @@ export default function PlannerScreen() {
       <AppHeader title="Planner" />
 
       <ScrollView
-        contentContainerStyle={{ paddingBottom: Spacing.xl * 2 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
         refreshControl={
           <RefreshControl
             refreshing={loading}
@@ -319,6 +320,8 @@ export default function PlannerScreen() {
         style={styles.fab}>
         <Text style={styles.fabText}>+</Text>
       </AnimatedPressable>
+
+      <FloatingNav />
     </SafeAreaView>
   );
 }
@@ -411,7 +414,8 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: Spacing.md,
-    bottom: Spacing.lg,
+    // Clears the floating nav pill so the two don't overlap.
+    bottom: 120,
     width: 52,
     height: 52,
     borderRadius: 26,

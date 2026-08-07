@@ -1,167 +1,346 @@
-import { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useFocusEffect } from 'expo-router';
-import AppHeader from '../../components/AppHeader';
-import { getTodaysMeals, getFrequentMeals, saveMeal, calculateMealTotals, Meal } from '../../services/meals';
-import { Colors, Spacing, Radius, Typography, Shadows } from '../../constants/theme';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  SafeAreaView,
+  ActivityIndicator,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Bell } from 'lucide-react-native';
+import { supabase } from '../../services/supabase';
+import {
+  Colors,
+  Gradients,
+  Spacing,
+  Radius,
+  Typography,
+  Shadow,
+} from '../../constants/theme';
+import FloatingNav from '../../components/FloatingNav';
+import AnimatedPressable from '../../components/AnimatedPressable';
+import { MotiView } from 'moti';
 
-// Visual refresh only — all data logic below is unchanged from the prior
-// version. Only styling changed: glass cards, circular score ring, floating
-// nav means extra bottom padding, purple palette via theme.ts.
 export default function HomeScreen() {
-  const [meals, setMeals] = useState<Meal[]>([]);
-  const [frequentMeals, setFrequentMeals] = useState<Meal[]>([]);
+  const router = useRouter();
+  const [userName, setUserName] = useState('RMR');
+  const [healthScore, setHealthScore] = useState(82);
   const [loading, setLoading] = useState(true);
 
-  const loadData = async () => {
-    try {
-      const [todaysMeals, frequent] = await Promise.all([getTodaysMeals(), getFrequentMeals()]);
-      setMeals(todaysMeals);
-      setFrequentMeals(frequent);
-    } catch (err) {
-      console.warn('Failed to load nutrition data:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData?.session?.user?.email) {
+          const name = sessionData.session.user.email.split('@')[0];
+          setUserName(name.charAt(0).toUpperCase() + name.slice(1));
+        }
+        // TODO: Fetch actual health score from database
+      } catch (err) {
+        console.error('Error fetching user data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUserData();
+  }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-    }, [])
-  );
+  const metrics = [
+    { label: 'Steps', value: '7,842', unit: 'Steps' },
+    { label: 'Sleep', value: '7h', unit: 'Hours' },
+    { label: 'BPM', value: '72', unit: 'Heart Rate' },
+    { label: 'Calories', value: '392', unit: 'Kcal' },
+  ];
 
-  const totals = meals.reduce(
-    (acc, meal) => {
-      const t = calculateMealTotals(meal);
-      return {
-        calories: acc.calories + t.calories,
-        protein: acc.protein + t.protein,
-        carbs: acc.carbs + t.carbs,
-        fat: acc.fat + t.fat,
-      };
+  const todaysPlan = [
+    {
+      id: '1',
+      icon: '💊',
+      title: 'Morning Medication',
+      subtitle: '2 Medicines',
+      time: '8:00 AM',
+      completed: true,
     },
-    { calories: 0, protein: 0, carbs: 0, fat: 0 }
-  );
-
-  const dailyTarget = 1800; // TODO: pull from profiles.daily_calorie_target
-  const progress = Math.min(totals.calories / dailyTarget, 1);
-  const scoreOutOf100 = Math.round(progress * 100);
-
-  const handleQuickAdd = async (meal: Meal) => {
-    try {
-      await saveMeal({
-        source: 'quickadd',
-        items: meal.items,
-        aiSuggestion: meal.ai_suggestion,
-      });
-      loadData();
-    } catch (err) {
-      console.warn('Quick add failed:', err);
-    }
-  };
+    {
+      id: '2',
+      icon: '🍎',
+      title: 'Breakfast',
+      subtitle: 'Oatmeal with fruits',
+      time: 'Completed',
+      completed: true,
+    },
+    {
+      id: '3',
+      icon: '💧',
+      title: 'Drink Water',
+      subtitle: '6 of 8 glasses',
+      time: '75%',
+      completed: false,
+    },
+  ];
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <AppHeader />
-
-      <ScrollView contentContainerStyle={styles.content}>
-        <TouchableOpacity style={styles.chatBar} onPress={() => router.push('/ai-assistant')}>
-          <Text style={styles.chatBarText}>Ask OneLife anything...</Text>
-        </TouchableOpacity>
-
-        {/* Health score card — circular ring replaces the flat bar */}
-        <View style={[styles.scoreCard, Shadows.card]}>
-          <View style={styles.scoreRing}>
-            <Text style={styles.scoreValue}>{scoreOutOf100}</Text>
-            <Text style={styles.scoreOutOf}>/100</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.cardLabel}>Today's intake</Text>
-            <Text style={styles.calorieText}>
-              {totals.calories} <Text style={styles.calorieTarget}>/ {dailyTarget} kcal</Text>
-            </Text>
-            <View style={styles.macroRow}>
-              <View style={styles.macroItem}>
-                <Text style={styles.macroValue}>{totals.protein}g</Text>
-                <Text style={styles.macroLabel}>Protein</Text>
-              </View>
-              <View style={styles.macroItem}>
-                <Text style={styles.macroValue}>{totals.carbs}g</Text>
-                <Text style={styles.macroLabel}>Carbs</Text>
-              </View>
-              <View style={styles.macroItem}>
-                <Text style={styles.macroValue}>{totals.fat}g</Text>
-                <Text style={styles.macroLabel}>Fat</Text>
-              </View>
+    <SafeAreaView style={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        bounces={false}>
+        {/* Header */}
+        <MotiView
+          from={{ opacity: 0, translateY: -8 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 300 }}
+          style={styles.header}>
+          <View style={styles.greeting}>
+            <LinearGradient
+              colors={Gradients.avatar}
+              start={Gradients.diagonal.start}
+              end={Gradients.diagonal.end}
+              style={styles.avatar}
+            />
+            <View>
+              <Text style={styles.greetingSubtext}>Good morning,</Text>
+              <Text style={styles.greetingName}>{userName}! 👋</Text>
             </View>
           </View>
+          <View style={styles.notificationBell}>
+            <Bell size={18} color={Colors.textSecondary} />
+          </View>
+        </MotiView>
+
+        {/* Health Score Card */}
+        <MotiView
+          from={{ opacity: 0, translateY: 16 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 320, delay: 60 }}
+          style={styles.healthScoreCard}>
+          <LinearGradient
+            colors={Gradients.primary}
+            start={Gradients.diagonal.start}
+            end={Gradients.diagonal.end}
+            style={styles.healthScoreGradient}>
+            {/* Score dial. A true arc needs react-native-svg, which isn't a
+                dependency yet — this is the ring track plus the numeral. */}
+            <View style={styles.ringContainer}>
+              <Text style={styles.ringValue}>{healthScore}</Text>
+            </View>
+            <View style={styles.healthScoreText}>
+              <Text style={styles.healthScoreLabel}>Health Score</Text>
+              <Text style={styles.healthScoreTitle}>⭐ Excellent</Text>
+              <Text style={styles.healthScoreSubtitle}>
+                You're doing great! Keep tracking to maintain your streak.
+              </Text>
+            </View>
+          </LinearGradient>
+        </MotiView>
+
+        {/* Metrics Grid */}
+        <View style={styles.metricsGrid}>
+          {metrics.map((metric, index) => (
+            <MotiView
+              key={index}
+              from={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{
+                type: 'timing',
+                duration: 280,
+                delay: 120 + index * 40,
+              }}
+              style={styles.metricCard}>
+              <Text style={styles.metricLabel}>{metric.label}</Text>
+              <Text style={styles.metricValue}>{metric.value}</Text>
+            </MotiView>
+          ))}
         </View>
 
-        <Text style={styles.sectionTitle}>Logged today</Text>
-        {loading && <Text style={styles.placeholderNote}>Loading...</Text>}
-        {!loading && meals.length === 0 && (
-          <Text style={styles.placeholderNote}>No meals logged yet today.</Text>
-        )}
-        {meals.map((meal) => {
-          const t = calculateMealTotals(meal);
-          const time = new Date(meal.logged_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          return (
-            <View key={meal.id} style={[styles.mealRow, Shadows.card]}>
-              <View style={styles.mealIcon}>
-                <Text style={{ fontSize: 14 }}>🍛</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.mealName}>{meal.items.map((i) => i.name).join(', ')}</Text>
-                <Text style={styles.mealTime}>{time}</Text>
-              </View>
-              <Text style={styles.mealCalories}>{t.calories} kcal</Text>
-            </View>
-          );
-        })}
+        {/* Today's Plan */}
+        <View style={styles.todaysPlanContainer}>
+          <View style={styles.todaysPlanHeader}>
+            <Text style={styles.todaysPlanTitle}>Today's Plan</Text>
+            <AnimatedPressable onPress={() => router.push('/(tabs)/planner')}>
+              <Text style={styles.viewAllLink}>View all</Text>
+            </AnimatedPressable>
+          </View>
 
-        {frequentMeals.length > 0 && (
-          <>
-            <Text style={styles.sectionTitle}>Quick add — your usual meals</Text>
-            {frequentMeals.map((meal) => {
-              const t = calculateMealTotals(meal);
-              return (
-                <TouchableOpacity
-                  key={meal.id}
-                  style={styles.quickAddRow}
-                  onPress={() => handleQuickAdd(meal)}
-                >
-                  <Text style={styles.quickAddName}>{meal.items.map((i) => i.name).join(', ')}</Text>
-                  <Text style={styles.quickAddCalories}>~{t.calories} kcal</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </>
-        )}
+          {todaysPlan.map((item, index) => (
+            <MotiView
+              key={item.id}
+              from={{ opacity: 0, translateX: -12 }}
+              animate={{ opacity: 1, translateX: 0 }}
+              transition={{
+                type: 'timing',
+                duration: 260,
+                delay: 160 + index * 50,
+              }}
+              style={styles.planItem}>
+              <View style={styles.planItemIconContainer}>
+                <Text style={styles.planItemIcon}>{item.icon}</Text>
+              </View>
+              <View style={styles.planItemContent}>
+                <Text style={styles.planItemTitle}>{item.title}</Text>
+                <Text style={styles.planItemSubtitle}>{item.subtitle}</Text>
+              </View>
+              <Text
+                style={[
+                  styles.planItemTime,
+                  item.completed && styles.planItemTimeDone,
+                ]}>
+                {item.time}
+              </Text>
+              {item.completed && (
+                <View style={styles.checkmark}>
+                  <Text style={styles.checkmarkText}>✓</Text>
+                </View>
+              )}
+            </MotiView>
+          ))}
+        </View>
+
+        {/* Spacer for floating nav */}
+        <View style={{ height: 120 }} />
       </ScrollView>
 
-      <TouchableOpacity style={[styles.fab, Shadows.floating]} onPress={() => router.push('/log-meal')}>
-        <Text style={styles.fabIcon}>+</Text>
-      </TouchableOpacity>
+      {/* Floating Nav */}
+      <FloatingNav />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: Spacing.md, paddingBottom: 120 }, // extra room for floating nav
-  chatBar: {
-    backgroundColor: Colors.surfaceMuted,
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.md,
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  scrollContent: {
+    paddingHorizontal: Spacing.xxl,
+    paddingTop: Spacing.xxl,
+    paddingBottom: Spacing.xxl,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.xxl,
+  },
+  greeting: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.lg,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  greetingSubtext: {
+    ...Typography.secondary,
+    color: Colors.textSecondary,
+  },
+  greetingName: {
+    ...Typography.cardTitle,
+    color: Colors.textPrimary,
+  },
+  notificationBell: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.round,
+    backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  chatBarText: { color: Colors.textMuted, ...Typography.body },
-  scoreCard: {
+  healthScoreCard: {
+    marginBottom: Spacing.xl,
+    borderRadius: Radius.xl,
+    overflow: 'hidden',
+    ...Shadow.glow,
+  },
+  healthScoreGradient: {
+    flexDirection: 'row',
+    gap: Spacing.lg,
+    padding: Spacing.xl,
+  },
+  ringContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: Radius.round,
+    borderWidth: 6,
+    borderColor: Colors.onPrimaryFaint,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  ringValue: {
+    ...Typography.scoreValue,
+    color: Colors.onPrimary,
+  },
+  healthScoreText: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  healthScoreLabel: {
+    ...Typography.label,
+    color: Colors.onPrimaryMuted,
+    marginBottom: Spacing.xs,
+  },
+  healthScoreTitle: {
+    ...Typography.cardTitle,
+    color: Colors.onPrimary,
+    marginBottom: Spacing.sm,
+  },
+  healthScoreSubtitle: {
+    ...Typography.secondary,
+    color: Colors.onPrimaryMuted,
+    lineHeight: 22,
+  },
+  metricsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.md,
+    marginBottom: Spacing.xxl,
+  },
+  metricCard: {
+    flexGrow: 1,
+    flexBasis: '46%',
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: Spacing.md,
+    alignItems: 'center',
+    ...Shadow.card,
+  },
+  metricLabel: {
+    ...Typography.label,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.xs,
+  },
+  metricValue: {
+    ...Typography.largeNumber,
+    color: Colors.textPrimary,
+  },
+  todaysPlanContainer: {
+    marginBottom: Spacing.xl,
+  },
+  todaysPlanHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  todaysPlanTitle: {
+    ...Typography.sectionTitle,
+    color: Colors.textPrimary,
+  },
+  viewAllLink: {
+    ...Typography.secondary,
+    color: Colors.primary,
+    fontWeight: '600',
+  },
+  planItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
@@ -169,64 +348,51 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     padding: Spacing.md,
     marginBottom: Spacing.md,
-  },
-  scoreRing: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    borderWidth: 6,
-    borderColor: Colors.accent,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: Colors.accentLight,
-  },
-  scoreValue: { fontSize: 20, fontWeight: '800', color: Colors.accent, lineHeight: 22 },
-  scoreOutOf: { fontSize: 10, color: Colors.textMuted, fontWeight: '600' },
-  cardLabel: { color: Colors.textSecondary, ...Typography.caption },
-  calorieText: { ...Typography.title, color: Colors.textPrimary, marginTop: Spacing.xs, marginBottom: Spacing.sm },
-  calorieTarget: { fontSize: 13, color: Colors.textSecondary, fontWeight: '400' },
-  macroRow: { flexDirection: 'row', gap: Spacing.md },
-  macroItem: { alignItems: 'flex-start' },
-  macroValue: { fontSize: 13, fontWeight: '700', color: Colors.textPrimary },
-  macroLabel: { fontSize: 10, color: Colors.textMuted },
-  sectionTitle: { ...Typography.heading, fontSize: 13, color: Colors.textPrimary, marginBottom: Spacing.sm, marginTop: Spacing.md },
-  placeholderNote: { color: Colors.textMuted, fontSize: 13 },
-  mealRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    padding: Spacing.sm + 2,
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.md,
-    marginBottom: Spacing.sm,
-  },
-  mealIcon: { width: 32, height: 32, borderRadius: 9, backgroundColor: Colors.medicineBg, justifyContent: 'center', alignItems: 'center' },
-  mealName: { fontSize: 12.5, fontWeight: '600', color: Colors.textPrimary },
-  mealTime: { fontSize: 10, color: Colors.textMuted },
-  mealCalories: { fontSize: 11, color: Colors.textSecondary },
-  quickAddRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.border,
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.sm + 2,
-    padding: Spacing.sm + 2,
-    marginBottom: Spacing.sm,
+    ...Shadow.card,
   },
-  quickAddName: { fontSize: 12.5, color: Colors.textPrimary, flex: 1 },
-  quickAddCalories: { fontSize: 10.5, color: Colors.textMuted },
-  fab: {
-    position: 'absolute',
-    bottom: 100,
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.accent,
+  planItemIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: Radius.tile,
+    backgroundColor: Colors.primaryTint,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  fabIcon: { color: 'white', fontSize: 28, lineHeight: 28 },
+  planItemIcon: {
+    fontSize: 22,
+  },
+  planItemContent: {
+    flex: 1,
+  },
+  planItemTitle: {
+    ...Typography.body,
+    color: Colors.textPrimary,
+  },
+  planItemSubtitle: {
+    ...Typography.label,
+    color: Colors.textSecondary,
+    marginTop: Spacing.xs,
+  },
+  planItemTime: {
+    ...Typography.label,
+    color: Colors.textSecondary,
+  },
+  planItemTimeDone: {
+    color: Colors.success,
+  },
+  checkmark: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: Colors.success,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkmarkText: {
+    color: 'white',
+    fontSize: 13,
+    fontWeight: '600',
+  },
 });
