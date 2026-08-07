@@ -1,40 +1,51 @@
 /**
- * OneLife design tokens — colors, spacing, and typography pulled directly
- * from the approved UX mockups. Single source of truth for all screens.
+ * OneLife design tokens — colors, spacing, and typography.
+ * v3: purple/indigo visual refresh (glassmorphism, floating nav, health
+ * score ring) — functionality unchanged, this file only updates values.
+ * Every existing key name is preserved so no other file needs to change
+ * its imports; only the underlying color values shifted.
  */
 
 import { Platform } from 'react-native';
 
 export const Colors = {
-  background: '#F5F4F0',
+  background: '#F7F6FC',
   surface: '#FFFFFF',
-  surfaceMuted: '#F7F6F2',
-  border: '#E5E3DC',
+  surfaceMuted: '#F3F1FA',
+  border: '#E7E4F5',
 
-  textPrimary: '#1C1C1E',
-  textSecondary: '#7A7870',
-  textMuted: '#9C9A91',
+  textPrimary: '#1E1B2E',
+  textSecondary: '#6E6A85',
+  textMuted: '#A6A2BC',
 
-  accent: '#1D9E75',
-  accentLight: '#EAF3F0',
-  accentGradientStart: '#34C77B',
+  accent: '#6C5CE7',
+  accentLight: '#EDEAFC',
+  accentGradientStart: '#8B7FF0',
+  accentGradientEnd: '#6C5CE7',
 
-  medicineBg: '#FDF1EC',
-  medicineAccent: '#F6D9CC',
-  medicineText: '#9C7B6B',
+  medicineBg: '#F3EEFF',
+  medicineAccent: '#DCCFFF',
+  medicineText: '#7B5FD9',
 
-  plannerBg: '#EEF2FB',
-  plannerAccent: '#D9E3F7',
+  plannerBg: '#EEF1FF',
+  plannerAccent: '#D6DEFF',
 
-  danger: '#D85A30',
-  warningBg: '#FDF1EC',
-  warningText: '#9C4B2E',
+  danger: '#E15B64',
+  warningBg: '#FFF1EE',
+  warningText: '#C15A3F',
 
-  womensHealthAccent: '#B23D6C',
-  womensHealthBg: '#FDEEF3',
+  womensHealthAccent: '#D4508A',
+  womensHealthBg: '#FDEAF3',
 
-  waterBlue: '#1C6FC9',
-  activityOrange: '#D68B4A',
+  waterBlue: '#4C7EF3',
+  activityOrange: '#F2A65A',
+
+  // New tokens for the glassmorphism / floating-nav style
+  glassBg: 'rgba(255,255,255,0.72)',
+  glassBorder: 'rgba(255,255,255,0.5)',
+  navFloatingBg: 'rgba(30,27,46,0.92)',
+  success: '#3CBE8B',
+  successLight: '#E4F8F0',
 } as const;
 
 export type ThemeColor = keyof typeof Colors;
@@ -69,9 +80,9 @@ export const Spacing = {
 } as const;
 
 export const Radius = {
-  sm: 10,
-  md: 14,
-  lg: 18,
+  sm: 12,
+  md: 16,
+  lg: 22,
   pill: 999,
 } as const;
 
@@ -80,6 +91,24 @@ export const Typography = {
   heading: { fontSize: 17, fontWeight: '700' as const },
   body: { fontSize: 14, fontWeight: '400' as const },
   caption: { fontSize: 12, fontWeight: '500' as const },
+} as const;
+
+// Reusable shadow preset for floating cards / the floating nav bar
+export const Shadows = {
+  card: {
+    shadowColor: '#3A2F73',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
+  },
+  floating: {
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 10,
+  },
 } as const;
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
