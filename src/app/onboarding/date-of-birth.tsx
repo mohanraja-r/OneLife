@@ -1,12 +1,17 @@
-import { useState } from 'react';
-import { View, Text, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import OnboardingProgress from './OnboardingProgress';
+import { router } from 'expo-router';
+import { CalendarDays, Cake } from 'lucide-react-native';
+import { MotiView } from 'moti';
+import { useState } from 'react';
+import { Platform, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Accents, Colors, Motion, Radius } from '../../constants/theme';
 import ContinueButton from './ContinueButton';
-import { onboardingState } from './state';
+import OnboardingProgress from './OnboardingProgress';
 import { onboardingStyles as s } from './onboardingStyles';
+import { onboardingState } from './state';
+
+const accent = Accents.violet;
 
 function calculateAge(dob: Date): number {
   const today = new Date();
@@ -18,7 +23,9 @@ function calculateAge(dob: Date): number {
 
 export default function DateOfBirthScreen() {
   const [date, setDate] = useState<Date>(
-    onboardingState.dateOfBirth ? new Date(onboardingState.dateOfBirth) : new Date(2000, 0, 1)
+    onboardingState.dateOfBirth
+      ? new Date(onboardingState.dateOfBirth)
+      : new Date(2000, 0, 1)
   );
 
   const age = calculateAge(date);
@@ -31,25 +38,65 @@ export default function DateOfBirthScreen() {
 
   return (
     <SafeAreaView style={s.container}>
-      <OnboardingProgress step={2} />
-      <Text style={s.title}>When were you born?</Text>
+      <OnboardingProgress step={2} accent={accent} />
 
-      <View style={s.pickerWrapper}>
-        <DateTimePicker
-          value={date}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          maximumDate={new Date()}
-          onChange={(_, selectedDate) => selectedDate && setDate(selectedDate)}
-        />
+      <View style={s.content}>
+        <MotiView
+          from={{ opacity: 0, scale: 0.85 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: 'timing', duration: Motion.slow }}
+          style={[s.iconTile, { backgroundColor: accent.tint }]}>
+          <CalendarDays size={32} color={accent.main} strokeWidth={2} />
+        </MotiView>
+
+        <Text style={s.title}>What&apos;s your date of birth?</Text>
+        <Text style={s.subtitle}>
+          Your age helps us tailor your plan better.
+        </Text>
+
+        <View style={s.pickerWrapper}>
+          <DateTimePicker
+            value={date}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            maximumDate={new Date()}
+            accentColor={accent.main}
+            textColor={Colors.textPrimary}
+            onChange={(_, selectedDate) =>
+              selectedDate && setDate(selectedDate)
+            }
+          />
+        </View>
+
+        <MotiView
+          key={age}
+          from={{ opacity: 0, translateY: 8 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: Motion.fast }}
+          style={[s.agePreview, { backgroundColor: accent.tint }]}>
+          <View style={[styles.ageIcon, { backgroundColor: Colors.surface }]}>
+            <Cake size={20} color={accent.main} strokeWidth={2} />
+          </View>
+          <View>
+            <Text style={s.agePreviewLabel}>You are</Text>
+            <Text style={s.agePreviewValue}>{age} years old</Text>
+          </View>
+        </MotiView>
       </View>
 
-      <View style={s.agePreview}>
-        <Text style={s.agePreviewText}>Age: {age} Years</Text>
+      <View style={s.footer}>
+        <ContinueButton onPress={handleContinue} accent={accent} />
       </View>
-
-      <View style={{ flex: 1 }} />
-      <ContinueButton onPress={handleContinue} />
     </SafeAreaView>
   );
 }
+
+const styles = {
+  ageIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.md,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+  },
+};

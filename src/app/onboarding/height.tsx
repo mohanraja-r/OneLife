@@ -1,15 +1,38 @@
-import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import OnboardingProgress from './OnboardingProgress';
+import { Ruler } from 'lucide-react-native';
+import { MotiView } from 'moti';
+import { useState } from 'react';
+import {
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  Accents,
+  Colors,
+  Motion,
+  Spacing,
+  Typography,
+} from '../../constants/theme';
 import ContinueButton from './ContinueButton';
-import { onboardingState, HeightUnit } from './_state';
-import { Colors, Spacing, Radius } from '../../constants/theme';
+import OnboardingProgress from './OnboardingProgress';
+import { onboardingStyles as s } from './onboardingStyles';
+import { HeightUnit, onboardingState } from './_state';
+
+const accent = Accents.green;
 
 export default function HeightScreen() {
-  const [unit, setUnit] = useState<HeightUnit>(onboardingState.heightUnit ?? 'cm');
-  const [cm, setCm] = useState(onboardingState.heightUnit === 'cm' ? String(onboardingState.heightValue ?? '') : '');
+  const [unit, setUnit] = useState<HeightUnit>(
+    onboardingState.heightUnit ?? 'cm'
+  );
+  const [cm, setCm] = useState(
+    onboardingState.heightUnit === 'cm'
+      ? String(onboardingState.heightValue ?? '')
+      : ''
+  );
   const [feet, setFeet] = useState('');
   const [inches, setInches] = useState('');
 
@@ -27,77 +50,119 @@ export default function HeightScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <OnboardingProgress step={3} />
-      <Text style={styles.title}>How tall are you?</Text>
+    <SafeAreaView style={s.container}>
+      <OnboardingProgress step={3} accent={accent} />
 
-      <View style={styles.unitToggle}>
-        <TouchableOpacity
-          style={[styles.unitOption, unit === 'cm' && styles.unitOptionActive]}
-          onPress={() => setUnit('cm')}
-        >
-          <Text style={[styles.unitText, unit === 'cm' && styles.unitTextActive]}>Centimeters</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.unitOption, unit === 'ft_in' && styles.unitOptionActive]}
-          onPress={() => setUnit('ft_in')}
-        >
-          <Text style={[styles.unitText, unit === 'ft_in' && styles.unitTextActive]}>Feet &amp; Inches</Text>
-        </TouchableOpacity>
+      <View style={s.content}>
+        <MotiView
+          from={{ opacity: 0, scale: 0.85 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: 'timing', duration: Motion.slow }}
+          style={[s.iconTile, { backgroundColor: accent.tint }]}>
+          <Ruler size={32} color={accent.main} strokeWidth={2} />
+        </MotiView>
+
+        <Text style={s.title}>What&apos;s your height?</Text>
+        <Text style={s.subtitle}>
+          We&apos;ll use this to calculate your health metrics.
+        </Text>
+
+        <View style={s.unitToggle}>
+          {(['cm', 'ft_in'] as HeightUnit[]).map((u) => {
+            const active = unit === u;
+            return (
+              <TouchableOpacity
+                key={u}
+                style={[
+                  s.unitOption,
+                  active && { backgroundColor: accent.tint },
+                ]}
+                onPress={() => setUnit(u)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}>
+                <Text
+                  style={[
+                    s.unitText,
+                    active && s.unitTextActive,
+                    active && { color: accent.dark },
+                  ]}>
+                  {u === 'cm' ? 'cm' : 'ft & in'}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {unit === 'cm' ? (
+          <View style={s.readout}>
+            <TextInput
+              style={[styles.readoutInput, { color: Colors.textPrimary }]}
+              placeholder="170"
+              placeholderTextColor={Colors.textMuted}
+              keyboardType="number-pad"
+              maxLength={3}
+              value={cm}
+              onChangeText={setCm}
+              accessibilityLabel="Height in centimetres"
+            />
+            <Text style={s.readoutUnit}>cm</Text>
+          </View>
+        ) : (
+          <View style={s.readout}>
+            <TextInput
+              style={styles.readoutInput}
+              placeholder="5"
+              placeholderTextColor={Colors.textMuted}
+              keyboardType="number-pad"
+              maxLength={1}
+              value={feet}
+              onChangeText={setFeet}
+              accessibilityLabel="Height in feet"
+            />
+            <Text style={s.readoutUnit}>ft</Text>
+            <TextInput
+              style={[styles.readoutInput, styles.readoutInputSecond]}
+              placeholder="7"
+              placeholderTextColor={Colors.textMuted}
+              keyboardType="number-pad"
+              maxLength={2}
+              value={inches}
+              onChangeText={setInches}
+              accessibilityLabel="Height in inches"
+            />
+            <Text style={s.readoutUnit}>in</Text>
+          </View>
+        )}
+
+        <View style={[styles.underline, { backgroundColor: accent.main }]} />
       </View>
 
-      {unit === 'cm' ? (
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. 170"
-          placeholderTextColor={Colors.textMuted}
-          keyboardType="numeric"
-          value={cm}
-          onChangeText={setCm}
+      <View style={s.footer}>
+        <ContinueButton
+          onPress={handleContinue}
+          disabled={!canContinue}
+          accent={accent}
         />
-      ) : (
-        <View style={styles.rowInputs}>
-          <TextInput
-            style={[styles.input, styles.rowInput]}
-            placeholder="Feet"
-            placeholderTextColor={Colors.textMuted}
-            keyboardType="numeric"
-            value={feet}
-            onChangeText={setFeet}
-          />
-          <TextInput
-            style={[styles.input, styles.rowInput]}
-            placeholder="Inches"
-            placeholderTextColor={Colors.textMuted}
-            keyboardType="numeric"
-            value={inches}
-            onChangeText={setInches}
-          />
-        </View>
-      )}
-
-      <View style={{ flex: 1 }} />
-      <ContinueButton onPress={handleContinue} disabled={!canContinue} />
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background, padding: Spacing.lg },
-  title: { fontSize: 26, fontWeight: '800', color: Colors.textPrimary, marginBottom: Spacing.lg },
-  unitToggle: { flexDirection: 'row', backgroundColor: '#F2F0F5', borderRadius: Radius.pill, padding: 4, marginBottom: Spacing.lg },
-  unitOption: { flex: 1, paddingVertical: Spacing.sm + 2, borderRadius: Radius.pill, alignItems: 'center' },
-  unitOptionActive: { backgroundColor: 'white' },
-  unitText: { fontSize: 13, fontWeight: '600', color: Colors.textMuted },
-  unitTextActive: { color: Colors.textPrimary },
-  input: {
-    backgroundColor: Colors.surfaceMuted,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    fontSize: 18,
+  readoutInput: {
+    ...Typography.displayNumber,
     color: Colors.textPrimary,
     textAlign: 'center',
+    minWidth: 90,
+    padding: 0,
   },
-  rowInputs: { flexDirection: 'row', gap: Spacing.md },
-  rowInput: { flex: 1 },
+  readoutInputSecond: {
+    marginLeft: Spacing.sm,
+  },
+  // Accent rule under the readout, echoing the reference's measuring scale.
+  underline: {
+    width: 72,
+    height: 4,
+    borderRadius: 2,
+  },
 });
