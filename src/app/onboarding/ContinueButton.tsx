@@ -1,4 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
+import type { LucideIcon } from 'lucide-react-native';
 import { ArrowRight } from 'lucide-react-native';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
@@ -21,6 +22,8 @@ interface Props {
   accent?: Accent;
   /** Hide the trailing arrow (e.g. terminal steps). */
   hideArrow?: boolean;
+  /** Leading glyph before the label, e.g. the envelope on "Sign up with Email". */
+  icon?: LucideIcon;
 }
 
 export default function ContinueButton({
@@ -29,6 +32,7 @@ export default function ContinueButton({
   disabled = false,
   accent = Accents.violet,
   hideArrow = false,
+  icon: Icon,
 }: Props) {
   return (
     <TouchableOpacity
@@ -48,6 +52,9 @@ export default function ContinueButton({
         start={Gradients.horizontal.start}
         end={Gradients.horizontal.end}
         style={styles.button}>
+        {Icon && (
+          <Icon size={20} color={Colors.textInverse} strokeWidth={2.2} />
+        )}
         <Text style={styles.label}>{label}</Text>
         {!hideArrow && (
           <View style={styles.arrow}>

@@ -1,9 +1,14 @@
+import type { LucideIcon } from 'lucide-react-native';
+import { Check } from 'lucide-react-native';
 import { Text, TouchableOpacity, View } from 'react-native';
-import { Accent, Accents } from '../../constants/theme';
+import { Accent, Accents, Colors } from '../../constants/theme';
 import { onboardingStyles as s } from './onboardingStyles';
 
 interface OptionCardProps {
-  emoji: string;
+  /** Lucide icon for the leading tile — preferred over `emoji`. */
+  icon?: LucideIcon;
+  /** Glyph fallback when no lucide icon fits (e.g. ♂ / ♀ on the gender step). */
+  emoji?: string;
   title: string;
   subtitle?: string;
   selected: boolean;
@@ -20,6 +25,7 @@ interface OptionCardProps {
 // StyleSheet.create here. Update sizes once in onboardingStyles.ts and every
 // screen using OptionCard (Gender, Goal, Eating Style, …) picks it up.
 export default function OptionCard({
+  icon: Icon,
   emoji,
   title,
   subtitle,
@@ -29,7 +35,7 @@ export default function OptionCard({
   accent = Accents.violet,
   iconAccent,
 }: OptionCardProps) {
-  const icon = iconAccent ?? accent;
+  const iconTone = iconAccent ?? accent;
 
   return (
     <TouchableOpacity
@@ -43,8 +49,12 @@ export default function OptionCard({
       accessibilityRole={multiSelect ? 'checkbox' : 'radio'}
       accessibilityState={{ selected, checked: selected }}
       accessibilityLabel={subtitle ? `${title}. ${subtitle}` : title}>
-      <View style={[s.optionIconCircle, { backgroundColor: icon.tint }]}>
-        <Text style={[s.optionEmoji, { color: icon.main }]}>{emoji}</Text>
+      <View style={[s.optionIconCircle, { backgroundColor: iconTone.tint }]}>
+        {Icon ? (
+          <Icon size={20} color={iconTone.main} strokeWidth={2.2} />
+        ) : (
+          <Text style={[s.optionEmoji, { color: iconTone.main }]}>{emoji}</Text>
+        )}
       </View>
 
       <View style={{ flex: 1 }}>
@@ -61,7 +71,9 @@ export default function OptionCard({
             (multiSelect ? s.optionCheckboxSelected : s.optionRadioSelected),
           selected && { backgroundColor: accent.main },
         ]}>
-        {selected && <Text style={s.optionCheckmark}>✓</Text>}
+        {selected && (
+          <Check size={14} color={Colors.textInverse} strokeWidth={3} />
+        )}
       </View>
     </TouchableOpacity>
   );

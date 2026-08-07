@@ -1,26 +1,73 @@
-import { useState } from 'react';
-import { Text, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import OnboardingProgress from './OnboardingProgress';
+import type { LucideIcon } from 'lucide-react-native';
+import {
+  Beef,
+  Carrot,
+  Drumstick,
+  Egg,
+  Fish,
+  Leaf,
+  Salad,
+  Wheat,
+} from 'lucide-react-native';
+import { useState } from 'react';
+import { Accent, Accents } from '../../constants/theme';
 import OptionCard from './OptionCard';
-import ContinueButton from './ContinueButton';
-import { onboardingState, EatingStyle } from './state';
-import { onboardingStyles as s } from './onboardingStyles';
+import QuestionScreen, { StaggeredOption } from './QuestionScreen';
+import { EatingStyle, onboardingState } from './state';
 
-const OPTIONS: { value: EatingStyle; emoji: string; title: string }[] = [
-  { value: 'balanced', emoji: '🍽️', title: 'Balanced' },
-  { value: 'whole_foods', emoji: '🥗', title: 'Whole Foods' },
-  { value: 'vegetarian', emoji: '🌱', title: 'Vegetarian' },
-  { value: 'vegan', emoji: '🌿', title: 'Vegan' },
-  { value: 'keto', emoji: '🥩', title: 'Keto' },
-  { value: 'paleo', emoji: '🥜', title: 'Paleo' },
-  { value: 'high_protein', emoji: '🍚', title: 'High Protein' },
-  { value: 'no_special_diet', emoji: '❌', title: 'No Special Diet' },
+const accent = Accents.violet;
+
+const OPTIONS: {
+  value: EatingStyle;
+  icon: LucideIcon;
+  title: string;
+  iconAccent: Accent;
+}[] = [
+  {
+    value: 'no_special_diet',
+    icon: Drumstick,
+    title: 'I eat everything',
+    iconAccent: Accents.green,
+  },
+  {
+    value: 'vegetarian',
+    icon: Carrot,
+    title: 'Vegetarian',
+    iconAccent: Accents.orange,
+  },
+  { value: 'vegan', icon: Leaf, title: 'Vegan', iconAccent: Accents.green },
+  {
+    value: 'whole_foods',
+    icon: Salad,
+    title: 'Whole foods',
+    iconAccent: Accents.amber,
+  },
+  { value: 'keto', icon: Beef, title: 'Keto', iconAccent: Accents.rose },
+  {
+    value: 'paleo',
+    icon: Fish,
+    title: 'Pescatarian',
+    iconAccent: Accents.blue,
+  },
+  {
+    value: 'high_protein',
+    icon: Egg,
+    title: 'High protein',
+    iconAccent: Accents.amber,
+  },
+  {
+    value: 'balanced',
+    icon: Wheat,
+    title: 'Balanced',
+    iconAccent: Accents.violet,
+  },
 ];
 
 export default function EatingStyleScreen() {
-  const [selected, setSelected] = useState<EatingStyle | null>(onboardingState.eatingStyle ?? null);
+  const [selected, setSelected] = useState<EatingStyle | null>(
+    onboardingState.eatingStyle ?? null
+  );
 
   const handleContinue = () => {
     if (!selected) return;
@@ -29,23 +76,26 @@ export default function EatingStyleScreen() {
   };
 
   return (
-    <SafeAreaView style={s.container}>
-      <OnboardingProgress step={7} />
-      <Text style={s.title}>Do you follow a specific diet?</Text>
-
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {OPTIONS.map((o) => (
+    <QuestionScreen
+      step={7}
+      icon={Salad}
+      accent={accent}
+      title="What best describes your eating style?"
+      subtitle="We'll tailor meal suggestions that fit your lifestyle."
+      onContinue={handleContinue}
+      continueDisabled={!selected}>
+      {OPTIONS.map((option, index) => (
+        <StaggeredOption key={option.value} index={index}>
           <OptionCard
-            key={o.value}
-            emoji={o.emoji}
-            title={o.title}
-            selected={selected === o.value}
-            onPress={() => setSelected(o.value)}
+            icon={option.icon}
+            title={option.title}
+            selected={selected === option.value}
+            onPress={() => setSelected(option.value)}
+            accent={accent}
+            iconAccent={option.iconAccent}
           />
-        ))}
-      </ScrollView>
-
-      <ContinueButton onPress={handleContinue} disabled={!selected} />
-    </SafeAreaView>
+        </StaggeredOption>
+      ))}
+    </QuestionScreen>
   );
 }

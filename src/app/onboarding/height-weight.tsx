@@ -209,7 +209,11 @@ export default function HeightWeightScreen() {
           from={{ opacity: 0, scale: 0.85 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ type: 'timing', duration: Motion.slow }}
-          style={[s.iconTile, styles.iconTile, { backgroundColor: screenAccent.tint }]}>
+          style={[
+            s.iconTile,
+            styles.iconTile,
+            { backgroundColor: screenAccent.tint },
+          ]}>
           <Ruler size={32} color={screenAccent.main} strokeWidth={2} />
         </MotiView>
 

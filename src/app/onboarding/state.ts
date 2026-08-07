@@ -5,10 +5,23 @@ export type Gender = 'woman' | 'man' | 'non_binary' | 'unspecified';
 export type HeightUnit = 'cm' | 'ft_in';
 export type WeightUnit = 'kg' | 'lb';
 export type WorkoutFrequency = 'rarely' | 'sometimes' | 'frequently';
-export type Goal = 'lose_weight' | 'maintain' | 'gain_weight' | 'improve_health' | 'build_muscle';
+export type Goal =
+  | 'lose_weight'
+  | 'maintain'
+  | 'gain_weight'
+  | 'improve_health'
+  | 'build_muscle';
 export type EatingStyle =
-  | 'balanced' | 'whole_foods' | 'vegetarian' | 'vegan' | 'keto' | 'paleo' | 'high_protein' | 'no_special_diet';
-export type ProfessionalGuidance = 'personal_trainer' | 'dietitian' | 'both' | 'neither';
+  | 'balanced'
+  | 'whole_foods'
+  | 'vegetarian'
+  | 'vegan'
+  | 'keto'
+  | 'paleo'
+  | 'high_protein'
+  | 'no_special_diet';
+export type ProfessionalGuidance =
+  'personal_trainer' | 'dietitian' | 'both' | 'neither';
 
 interface OnboardingState {
   gender?: Gender;
@@ -32,7 +45,9 @@ interface OnboardingState {
 export const onboardingState: OnboardingState = {};
 
 export function resetOnboardingState() {
-  Object.keys(onboardingState).forEach((key) => delete (onboardingState as any)[key]);
+  Object.keys(onboardingState).forEach(
+    (key) => delete (onboardingState as any)[key]
+  );
 }
 
 // Updated from 13 to 12 — Height and Weight are now a single combined step.

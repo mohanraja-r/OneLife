@@ -28,6 +28,15 @@ export const onboardingStyles = StyleSheet.create({
     paddingTop: Spacing.xxl,
   },
 
+  // Scrolling body used by QuestionScreen — same rhythm as `content`, but the
+  // options list can run past the fold on the longer steps.
+  scroll: { flex: 1 },
+  scrollContent: {
+    flexGrow: 1,
+    alignItems: 'center',
+    paddingTop: Spacing.xl,
+  },
+
   // Round tinted tile above the question — accent tint applied inline.
   iconTile: {
     width: 72,
@@ -35,7 +44,7 @@ export const onboardingStyles = StyleSheet.create({
     borderRadius: Radius.round,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: Spacing.xxl,
+    marginBottom: Spacing.xl,
   },
 
   title: {
@@ -55,13 +64,14 @@ export const onboardingStyles = StyleSheet.create({
     ...Typography.secondary,
     color: Colors.textSecondary,
     textAlign: 'center',
-    marginBottom: Spacing.xxxl,
+    marginBottom: Spacing.xxl,
     paddingHorizontal: Spacing.lg,
   },
   hint: {
     ...Typography.caption,
     color: Colors.textMuted,
     textAlign: 'center',
+    marginTop: -Spacing.md,
     marginBottom: Spacing.lg,
   },
 
@@ -143,11 +153,105 @@ export const onboardingStyles = StyleSheet.create({
     ...Typography.body,
     color: Colors.textPrimary,
   },
+  // Input with a trailing glyph (the gift on the referral step).
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    backgroundColor: Colors.surface,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    borderRadius: Radius.lg,
+    paddingHorizontal: Spacing.lg,
+    ...Shadow.card,
+  },
+  inputField: {
+    flex: 1,
+    paddingVertical: Spacing.lg,
+    ...Typography.body,
+    color: Colors.textPrimary,
+  },
   label: {
     ...Typography.caption,
     fontWeight: '600',
     color: Colors.textPrimary,
     marginBottom: Spacing.sm,
+  },
+  // Small centered divider label, e.g. "Popular apps you may have used".
+  sectionLabel: {
+    ...Typography.caption,
+    color: Colors.textMuted,
+    textAlign: 'center',
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+
+  // Reassurance / reward callout — tinted inline with the screen accent.
+  noteCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    marginTop: Spacing.lg,
+  },
+  noteIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.tile,
+    backgroundColor: Colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noteTitle: {
+    ...Typography.caption,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  noteBody: {
+    ...Typography.label,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+
+  // Centered text link under the primary button ("I don't have a code").
+  textLink: {
+    ...Typography.caption,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginTop: Spacing.lg,
+  },
+
+  // Three-up tile grid (the "popular apps" picker).
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: Spacing.md,
+  },
+  gridTile: {
+    width: '30%',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.surface,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    borderRadius: Radius.lg,
+    paddingVertical: Spacing.md,
+    ...Shadow.card,
+  },
+  gridTileIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.tile,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  gridTileLabel: {
+    ...Typography.label,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    textAlign: 'center',
   },
 
   // Segmented unit toggle (cm / ft & in, kg / lb). The active pill takes the

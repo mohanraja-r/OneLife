@@ -1,21 +1,48 @@
-import { useState } from 'react';
-import { View, Text } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import OnboardingProgress from './OnboardingProgress';
+import type { LucideIcon } from 'lucide-react-native';
+import { Activity, Flame, Footprints, Zap } from 'lucide-react-native';
+import { useState } from 'react';
+import { Accent, Accents } from '../../constants/theme';
 import OptionCard from './OptionCard';
-import ContinueButton from './ContinueButton';
-import { onboardingState, WorkoutFrequency } from './state';
-import { onboardingStyles as s } from './onboardingStyles';
+import QuestionScreen, { StaggeredOption } from './QuestionScreen';
+import { WorkoutFrequency, onboardingState } from './state';
 
-const OPTIONS: { value: WorkoutFrequency; emoji: string; title: string; subtitle: string }[] = [
-  { value: 'rarely', emoji: '🏠', title: 'Rarely', subtitle: '0–2 times/week' },
-  { value: 'sometimes', emoji: '💪', title: 'Sometimes', subtitle: '3–5 times/week' },
-  { value: 'frequently', emoji: '🔥', title: 'Frequently', subtitle: '6+ times/week' },
+const accent = Accents.violet;
+
+const OPTIONS: {
+  value: WorkoutFrequency;
+  icon: LucideIcon;
+  title: string;
+  subtitle: string;
+  iconAccent: Accent;
+}[] = [
+  {
+    value: 'rarely',
+    icon: Zap,
+    title: 'Rarely',
+    subtitle: '0–2 times per week',
+    iconAccent: Accents.violet,
+  },
+  {
+    value: 'sometimes',
+    icon: Flame,
+    title: 'Sometimes',
+    subtitle: '3–5 times per week',
+    iconAccent: Accents.orange,
+  },
+  {
+    value: 'frequently',
+    icon: Activity,
+    title: 'Frequently',
+    subtitle: '6+ times per week',
+    iconAccent: Accents.green,
+  },
 ];
 
 export default function WorkoutFrequencyScreen() {
-  const [selected, setSelected] = useState<WorkoutFrequency | null>(onboardingState.workoutFrequency ?? null);
+  const [selected, setSelected] = useState<WorkoutFrequency | null>(
+    onboardingState.workoutFrequency ?? null
+  );
 
   const handleContinue = () => {
     if (!selected) return;
@@ -24,25 +51,27 @@ export default function WorkoutFrequencyScreen() {
   };
 
   return (
-    <SafeAreaView style={s.container}>
-      <OnboardingProgress step={4} />
-      <Text style={s.title}>How often do you work out?</Text>
-
-      <View style={s.options}>
-        {OPTIONS.map((o) => (
+    <QuestionScreen
+      step={4}
+      icon={Footprints}
+      accent={accent}
+      title="How often do you work out?"
+      subtitle="This helps us personalize your activity recommendations."
+      onContinue={handleContinue}
+      continueDisabled={!selected}>
+      {OPTIONS.map((option, index) => (
+        <StaggeredOption key={option.value} index={index}>
           <OptionCard
-            key={o.value}
-            emoji={o.emoji}
-            title={o.title}
-            subtitle={o.subtitle}
-            selected={selected === o.value}
-            onPress={() => setSelected(o.value)}
+            icon={option.icon}
+            title={option.title}
+            subtitle={option.subtitle}
+            selected={selected === option.value}
+            onPress={() => setSelected(option.value)}
+            accent={accent}
+            iconAccent={option.iconAccent}
           />
-        ))}
-      </View>
-
-      <View style={{ flex: 1 }} />
-      <ContinueButton onPress={handleContinue} disabled={!selected} />
-    </SafeAreaView>
+        </StaggeredOption>
+      ))}
+    </QuestionScreen>
   );
 }
