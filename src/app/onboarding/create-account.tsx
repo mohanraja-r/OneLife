@@ -26,7 +26,7 @@ import {
   Typography,
 } from '../../constants/theme';
 import { supabase } from '../../services/supabase';
-import ContinueButton from './ContinueButton';
+import PrimaryButton from '../../components/PrimaryButton';
 import { onboardingStyles as s } from './onboardingStyles';
 import { onboardingState, resetOnboardingState } from './state';
 
@@ -254,7 +254,7 @@ export default function CreateAccountScreen() {
               </MotiView>
             )}
 
-            <ContinueButton
+            <PrimaryButton
               label={
                 saving
                   ? 'Creating account…'

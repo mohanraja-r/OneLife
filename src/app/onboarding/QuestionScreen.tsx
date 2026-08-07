@@ -4,7 +4,7 @@ import { ReactNode } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Accent, Accents, Motion } from '../../constants/theme';
-import ContinueButton from './ContinueButton';
+import PrimaryButton from '../../components/PrimaryButton';
 import OnboardingProgress from './OnboardingProgress';
 import { onboardingStyles as s } from './onboardingStyles';
 
@@ -71,7 +71,7 @@ export default function QuestionScreen({
       {belowContent}
 
       <View style={s.footer}>
-        <ContinueButton
+        <PrimaryButton
           label={buttonLabel}
           onPress={onContinue}
           disabled={continueDisabled}

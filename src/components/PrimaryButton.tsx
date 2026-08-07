@@ -12,7 +12,7 @@ import {
   Spacing,
   Typography,
   accentShadow,
-} from '../../constants/theme';
+} from '../constants/theme';
 
 interface Props {
   label?: string;
@@ -20,13 +20,17 @@ interface Props {
   disabled?: boolean;
   /** Screen accent — fills the button. Defaults to brand violet. */
   accent?: Accent;
-  /** Hide the trailing arrow (e.g. terminal steps). */
+  /** Hide the trailing arrow (e.g. terminal steps, auth actions). */
   hideArrow?: boolean;
   /** Leading glyph before the label, e.g. the envelope on "Sign up with Email". */
   icon?: LucideIcon;
 }
 
-export default function ContinueButton({
+/**
+ * The app's filled gradient call-to-action — the onboarding Continue button and
+ * the auth submit button are the same control with a different label.
+ */
+export default function PrimaryButton({
   label = 'Continue',
   onPress,
   disabled = false,

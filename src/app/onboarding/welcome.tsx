@@ -11,7 +11,7 @@ import {
   Spacing,
   Typography,
 } from '../../constants/theme';
-import ContinueButton from './ContinueButton';
+import PrimaryButton from '../../components/PrimaryButton';
 
 const accent = Accents.violet;
 
@@ -58,7 +58,7 @@ export default function WelcomeScreen() {
           delay: Motion.enterDelay * 2,
         }}
         style={styles.footer}>
-        <ContinueButton
+        <PrimaryButton
           label="Get Started"
           accent={accent}
           onPress={() => router.push('/onboarding/gender')}
