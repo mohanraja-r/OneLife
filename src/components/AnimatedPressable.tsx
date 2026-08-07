@@ -1,12 +1,15 @@
 import { ReactNode } from 'react';
-import { ViewStyle } from 'react-native';
+import { StyleProp, ViewStyle } from 'react-native';
 import { MotiPressable } from 'moti/interactions';
 import * as Haptics from 'expo-haptics';
 
 interface AnimatedPressableProps {
   children: ReactNode;
   onPress?: () => void;
-  style?: ViewStyle | ViewStyle[];
+  // StyleProp, not ViewStyle[] — callers pass conditional arrays such as
+  // [styles.box, done && styles.boxDone], whose falsy members a bare
+  // ViewStyle[] rejects.
+  style?: StyleProp<ViewStyle>;
   haptic?: boolean;
 }
 
@@ -34,8 +37,7 @@ export default function AnimatedPressable({
         };
       }}
       transition={{ type: 'timing', duration: 120 }}
-      style={style as any}
-    >
+      style={style as any}>
       {children}
     </MotiPressable>
   );
