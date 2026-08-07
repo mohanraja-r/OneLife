@@ -1,373 +1,448 @@
 import { supabase } from './supabase';
 
+/**
+ * Medicine data access.
+ *
+ * Mirrors the live `medicines` / `dose_log` schema exactly:
+ *
+ *   medicines  id, owner_id, is_managed_profile, name, dosage, frequency,
+ *              times text[], food_relation, duration_type, duration_end_date,
+ *              active
+ *   dose_log   id, medicine_id, owner_id, scheduled_for timestamptz,
+ *              status ('pending' | 'taken' | 'missed'), taken_at
+ *
+ * A medicine stores its reminder slots as `times` (["08:00", "21:00"]); there
+ * is no per-dose row until the user acts on one, so today's schedule is the
+ * cross product of active medicines and their slots, left-joined onto whatever
+ * dose_log rows already exist for today.
+ */
+
+/** When a dose should be taken relative to a meal. */
+export type FoodRelation = 'before' | 'after' | 'any';
+/** Whether a medicine runs forever or ends on a set date. */
+export type DurationType = 'ongoing' | 'course';
+/** State of a single scheduled dose. */
+export type DoseStatus = 'pending' | 'taken' | 'missed';
+
 export interface Medicine {
   id: string;
-  userId: string;
+  ownerId: string;
   name: string;
   dosage: string;
-  type: string;
   frequency: string;
-  startDate: string;
-  endDate?: string;
-  time: string;
-  notes?: string;
-  prescriptionImageUrl?: string;
-  doctorName?: string;
-  createdAt: string;
+  /** Reminder slots in 24-hour `HH:MM` form. */
+  times: string[];
+  foodRelation: FoodRelation;
+  durationType: DurationType;
+  /** `YYYY-MM-DD`, or null for an ongoing medicine. */
+  durationEndDate: string | null;
+  active: boolean;
 }
 
-export interface DoseLog {
+/** The writable half of a medicine — everything the add/edit form collects. */
+export interface MedicineInput {
+  name: string;
+  dosage: string;
+  frequency: string;
+  times: string[];
+  foodRelation: FoodRelation;
+  durationType: DurationType;
+  durationEndDate?: string | null;
+  /** False pauses the medicine: it keeps its history but stops being scheduled. */
+  active?: boolean;
+}
+
+/** One medicine at one reminder slot on a given day. */
+export interface ScheduledDose {
+  /** `medicineId|HH:MM` — stable across reloads, safe as a list key. */
   id: string;
   medicineId: string;
-  doseDate: string;
-  taken: boolean;
-  takenAt?: string;
-  notes?: string;
+  name: string;
+  dosage: string;
+  foodRelation: FoodRelation;
+  /** 24-hour slot, e.g. `08:00`. */
+  time: string;
+  /** Display form of `time`, e.g. `8:00 AM`. */
+  label: string;
+  /** ISO instant this dose is due. */
+  scheduledFor: string;
+  status: DoseStatus;
+  /** Set once a dose_log row exists for this dose. */
+  logId?: string;
+}
+
+/** Headline adherence numbers for the Medicine screen's stat row. */
+export interface AdherenceSummary {
+  /** Doses taken in the last 7 days as a percentage of doses expected. */
+  onTrackPercent: number;
+  /** Number of active medicines. */
+  medicineCount: number;
+  /** Doses marked taken in the last 7 days. */
+  takenThisWeek: number;
+  /** Doses taken on each of the last 7 days, oldest first — the stat sparkline. */
+  weeklyTrend: number[];
+}
+
+interface MedicineRow {
+  id: string;
+  owner_id: string;
+  name: string;
+  dosage: string;
+  frequency: string;
+  times: string[] | null;
+  food_relation: FoodRelation | null;
+  duration_type: DurationType | null;
+  duration_end_date: string | null;
+  active: boolean | null;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Returns the signed-in user's id, or throws when there is no session. */
+async function requireUserId(): Promise<string> {
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+
+  const userId = data.session?.user.id;
+  if (!userId) throw new Error('You need to be signed in to manage medicines.');
+  return userId;
+}
+
+/** Left-pads a clock component to two digits. */
+function pad(value: number): string {
+  return value.toString().padStart(2, '0');
 }
 
 /**
- * Get medicines scheduled for today with their dose status
+ * Splits a clock string into hours and minutes, or null when it is not a time.
+ *
+ * Deliberately strict: a partially typed value such as `930` has no minutes to
+ * read, and silently treating that as `undefined` is what used to crash the
+ * schedule while it rendered.
  */
-export async function getMedicinesForToday(): Promise<Medicine[]> {
-  try {
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (!sessionData?.session?.user?.id) {
-      throw new Error('User not authenticated');
-    }
+function parseTime(time: string): { hours: number; minutes: number } | null {
+  const match = /^(\d{1,2}):([0-5]\d)/.exec(time.trim());
+  if (!match) return null;
 
-    const userId = sessionData.session.user.id;
-    const today = new Date().toISOString().split('T')[0];
+  const hours = Number(match[1]);
+  if (hours > 23) return null;
 
-    // Get all active medicines
-    const { data: medicines, error: medicinesError } = await supabase
-      .from('medicines')
-      .select('*')
-      .eq('user_id', userId)
-      .or(`end_date.is.null,end_date.gte.${today}`)
-      .order('time', { ascending: true });
+  return { hours, minutes: Number(match[2]) };
+}
 
-    if (medicinesError) throw medicinesError;
+/** Canonicalises any stored or typed time to zero-padded 24-hour `HH:MM`. */
+function normaliseTime(time: string): string {
+  const parsed = parseTime(time);
+  return parsed
+    ? `${pad(parsed.hours)}:${pad(parsed.minutes)}`
+    : time.slice(0, 5);
+}
 
-    // For each medicine, check if taken today
-    const medicinesWithStatus = await Promise.all(
-      medicines?.map(async (med) => {
-        const { data: doseLog } = await supabase
-          .from('dose_log')
-          .select('taken, taken_at')
-          .eq('medicine_id', med.id)
-          .eq('dose_date', today)
-          .single();
+/** Formats a 24-hour `HH:MM` slot as a 12-hour label such as `8:00 AM`. */
+export function formatTimeLabel(time: string): string {
+  const parsed = parseTime(time);
+  if (!parsed) return time;
 
-        return {
-          ...med,
-          taken: doseLog?.taken || false,
-          takenAt: doseLog?.taken_at,
-        };
-      }) || []
-    );
+  const suffix = parsed.hours < 12 ? 'AM' : 'PM';
+  const hour12 = parsed.hours % 12 === 0 ? 12 : parsed.hours % 12;
+  return `${hour12}:${pad(parsed.minutes)} ${suffix}`;
+}
 
-    return medicinesWithStatus as Medicine[];
-  } catch (err) {
-    console.error("Error fetching today's medicines:", err);
-    return [];
+/** Turns a `HH:MM` slot into a Date today, ready to seed a time picker. */
+export function timeToDate(time: string): Date {
+  const { hours, minutes } = parseTime(time) ?? { hours: 9, minutes: 0 };
+  const date = new Date();
+  date.setHours(hours, minutes, 0, 0);
+  return date;
+}
+
+/** Turns a picked Date back into the `HH:MM` slot the app stores. */
+export function dateToTime(date: Date): string {
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/** Renders a Date as the `YYYY-MM-DD` string Postgres `date` columns expect. */
+export function toDateString(date: Date): string {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+/** Builds the local Date for a `HH:MM` slot on the given day. */
+function doseInstant(time: string, day: Date): Date {
+  const { hours, minutes } = parseTime(time) ?? { hours: 0, minutes: 0 };
+  const instant = new Date(day);
+  instant.setHours(hours, minutes, 0, 0);
+  return instant;
+}
+
+/** Maps a `medicines` row onto the camelCase shape the app screens consume. */
+function toMedicine(row: MedicineRow): Medicine {
+  return {
+    id: row.id,
+    ownerId: row.owner_id,
+    name: row.name,
+    dosage: row.dosage,
+    frequency: row.frequency,
+    times: (row.times ?? []).map(normaliseTime),
+    foodRelation: row.food_relation ?? 'any',
+    durationType: row.duration_type ?? 'ongoing',
+    durationEndDate: row.duration_end_date,
+    active: row.active ?? true,
+  };
+}
+
+/** Maps a medicine form payload onto the snake_case columns of `medicines`. */
+function toRow(input: Partial<MedicineInput>) {
+  const row: Record<string, unknown> = {};
+
+  if (input.name !== undefined) row.name = input.name.trim();
+  if (input.dosage !== undefined) row.dosage = input.dosage.trim();
+  if (input.frequency !== undefined) row.frequency = input.frequency;
+  if (input.times !== undefined) row.times = input.times.map(normaliseTime);
+  if (input.foodRelation !== undefined) row.food_relation = input.foodRelation;
+  if (input.durationType !== undefined) {
+    row.duration_type = input.durationType;
+    // An ongoing medicine must not keep a stale end date behind it.
+    if (input.durationType === 'ongoing') row.duration_end_date = null;
   }
-}
-
-/**
- * Mark a medicine dose as taken or not taken
- */
-export async function markDoseTaken(
-  medicineId: string,
-  taken: boolean
-): Promise<boolean> {
-  try {
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (!sessionData?.session?.user?.id) {
-      throw new Error('User not authenticated');
-    }
-
-    const userId = sessionData.session.user.id;
-    const today = new Date().toISOString().split('T')[0];
-    const now = new Date().toISOString();
-
-    // Check if dose log exists for today
-    const { data: existingLog } = await supabase
-      .from('dose_log')
-      .select('id')
-      .eq('medicine_id', medicineId)
-      .eq('dose_date', today)
-      .single();
-
-    if (existingLog) {
-      // Update existing log
-      const { error } = await supabase
-        .from('dose_log')
-        .update({
-          taken,
-          taken_at: taken ? now : null,
-        })
-        .eq('id', existingLog.id);
-
-      if (error) throw error;
-    } else {
-      // Create new log
-      const { error } = await supabase.from('dose_log').insert({
-        medicine_id: medicineId,
-        dose_date: today,
-        taken,
-        taken_at: taken ? now : null,
-      });
-
-      if (error) throw error;
-    }
-
-    return true;
-  } catch (err) {
-    console.error('Error marking dose:', err);
-    return false;
+  if (input.durationEndDate !== undefined && input.durationType !== 'ongoing') {
+    row.duration_end_date = input.durationEndDate;
   }
+  if (input.active !== undefined) row.active = input.active;
+
+  return row;
 }
 
-/**
- * Get all medicines for the current user
- */
+// ---------------------------------------------------------------------------
+// Medicines
+// ---------------------------------------------------------------------------
+
+/** Fetches every medicine belonging to the signed-in user, newest name first. */
 export async function getAllMedicines(): Promise<Medicine[]> {
-  try {
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (!sessionData?.session?.user?.id) {
-      throw new Error('User not authenticated');
-    }
+  const userId = await requireUserId();
 
-    const userId = sessionData.session.user.id;
+  const { data, error } = await supabase
+    .from('medicines')
+    .select('*')
+    .eq('owner_id', userId)
+    .order('name', { ascending: true });
 
-    const { data: medicines, error } = await supabase
-      .from('medicines')
-      .select('*')
-      .eq('user_id', userId)
-      .order('name', { ascending: true });
-
-    if (error) throw error;
-
-    return medicines || [];
-  } catch (err) {
-    console.error('Error fetching medicines:', err);
-    return [];
-  }
+  if (error) throw error;
+  return (data as MedicineRow[]).map(toMedicine);
 }
 
-/**
- * Get a single medicine by ID
- */
+/** Fetches a single medicine by id, or null when it no longer exists. */
 export async function getMedicineById(
   medicineId: string
 ): Promise<Medicine | null> {
-  try {
-    const { data: medicine, error } = await supabase
-      .from('medicines')
-      .select('*')
-      .eq('id', medicineId)
-      .single();
+  const { data, error } = await supabase
+    .from('medicines')
+    .select('*')
+    .eq('id', medicineId)
+    .maybeSingle();
 
-    if (error) throw error;
-
-    return medicine || null;
-  } catch (err) {
-    console.error('Error fetching medicine:', err);
-    return null;
-  }
+  if (error) throw error;
+  return data ? toMedicine(data as MedicineRow) : null;
 }
 
-/**
- * Add a new medicine
- */
-export async function addMedicine(
-  medicineData: Omit<Medicine, 'id' | 'userId' | 'createdAt'>
-): Promise<Medicine | null> {
-  try {
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (!sessionData?.session?.user?.id) {
-      throw new Error('User not authenticated');
-    }
+/** Creates a medicine for the signed-in user and returns the saved row. */
+export async function addMedicine(input: MedicineInput): Promise<Medicine> {
+  const userId = await requireUserId();
 
-    const userId = sessionData.session.user.id;
+  const { data, error } = await supabase
+    .from('medicines')
+    .insert({ active: true, ...toRow(input), owner_id: userId })
+    .select()
+    .single();
 
-    const { data: medicine, error } = await supabase
-      .from('medicines')
-      .insert({
-        user_id: userId,
-        name: medicineData.name,
-        dosage: medicineData.dosage,
-        type: medicineData.type,
-        frequency: medicineData.frequency,
-        start_date: medicineData.startDate,
-        end_date: medicineData.endDate || null,
-        time: medicineData.time,
-        notes: medicineData.notes || null,
-        prescription_image_url: medicineData.prescriptionImageUrl || null,
-        doctor_name: medicineData.doctorName || null,
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    return medicine || null;
-  } catch (err) {
-    console.error('Error adding medicine:', err);
-    return null;
-  }
+  if (error) throw error;
+  return toMedicine(data as MedicineRow);
 }
 
-/**
- * Update an existing medicine
- */
+/** Applies a partial edit to a medicine and returns the updated row. */
 export async function updateMedicine(
   medicineId: string,
-  medicineData: Partial<Medicine>
-): Promise<Medicine | null> {
-  try {
-    const updateData: any = {};
+  input: Partial<MedicineInput>
+): Promise<Medicine> {
+  const { data, error } = await supabase
+    .from('medicines')
+    .update(toRow(input))
+    .eq('id', medicineId)
+    .select()
+    .single();
 
-    if (medicineData.name) updateData.name = medicineData.name;
-    if (medicineData.dosage) updateData.dosage = medicineData.dosage;
-    if (medicineData.type) updateData.type = medicineData.type;
-    if (medicineData.frequency) updateData.frequency = medicineData.frequency;
-    if (medicineData.startDate) updateData.start_date = medicineData.startDate;
-    if (medicineData.endDate !== undefined)
-      updateData.end_date = medicineData.endDate;
-    if (medicineData.time) updateData.time = medicineData.time;
-    if (medicineData.notes !== undefined) updateData.notes = medicineData.notes;
-    if (medicineData.prescriptionImageUrl)
-      updateData.prescription_image_url = medicineData.prescriptionImageUrl;
-    if (medicineData.doctorName)
-      updateData.doctor_name = medicineData.doctorName;
-
-    const { data: medicine, error } = await supabase
-      .from('medicines')
-      .update(updateData)
-      .eq('id', medicineId)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    return medicine || null;
-  } catch (err) {
-    console.error('Error updating medicine:', err);
-    return null;
-  }
+  if (error) throw error;
+  return toMedicine(data as MedicineRow);
 }
 
-/**
- * Delete a medicine
- */
-export async function deleteMedicine(medicineId: string): Promise<boolean> {
-  try {
-    const { error } = await supabase
-      .from('medicines')
-      .delete()
-      .eq('id', medicineId);
+/** Deletes a medicine along with its dose history. */
+export async function deleteMedicine(medicineId: string): Promise<void> {
+  // dose_log references medicines, so its rows have to go first.
+  const { error: logError } = await supabase
+    .from('dose_log')
+    .delete()
+    .eq('medicine_id', medicineId);
+  if (logError) throw logError;
 
-    if (error) throw error;
-
-    return true;
-  } catch (err) {
-    console.error('Error deleting medicine:', err);
-    return false;
-  }
+  const { error } = await supabase
+    .from('medicines')
+    .delete()
+    .eq('id', medicineId);
+  if (error) throw error;
 }
 
-/**
- * Get dose history for a specific medicine
- */
-export async function getMedicineDoseHistory(
-  medicineId: string,
-  daysBack: number = 30
-): Promise<DoseLog[]> {
-  try {
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - daysBack);
-    const startDateStr = startDate.toISOString().split('T')[0];
+// ---------------------------------------------------------------------------
+// Doses
+// ---------------------------------------------------------------------------
 
-    const { data: logs, error } = await supabase
-      .from('dose_log')
-      .select('*')
-      .eq('medicine_id', medicineId)
-      .gte('dose_date', startDateStr)
-      .order('dose_date', { ascending: false });
+/** Builds today's dose schedule by expanding each active medicine's slots. */
+export async function getTodaysDoses(): Promise<ScheduledDose[]> {
+  const userId = await requireUserId();
 
-    if (error) throw error;
+  const today = new Date();
+  const dayStart = new Date(today);
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setDate(dayEnd.getDate() + 1);
 
-    return logs || [];
-  } catch (err) {
-    console.error('Error fetching dose history:', err);
-    return [];
-  }
-}
-
-/**
- * Get medicine adherence percentage for the past N days
- */
-export async function getMedicineAdherence(
-  medicineId: string,
-  daysBack: number = 7
-): Promise<number> {
-  try {
-    const logs = await getMedicineDoseHistory(medicineId, daysBack);
-
-    if (logs.length === 0) return 0;
-
-    const takenCount = logs.filter((log) => log.taken).length;
-    return Math.round((takenCount / logs.length) * 100);
-  } catch (err) {
-    console.error('Error calculating adherence:', err);
-    return 0;
-  }
-}
-
-/**
- * Get overall medication adherence for all medicines
- */
-export async function getOverallAdherence(
-  daysBack: number = 7
-): Promise<number> {
-  try {
-    const medicines = await getAllMedicines();
-
-    if (medicines.length === 0) return 0;
-
-    const adherencePercentages = await Promise.all(
-      medicines.map((med) => getMedicineAdherence(med.id, daysBack))
+  const { data: rows, error } = await supabase
+    .from('medicines')
+    .select('*')
+    .eq('owner_id', userId)
+    .eq('active', true)
+    .or(
+      `duration_end_date.is.null,duration_end_date.gte.${toDateString(today)}`
     );
 
-    const average =
-      adherencePercentages.reduce((a, b) => a + b, 0) /
-      adherencePercentages.length;
-    return Math.round(average);
-  } catch (err) {
-    console.error('Error calculating overall adherence:', err);
-    return 0;
+  if (error) throw error;
+
+  const medicines = (rows as MedicineRow[]).map(toMedicine);
+  if (medicines.length === 0) return [];
+
+  const { data: logs, error: logError } = await supabase
+    .from('dose_log')
+    .select('id, medicine_id, scheduled_for, status')
+    .eq('owner_id', userId)
+    .gte('scheduled_for', dayStart.toISOString())
+    .lt('scheduled_for', dayEnd.toISOString());
+
+  if (logError) throw logError;
+
+  // Doses are identified by medicine + wall-clock slot, so index the logs the
+  // same way rather than by their raw timestamp.
+  const logBySlot = new Map<string, { id: string; status: DoseStatus }>();
+  for (const log of logs ?? []) {
+    const at = new Date(log.scheduled_for);
+    const slot = `${log.medicine_id}|${pad(at.getHours())}:${pad(at.getMinutes())}`;
+    logBySlot.set(slot, { id: log.id, status: log.status as DoseStatus });
   }
+
+  const doses = medicines.flatMap((medicine) =>
+    medicine.times.map<ScheduledDose>((time) => {
+      const id = `${medicine.id}|${time}`;
+      const log = logBySlot.get(id);
+      return {
+        id,
+        medicineId: medicine.id,
+        name: medicine.name,
+        dosage: medicine.dosage,
+        foodRelation: medicine.foodRelation,
+        time,
+        label: formatTimeLabel(time),
+        scheduledFor: doseInstant(time, today).toISOString(),
+        status: log?.status ?? 'pending',
+        logId: log?.id,
+      };
+    })
+  );
+
+  return doses.sort((a, b) => a.time.localeCompare(b.time));
 }
 
-/**
- * Get medicines that need to be taken soon (within next 2 hours)
- */
-export async function getUpcomingMedicines(): Promise<Medicine[]> {
-  try {
-    const allMedicines = await getMedicinesForToday();
-    const now = new Date();
-    const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+/** Records a dose as taken, missed or back to pending. */
+export async function setDoseStatus(
+  dose: ScheduledDose,
+  status: DoseStatus
+): Promise<void> {
+  const userId = await requireUserId();
+  const takenAt = status === 'taken' ? new Date().toISOString() : null;
 
-    return allMedicines.filter((med) => {
-      const [hours, minutes] = med.time.split(':').map(Number);
-      const medTime = new Date();
-      medTime.setHours(hours, minutes, 0);
-
-      return medTime >= now && medTime <= twoHoursLater && !med.taken;
-    });
-  } catch (err) {
-    console.error('Error fetching upcoming medicines:', err);
-    return [];
+  if (dose.logId) {
+    const { error } = await supabase
+      .from('dose_log')
+      .update({ status, taken_at: takenAt })
+      .eq('id', dose.logId);
+    if (error) throw error;
+    return;
   }
+
+  const { error } = await supabase.from('dose_log').insert({
+    medicine_id: dose.medicineId,
+    owner_id: userId,
+    scheduled_for: dose.scheduledFor,
+    status,
+    taken_at: takenAt,
+  });
+  if (error) throw error;
+}
+
+/** Returns the first dose still pending today, or null when the day is clear. */
+export function nextPendingDose(doses: ScheduledDose[]): ScheduledDose | null {
+  return doses.find((dose) => dose.status === 'pending') ?? null;
+}
+
+/** Summarises the last seven days of adherence for the stat row. */
+export async function getAdherenceSummary(): Promise<AdherenceSummary> {
+  const userId = await requireUserId();
+
+  // Today plus the six days before it — seven buckets in total.
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const windowStart = new Date(todayStart);
+  windowStart.setDate(windowStart.getDate() - 6);
+
+  const [medicinesResult, logsResult] = await Promise.all([
+    supabase
+      .from('medicines')
+      .select('times')
+      .eq('owner_id', userId)
+      .eq('active', true),
+    supabase
+      .from('dose_log')
+      .select('scheduled_for')
+      .eq('owner_id', userId)
+      .eq('status', 'taken')
+      .gte('scheduled_for', windowStart.toISOString()),
+  ]);
+
+  if (medicinesResult.error) throw medicinesResult.error;
+  if (logsResult.error) throw logsResult.error;
+
+  const medicines = medicinesResult.data as { times: string[] | null }[];
+  const dailyDoses = medicines.reduce(
+    (total, medicine) => total + (medicine.times?.length ?? 0),
+    0
+  );
+
+  const weeklyTrend = new Array<number>(7).fill(0);
+  for (const log of logsResult.data as { scheduled_for: string }[]) {
+    const day = new Date(log.scheduled_for);
+    day.setHours(0, 0, 0, 0);
+    const bucket =
+      6 - Math.round((todayStart.getTime() - day.getTime()) / 86400000);
+    if (bucket >= 0 && bucket < 7) weeklyTrend[bucket] += 1;
+  }
+
+  const takenThisWeek = logsResult.data.length;
+  const expected = dailyDoses * 7;
+
+  return {
+    onTrackPercent: expected
+      ? Math.round(Math.min(takenThisWeek / expected, 1) * 100)
+      : 0,
+    medicineCount: medicines.length,
+    takenThisWeek,
+    weeklyTrend,
+  };
 }
