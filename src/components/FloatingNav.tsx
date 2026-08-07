@@ -1,20 +1,16 @@
 import { BlurView } from 'expo-blur';
-import { Href, useRouter, useSegments } from 'expo-router';
+import { Href, usePathname, useRouter } from 'expo-router';
+import type { LucideIcon } from 'lucide-react-native';
 import {
-  Calendar,
+  CalendarCheck,
   Heart,
-  Home,
-  MoreHorizontal,
+  House,
   Pill,
+  SlidersHorizontal,
 } from 'lucide-react-native';
 import React from 'react';
-import {
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Colors,
   Radius,
@@ -24,96 +20,62 @@ import {
 } from '../constants/theme';
 
 interface NavItem {
-  name: string;
   label: string;
-  icon: React.ReactNode;
+  icon: LucideIcon;
   route: Href;
+  /** Resolved pathname this tab owns, used to decide the active state. */
+  match: string;
 }
 
 const navItems: NavItem[] = [
+  { label: 'Home', icon: House, route: '/(tabs)/home', match: '/home' },
+  { label: 'Medicine', icon: Pill, route: '/(tabs)/medicine', match: '/medicine' },
   {
-    name: 'home',
-    label: 'Home',
-    icon: <Home size={24} stroke={Colors.textSecondary} strokeWidth={2} />,
-    route: '/(tabs)/home',
-  },
-  {
-    name: 'medicine',
-    label: 'Medicine',
-    icon: <Pill size={24} stroke={Colors.textSecondary} strokeWidth={2} />,
-    route: '/(tabs)/medicine',
-  },
-  {
-    name: 'planner',
     label: 'Planner',
-    icon: <Calendar size={24} stroke={Colors.textSecondary} strokeWidth={2} />,
+    icon: CalendarCheck,
     route: '/(tabs)/planner',
+    match: '/planner',
   },
+  { label: 'Health', icon: Heart, route: '/(tabs)/health', match: '/health' },
+  // There is no (tabs)/more screen; "More" opens Settings, which is where the
+  // secondary destinations (profile, family, reports) hang off.
   {
-    name: 'health',
-    label: 'Health',
-    icon: <Heart size={24} stroke={Colors.textSecondary} strokeWidth={2} />,
-    route: '/(tabs)/health',
-  },
-  {
-    name: 'more',
     label: 'More',
-    icon: (
-      <MoreHorizontal size={24} stroke={Colors.textSecondary} strokeWidth={2} />
-    ),
-    // There is no (tabs)/more screen; "More" opens Settings, which is where
-    // the secondary destinations (profile, family, reports) hang off.
+    icon: SlidersHorizontal,
     route: '/settings',
+    match: '/settings',
   },
 ];
 
+// Bottom tab bar: a white sheet pinned to the bottom edge with rounded top
+// corners, one row of five icon + label tabs, and the active tab picked out in
+// the brand violet with a soft tinted fill.
 export default function FloatingNav() {
   const router = useRouter();
-  const segments = useSegments();
-  const activeRoute = segments[1];
-
-  const getActiveIcon = (name: string) => {
-    const isActive = activeRoute === name;
-    if (isActive) {
-      return name === 'home' ? (
-        <Home size={24} stroke={Colors.primary} strokeWidth={2} />
-      ) : name === 'medicine' ? (
-        <Pill size={24} stroke={Colors.primary} strokeWidth={2} />
-      ) : name === 'planner' ? (
-        <Calendar size={24} stroke={Colors.primary} strokeWidth={2} />
-      ) : name === 'health' ? (
-        <Heart size={24} stroke={Colors.primary} strokeWidth={2} />
-      ) : (
-        <MoreHorizontal size={24} stroke={Colors.primary} strokeWidth={2} />
-      );
-    }
-    return name === 'home' ? (
-      <Home size={24} stroke={Colors.textSecondary} strokeWidth={2} />
-    ) : name === 'medicine' ? (
-      <Pill size={24} stroke={Colors.textSecondary} strokeWidth={2} />
-    ) : name === 'planner' ? (
-      <Calendar size={24} stroke={Colors.textSecondary} strokeWidth={2} />
-    ) : name === 'health' ? (
-      <Heart size={24} stroke={Colors.textSecondary} strokeWidth={2} />
-    ) : (
-      <MoreHorizontal size={24} stroke={Colors.textSecondary} strokeWidth={2} />
-    );
-  };
+  const pathname = usePathname();
+  const insets = useSafeAreaInsets();
 
   return (
     <View style={styles.container}>
-      <BlurView intensity={80} style={styles.blurContainer}>
-        <View style={styles.navBar}>
+      <BlurView intensity={80} tint="light" style={styles.blurContainer}>
+        <View style={[styles.navBar, { paddingBottom: insets.bottom || Spacing.md }]}>
           {navItems.map((item) => {
-            const isActive = activeRoute === item.name;
+            const isActive = pathname.startsWith(item.match);
+            const Icon = item.icon;
             return (
               <TouchableOpacity
-                key={item.name}
+                key={item.label}
                 style={styles.navItem}
-                onPress={() => router.push(item.route)}>
-                <View style={styles.iconContainer}>
-                  {getActiveIcon(item.name)}
-                </View>
+                onPress={() => router.push(item.route)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isActive }}
+                accessibilityLabel={item.label}>
+                <Icon
+                  size={22}
+                  strokeWidth={isActive ? 2.2 : 1.8}
+                  color={isActive ? Colors.primary : Colors.textSecondary}
+                  fill={isActive ? Colors.primaryTint : 'transparent'}
+                />
                 <Text
                   style={[
                     styles.label,
@@ -121,7 +83,6 @@ export default function FloatingNav() {
                   ]}>
                   {item.label}
                 </Text>
-                {isActive && <View style={styles.underline} />}
               </TouchableOpacity>
             );
           })}
@@ -137,51 +98,34 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'transparent',
   },
   blurContainer: {
-    paddingBottom: Platform.OS === 'ios' ? Spacing.md : Spacing.sm,
+    borderTopLeftRadius: Radius.xxl,
+    borderTopRightRadius: Radius.xxl,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.navFloatingBorder,
+    overflow: 'hidden',
+    ...Shadow.floating,
   },
   navBar: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'flex-end',
-    height: 76,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    borderTopLeftRadius: Radius.pill,
-    borderTopRightRadius: Radius.pill,
-    marginHorizontal: Spacing.xxl,
-    marginBottom: Spacing.xxl,
-    paddingHorizontal: Spacing.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    ...Shadow.floating,
+    alignItems: 'flex-start',
+    backgroundColor: Colors.navFloatingBg,
+    paddingTop: Spacing.md,
+    paddingHorizontal: Spacing.sm,
   },
   navItem: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingVertical: Spacing.md,
-  },
-  iconContainer: {
-    marginBottom: Spacing.sm,
+    gap: Spacing.xs + 2,
   },
   label: {
-    ...Typography.label,
-    marginBottom: Spacing.xs,
+    ...Typography.tabLabel,
   },
   labelActive: {
     color: Colors.primary,
   },
   labelInactive: {
     color: Colors.textSecondary,
-    opacity: 0.6,
-  },
-  underline: {
-    width: 24,
-    height: 3,
-    backgroundColor: Colors.primary,
-    borderRadius: 1.5,
-    marginTop: Spacing.xs,
   },
 });

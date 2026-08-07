@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Bell } from 'lucide-react-native';
+import { Bell, Menu } from 'lucide-react-native';
 import { supabase } from '../../services/supabase';
 import {
   Colors,
@@ -49,7 +49,7 @@ export default function HomeScreen() {
   }, []);
 
   const metrics = [
-    { label: 'Steps', value: '7,842', unit: 'Steps' },
+    { label: 'Steps', value: '7842', unit: 'Steps' },
     { label: 'Sleep', value: '7h', unit: 'Hours' },
     { label: 'BPM', value: '72', unit: 'Heart Rate' },
     { label: 'Calories', value: '392', unit: 'Kcal' },
@@ -106,8 +106,18 @@ export default function HomeScreen() {
               <Text style={styles.greetingName}>{userName}! 👋</Text>
             </View>
           </View>
-          <View style={styles.notificationBell}>
-            <Bell size={18} color={Colors.textSecondary} />
+          <View style={styles.headerActions}>
+            <View style={styles.headerIconButton}>
+              <Bell size={18} color={Colors.textSecondary} />
+            </View>
+            <TouchableOpacity
+              style={styles.headerIconButton}
+              onPress={() => router.push('/profile')}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Open profile menu">
+              <Menu size={20} color={Colors.textPrimary} />
+            </TouchableOpacity>
           </View>
         </MotiView>
 
@@ -243,7 +253,12 @@ const styles = StyleSheet.create({
     ...Typography.cardTitle,
     color: Colors.textPrimary,
   },
-  notificationBell: {
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  headerIconButton: {
     width: 40,
     height: 40,
     borderRadius: Radius.round,

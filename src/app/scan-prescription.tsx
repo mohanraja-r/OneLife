@@ -1,12 +1,23 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, Image, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+  Image,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
-import { scanPrescription, ScannedMedicine } from '../services/prescriptionScan';
+import {
+  scanPrescription,
+  ScannedMedicine,
+} from '../services/prescriptionScan';
 import { addMedicine } from '../services/medicine';
-import { requestNotificationPermission, scheduleMedicineReminder } from '../services/notifications';
 import { Colors, Spacing, Radius, Typography } from '../constants/theme';
 
 export default function ScanPrescriptionScreen() {
@@ -21,13 +32,19 @@ export default function ScanPrescriptionScreen() {
       : await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      Alert.alert('Permission needed', 'Camera/photo access is required to scan a prescription.');
+      Alert.alert(
+        'Permission needed',
+        'Camera/photo access is required to scan a prescription.'
+      );
       return;
     }
 
     const result = fromCamera
       ? await ImagePicker.launchCameraAsync({ quality: 0.7, base64: false })
-      : await ImagePicker.launchImageLibraryAsync({ quality: 0.7, base64: false });
+      : await ImagePicker.launchImageLibraryAsync({
+          quality: 0.7,
+          base64: false,
+        });
 
     if (result.canceled || !result.assets[0]) return;
 
@@ -36,7 +53,9 @@ export default function ScanPrescriptionScreen() {
     setScanning(true);
 
     try {
-      const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
       const mediaType = result.assets[0].mimeType ?? 'image/jpeg';
 
       const scanResult = await scanPrescription(base64, mediaType);
@@ -44,12 +63,18 @@ export default function ScanPrescriptionScreen() {
       if (scanResult.error) {
         Alert.alert('Could not read prescription', scanResult.error);
       } else if (scanResult.medicines.length === 0) {
-        Alert.alert('No medicines found', 'Try a clearer photo, or add medicines manually.');
+        Alert.alert(
+          'No medicines found',
+          'Try a clearer photo, or add medicines manually.'
+        );
       } else {
         setMedicines(scanResult.medicines);
       }
     } catch (err: any) {
-      Alert.alert('Error scanning prescription', err.message ?? 'Something went wrong');
+      Alert.alert(
+        'Error scanning prescription',
+        err.message ?? 'Something went wrong'
+      );
     } finally {
       setScanning(false);
     }
@@ -64,7 +89,7 @@ export default function ScanPrescriptionScreen() {
     try {
       for (const med of medicines) {
         const timesForFrequency = deriveDefaultTimes(med.frequency);
-        const saved = await addMedicine({
+        await addMedicine({
           name: med.name,
           dosage: med.dosage,
           frequency: med.frequency,
@@ -72,24 +97,22 @@ export default function ScanPrescriptionScreen() {
           foodRelation: med.foodRelation,
           durationType: med.durationDays ? 'course' : 'ongoing',
           durationEndDate: med.durationDays
-            ? new Date(Date.now() + med.durationDays * 86400000).toISOString().slice(0, 10)
+            ? new Date(Date.now() + med.durationDays * 86400000)
+                .toISOString()
+                .slice(0, 10)
             : undefined,
         });
 
-        // Notifications disabled on Android for now — see add-medicine.tsx
-        // for the same guard and reasoning.
-        if (Platform.OS !== 'android') {
-          const granted = await requestNotificationPermission();
-          if (granted) {
-            for (const time of timesForFrequency) {
-              await scheduleMedicineReminder(saved.name, saved.dosage, time);
-            }
-          }
-        }
+        // TODO(notifications): reminders are not wired up yet. Once
+        // implemented, schedule one local notification per entry in
+        // `timesForFrequency` here — same as the add-medicine.tsx call site.
       }
       router.back();
     } catch (err: any) {
-      Alert.alert('Error adding medicines', err.message ?? 'Something went wrong');
+      Alert.alert(
+        'Error adding medicines',
+        err.message ?? 'Something went wrong'
+      );
     } finally {
       setSaving(false);
     }
@@ -108,18 +131,28 @@ export default function ScanPrescriptionScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         {!photoUri && (
           <View style={styles.captureBox}>
-            <Text style={styles.captureHint}>Point your camera at the prescription</Text>
+            <Text style={styles.captureHint}>
+              Point your camera at the prescription
+            </Text>
           </View>
         )}
-        {photoUri && <Image source={{ uri: photoUri }} style={styles.preview} />}
+        {photoUri && (
+          <Image source={{ uri: photoUri }} style={styles.preview} />
+        )}
 
         {!photoUri && (
           <View style={styles.buttonRow}>
-            <TouchableOpacity style={styles.primaryButton} onPress={() => pickAndScan(true)}>
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={() => pickAndScan(true)}>
               <Text style={styles.primaryButtonText}>📷 Take photo</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.secondaryButton} onPress={() => pickAndScan(false)}>
-              <Text style={styles.secondaryButtonText}>Choose from gallery</Text>
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={() => pickAndScan(false)}>
+              <Text style={styles.secondaryButtonText}>
+                Choose from gallery
+              </Text>
             </TouchableOpacity>
           </View>
         )}
@@ -135,8 +168,8 @@ export default function ScanPrescriptionScreen() {
           <>
             <View style={styles.detectedBanner}>
               <Text style={styles.detectedText}>
-                {medicines.length} medicine{medicines.length > 1 ? 's' : ''} detected — review before
-                adding
+                {medicines.length} medicine{medicines.length > 1 ? 's' : ''}{' '}
+                detected — review before adding
               </Text>
             </View>
 
@@ -149,10 +182,15 @@ export default function ScanPrescriptionScreen() {
                   </TouchableOpacity>
                 </View>
                 <Text style={styles.medicineDetail}>
-                  {med.dosage} · {med.frequency} · {med.foodRelation === 'any' ? 'any time' : `${med.foodRelation} food`}
+                  {med.dosage} · {med.frequency} ·{' '}
+                  {med.foodRelation === 'any'
+                    ? 'any time'
+                    : `${med.foodRelation} food`}
                 </Text>
                 {med.durationDays && (
-                  <Text style={styles.medicineDetailMuted}>{med.durationDays} days</Text>
+                  <Text style={styles.medicineDetailMuted}>
+                    {med.durationDays} days
+                  </Text>
                 )}
               </View>
             ))}
@@ -160,14 +198,14 @@ export default function ScanPrescriptionScreen() {
             <TouchableOpacity
               style={styles.addAllButton}
               onPress={handleAddAll}
-              disabled={saving}
-            >
+              disabled={saving}>
               <Text style={styles.addAllText}>
                 {saving ? 'Adding...' : `Add ${medicines.length} to Medicine`}
               </Text>
             </TouchableOpacity>
             <Text style={styles.disclaimer}>
-              Always verify against the physical prescription before your first dose.
+              Always verify against the physical prescription before your first
+              dose.
             </Text>
           </>
         )}
@@ -182,7 +220,8 @@ function deriveDefaultTimes(frequency: string): string[] {
   const f = frequency.toLowerCase();
   if (f.includes('once')) return ['09:00'];
   if (f.includes('twice')) return ['09:00', '21:00'];
-  if (f.includes('three') || f.includes('thrice')) return ['08:00', '14:00', '20:00'];
+  if (f.includes('three') || f.includes('thrice'))
+    return ['08:00', '14:00', '20:00'];
   return ['09:00'];
 }
 
@@ -210,7 +249,12 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   captureHint: { color: Colors.textSecondary, fontSize: 13 },
-  preview: { width: '100%', height: 220, borderRadius: Radius.lg, marginBottom: Spacing.lg },
+  preview: {
+    width: '100%',
+    height: 220,
+    borderRadius: Radius.lg,
+    marginBottom: Spacing.lg,
+  },
   buttonRow: { gap: Spacing.sm },
   primaryButton: {
     backgroundColor: Colors.textPrimary,
@@ -226,8 +270,18 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     alignItems: 'center',
   },
-  secondaryButtonText: { color: Colors.textPrimary, fontSize: 14, fontWeight: '600' },
-  scanningRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, justifyContent: 'center', marginTop: Spacing.lg },
+  secondaryButtonText: {
+    color: Colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  scanningRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    justifyContent: 'center',
+    marginTop: Spacing.lg,
+  },
   scanningText: { color: Colors.textSecondary, fontSize: 13 },
   detectedBanner: {
     backgroundColor: Colors.accentLight,
@@ -243,7 +297,11 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     marginBottom: Spacing.sm,
   },
-  medicineCardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.xs },
+  medicineCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.xs,
+  },
   medicineName: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
   removeText: { color: Colors.textMuted, fontSize: 14 },
   medicineDetail: { fontSize: 12, color: Colors.textSecondary },
@@ -256,5 +314,10 @@ const styles = StyleSheet.create({
     marginTop: Spacing.md,
   },
   addAllText: { color: 'white', fontSize: 15, fontWeight: '600' },
-  disclaimer: { fontSize: 10.5, color: Colors.textMuted, textAlign: 'center', marginTop: Spacing.sm },
+  disclaimer: {
+    fontSize: 10.5,
+    color: Colors.textMuted,
+    textAlign: 'center',
+    marginTop: Spacing.sm,
+  },
 });
