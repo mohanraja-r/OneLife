@@ -26,7 +26,9 @@ serve(async (req) => {
       imageBase64 ? 'in this photo' : `described as: "${manualText}"`
     }. This is likely Indian home-cooked or restaurant food. The user's goal is "${userGoal}" and
 dietary preference is "${dietaryPreference}". Return a JSON object with:
-- items: array of { name, calories, protein, carbs, fat } (numbers, per typical serving)
+- items: array of { name, calories, protein, carbs, fat, quantity, unit } where the macros are
+  numbers for the portion you estimate, quantity is that portion as a number, and unit is one of
+  "g", "ml", "piece", "cup", "tbsp", "bowl"
 - suggestion: a short (1-2 sentence), calm, practical note on how this meal fits the user's goal.
 Do not give medical advice. Return ONLY valid JSON, no markdown fences, no other text.`;
 
