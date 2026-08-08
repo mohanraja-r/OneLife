@@ -1,7 +1,12 @@
 // In-memory onboarding state across all screens. Persisted to Supabase
 // only at the very end (after account creation on the final screen).
 
-export type Gender = 'woman' | 'man' | 'non_binary' | 'unspecified';
+// Gender lives with the profile service because the nav and other screens read
+// it back off `profiles` long after onboarding is done.
+import type { Gender } from '../../services/profile';
+
+export type { Gender };
+
 export type HeightUnit = 'cm' | 'ft_in';
 export type WeightUnit = 'kg' | 'lb';
 export type WorkoutFrequency = 'rarely' | 'sometimes' | 'frequently';

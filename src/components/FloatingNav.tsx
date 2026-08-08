@@ -7,10 +7,12 @@ import {
   House,
   Pill,
   SlidersHorizontal,
+  Venus,
 } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import {
   Colors,
   Radius,
@@ -18,6 +20,7 @@ import {
   Spacing,
   Typography,
 } from '../constants/theme';
+import { useWomensHealthEnabled } from '../services/profile';
 
 interface NavItem {
   label: string;
@@ -27,33 +30,60 @@ interface NavItem {
   match: string;
 }
 
-const navItems: NavItem[] = [
-  { label: 'Home', icon: House, route: '/(tabs)/home', match: '/home' },
-  { label: 'Medicine', icon: Pill, route: '/(tabs)/medicine', match: '/medicine' },
-  {
-    label: 'Planner',
-    icon: CalendarCheck,
-    route: '/(tabs)/planner',
-    match: '/planner',
-  },
-  { label: 'Health', icon: Heart, route: '/(tabs)/health', match: '/health' },
-  // There is no (tabs)/more screen; "More" opens Settings, which is where the
-  // secondary destinations (profile, family, reports) hang off.
-  {
-    label: 'More',
-    icon: SlidersHorizontal,
-    route: '/settings',
-    match: '/settings',
-  },
-];
+const home: NavItem = {
+  label: 'Home',
+  icon: House,
+  route: '/(tabs)/home',
+  match: '/home',
+};
+const medicine: NavItem = {
+  label: 'Medicine',
+  icon: Pill,
+  route: '/(tabs)/medicine',
+  match: '/medicine',
+};
+const planner: NavItem = {
+  label: 'Planner',
+  icon: CalendarCheck,
+  route: '/(tabs)/planner',
+  match: '/planner',
+};
+const health: NavItem = {
+  label: 'Health',
+  icon: Heart,
+  route: '/(tabs)/health',
+  match: '/health',
+};
+const women: NavItem = {
+  label: 'Women',
+  icon: Venus,
+  route: '/(tabs)/women',
+  match: '/women',
+};
+// There is no (tabs)/more screen; "More" opens Settings, which is where the
+// secondary destinations (profile, family, reports) hang off.
+const more: NavItem = {
+  label: 'More',
+  icon: SlidersHorizontal,
+  route: '/settings',
+  match: '/settings',
+};
+
+const defaultItems: NavItem[] = [home, medicine, planner, health, more];
+// Five tabs is the most this bar fits, so Women's Health takes the slot "More"
+// held — Settings stays reachable from the profile panel and the app header.
+const womensItems: NavItem[] = [home, medicine, planner, women, health];
 
 // Bottom tab bar: a white sheet pinned to the bottom edge with rounded top
 // corners, one row of five icon + label tabs, and the active tab picked out in
-// the brand violet with a soft tinted fill.
+// the brand violet with a soft tinted fill. Users whose profile gender is
+// `woman` get the Women's Health destination in place of "More".
 export default function FloatingNav() {
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
+  const womensHealth = useWomensHealthEnabled();
+  const navItems = womensHealth ? womensItems : defaultItems;
 
   return (
     <View style={styles.container}>
