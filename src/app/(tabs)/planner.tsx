@@ -1,7 +1,20 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
-import { MotiView } from 'moti';
-import { useCallback, useState } from 'react';
+import type { LucideIcon } from 'lucide-react-native';
 import {
+  Briefcase,
+  CalendarDays,
+  Check,
+  Dumbbell,
+  House,
+  Pill,
+  Plus,
+  Utensils,
+} from 'lucide-react-native';
+import { MotiView } from 'moti';
+import { useCallback, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -9,35 +22,66 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
 import AnimatedPressable from '../../components/AnimatedPressable';
-import AppHeader from '../../components/AppHeader';
 import FloatingNav from '../../components/FloatingNav';
-import { Colors, Radius, Spacing } from '../../constants/theme';
 import {
-  getTasksForDate,
+  Accent,
+  Accents,
+  Colors,
+  Gradients,
+  Motion,
+  Radius,
+  Shadow,
+  Spacing,
+  Typography,
+} from '../../constants/theme';
+import {
   PlannerTask,
+  TaskCategory,
+  getTasksForDate,
   toggleTaskComplete,
 } from '../../services/planner';
-import { getTasksContextForDate } from '../../services/plannerContext';
+import {
+  ContextItem,
+  ContextKind,
+  getTasksContextForDate,
+} from '../../services/plannerContext';
+import { supabase } from '../../services/supabase';
 
-// Rotating pastel palette — matches the reference design, where each
-// timeline card gets a different soft color regardless of category.
-const PALETTE = [
-  { bg: '#E4DFFC', text: '#6C5CE0' }, // lavender
-  { bg: '#D9F5EA', text: '#1E9E74' }, // mint
-  { bg: '#FCE9D9', text: '#D97F3D' }, // peach
-  { bg: '#F7DFF0', text: '#C24FA0' }, // lilac
-];
-
-function toDateString(d: Date) {
-  return d.toISOString().slice(0, 10);
+/** The icon tile and accent a timeline row is drawn with. */
+interface RowVisual {
+  icon: LucideIcon;
+  accent: Accent;
 }
 
-// Full Sun–Sat week containing the given date, matching the reference's
-// fixed week strip (not a rolling 5-day window).
+/** Task categories keep one colour each, so a row reads before you do. */
+const CATEGORY_VISUALS: Record<TaskCategory, RowVisual> = {
+  work: { icon: Briefcase, accent: Accents.blue },
+  personal: { icon: House, accent: Accents.violet },
+  fitness: { icon: Dumbbell, accent: Accents.orange },
+};
+
+/** Read-only markers reuse the colour their own tab uses. */
+const CONTEXT_VISUALS: Record<ContextKind, RowVisual> = {
+  medicine: { icon: Pill, accent: Accents.violet },
+  meal: { icon: Utensils, accent: Accents.green },
+};
+
+const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+/** Formats a Date as a local YYYY-MM-DD key, matching how tasks are stored. */
+function toDateString(d: Date) {
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${month}-${day}`;
+}
+
+/** Returns the Monday-to-Sunday week containing the given date. */
 function getWeek(date: Date) {
   const start = new Date(date);
-  start.setDate(start.getDate() - start.getDay());
+  // getDay() is Sunday-first; shift it so Monday is index 0.
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(start);
     d.setDate(start.getDate() + i);
@@ -45,29 +89,41 @@ function getWeek(date: Date) {
   });
 }
 
+/** Renders an HH:MM time as "8:00 AM". */
 function formatTime12h(time: string) {
   const [h, m] = time.split(':').map(Number);
   const period = h >= 12 ? 'PM' : 'AM';
   const hour12 = h % 12 === 0 ? 12 : h % 12;
-  return `${hour12}${m ? ':' + String(m).padStart(2, '0') : ''}${period.toLowerCase()}`;
+  return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
 }
 
-interface ContextItem {
-  time: string;
-  label: string;
-  icon: string;
-  status: 'done' | 'due' | 'neutral';
+/** Picks the greeting that matches the current time of day. */
+function greetingFor(now: Date) {
+  const hour = now.getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
 }
+
+/** One row of the day: an editable planner task, or a read-only tracker marker. */
+type TimelineEntry =
+  | { key: string; sortKey: string; type: 'task'; task: PlannerTask }
+  | { key: string; sortKey: string; type: 'context'; item: ContextItem };
 
 export default function PlannerScreen() {
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [userName, setUserName] = useState('there');
   const [tasks, setTasks] = useState<PlannerTask[]>([]);
   const [contextItems, setContextItems] = useState<ContextItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const loadDay = useCallback(async (date: Date) => {
-    setLoading(true);
+  /** Loads the tasks and the meal/medicine markers for one day together. */
+  const loadDay = useCallback(async (date: Date, isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
     try {
+      setError(null);
       const dateStr = toDateString(date);
       const [taskList, context] = await Promise.all([
         getTasksForDate(dateStr),
@@ -76,250 +132,333 @@ export default function PlannerScreen() {
       setTasks(taskList);
       setContextItems(context);
     } catch (err) {
-      console.error('Failed to load planner day:', err);
+      setError(err instanceof Error ? err.message : 'Could not load this day.');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  }, []);
+
+  /** Reads the signed-in user's first name for the hero greeting. */
+  const loadName = useCallback(async () => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const user = sessionData.session?.user;
+    if (!user) return;
+
+    const { data } = await supabase
+      .from('profiles')
+      .select('name')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    const profile = data as { name?: string | null } | null;
+    const name = profile?.name ?? user.email?.split('@')[0];
+    if (name) setUserName(name.split(' ')[0]);
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      loadDay(selectedDate);
-    }, [selectedDate, loadDay])
+      void loadDay(selectedDate);
+      void loadName();
+    }, [selectedDate, loadDay, loadName])
   );
 
-  const week = getWeek(selectedDate);
+  /** Flips a task's completion state, then reloads the day. */
+  const toggleTask = async (task: PlannerTask) => {
+    try {
+      await toggleTaskComplete(task.id, !task.completed);
+      await loadDay(selectedDate);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not update that task.');
+    }
+  };
 
-  const timeline = [
-    ...contextItems.map((c) => ({ type: 'context' as const, ...c })),
-    ...tasks
-      .filter((t) => t.time)
-      .map((t) => ({ type: 'task' as const, time: t.time!, task: t })),
-  ].sort((a, b) => (a.time ?? '').localeCompare(b.time ?? ''));
+  const week = useMemo(() => getWeek(selectedDate), [selectedDate]);
+  const todayKey = toDateString(new Date());
+  const selectedKey = toDateString(selectedDate);
 
-  const untimedTasks = tasks.filter((t) => !t.time);
+  // Untimed ("all day") tasks lead the list — an empty sort key sorts first.
+  const timeline = useMemo<TimelineEntry[]>(
+    () =>
+      [
+        ...tasks.map<TimelineEntry>((task) => ({
+          key: `task-${task.id}`,
+          sortKey: task.time ?? '',
+          type: 'task',
+          task,
+        })),
+        ...contextItems.map<TimelineEntry>((item, i) => ({
+          key: `context-${i}`,
+          sortKey: item.time,
+          type: 'context',
+          item,
+        })),
+      ].sort((a, b) => a.sortKey.localeCompare(b.sortKey)),
+    [tasks, contextItems]
+  );
+
+  const doses = contextItems.filter((c) => c.kind === 'medicine');
+  const summary = [
+    {
+      value: String(tasks.filter((t) => !t.completed).length),
+      caption: 'Tasks left',
+    },
+    {
+      value: String(tasks.filter((t) => t.completed).length),
+      caption: 'Completed',
+    },
+    {
+      value: `${doses.filter((d) => d.status === 'done').length}/${doses.length}`,
+      caption: 'Doses taken',
+    },
+    {
+      value: String(contextItems.filter((c) => c.kind === 'meal').length),
+      caption: 'Meals logged',
+    },
+  ];
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <AppHeader title="Planner" />
-
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={loading}
-            onRefresh={() => loadDay(selectedDate)}
+            refreshing={refreshing}
+            onRefresh={() => void loadDay(selectedDate, true)}
+            tintColor={Colors.primary}
           />
         }>
-        {/* "This week" card */}
-        <MotiView
-          from={{ opacity: 0, translateY: -8 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 280 }}
-          style={styles.weekCard}>
-          <View style={styles.weekCardHeader}>
-            <Text style={styles.weekCardTitle}>This week</Text>
-            <AnimatedPressable haptic={false}>
-              <Text style={styles.seeAll}>See all</Text>
-            </AnimatedPressable>
-          </View>
+        <View style={styles.header}>
+          <Text style={styles.screenTitle}>Planner</Text>
+          <AnimatedPressable
+            onPress={() => setSelectedDate(new Date())}
+            style={styles.todayButton}>
+            <CalendarDays size={18} color={Colors.primary} strokeWidth={2} />
+          </AnimatedPressable>
+        </View>
 
-          <View style={styles.weekRow}>
-            {week.map((d) => {
-              const isSelected = toDateString(d) === toDateString(selectedDate);
-              return (
-                <AnimatedPressable
-                  key={d.toISOString()}
-                  onPress={() => setSelectedDate(d)}
-                  style={styles.dayPillWrap}>
-                  <Text style={styles.dayLabel}>
-                    {d
-                      .toLocaleDateString('en-IN', { weekday: 'short' })
-                      .toUpperCase()}
-                  </Text>
-                  <MotiView
-                    animate={{
-                      backgroundColor: isSelected
-                        ? Colors.textPrimary
-                        : 'transparent',
-                      scale: isSelected ? 1 : 0.92,
-                    }}
-                    transition={{ type: 'spring', damping: 14 }}
-                    style={styles.dayPill}>
-                    <Text
-                      style={[
-                        styles.dayNumber,
-                        isSelected && styles.dayNumberSelected,
-                      ]}>
-                      {String(d.getDate()).padStart(2, '0')}
-                    </Text>
-                  </MotiView>
-                </AnimatedPressable>
-              );
-            })}
-          </View>
+        {/* Hero: greeting over the brand gradient, with the week strip inset
+            into its lower edge the way the reference design has it. */}
+        <MotiView
+          from={{ opacity: 0, translateY: 16 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: Motion.slow }}
+          style={styles.heroCard}>
+          <LinearGradient
+            colors={Gradients.primary}
+            start={Gradients.diagonal.start}
+            end={Gradients.diagonal.end}
+            style={styles.heroGradient}>
+            <Text style={styles.heroGreeting}>
+              {greetingFor(new Date())}, {userName}! ☀️
+            </Text>
+            <Text style={styles.heroSubtitle}>Let’s make today amazing</Text>
+
+            <View style={styles.weekStrip}>
+              {week.map((day, index) => {
+                const dayKey = toDateString(day);
+                const isSelected = dayKey === selectedKey;
+                const isToday = dayKey === todayKey;
+                return (
+                  <AnimatedPressable
+                    key={dayKey}
+                    onPress={() => setSelectedDate(day)}
+                    style={styles.dayColumn}>
+                    <Text style={styles.dayLabel}>{WEEKDAY_LABELS[index]}</Text>
+                    <MotiView
+                      animate={{
+                        backgroundColor: isSelected
+                          ? Colors.primary
+                          : Colors.surfaceTransparent,
+                      }}
+                      transition={{ type: 'timing', duration: Motion.fast }}
+                      style={styles.dayPill}>
+                      <Text
+                        style={[
+                          styles.dayNumber,
+                          isToday && styles.dayNumberToday,
+                          isSelected && styles.dayNumberSelected,
+                        ]}>
+                        {day.getDate()}
+                      </Text>
+                    </MotiView>
+                  </AnimatedPressable>
+                );
+              })}
+            </View>
+          </LinearGradient>
         </MotiView>
 
-        {/* Untimed tasks */}
-        {untimedTasks.length > 0 && (
-          <View style={styles.untimedSection}>
-            {untimedTasks.map((task, i) => {
-              const color = PALETTE[i % PALETTE.length];
-              return (
-                <MotiView
-                  key={task.id}
-                  from={{ opacity: 0, translateX: -12 }}
-                  animate={{ opacity: 1, translateX: 0 }}
-                  transition={{
-                    type: 'timing',
-                    duration: 240,
-                    delay: 80 + i * 50,
-                  }}>
-                  <AnimatedPressable
-                    onPress={() =>
-                      router.push({
-                        pathname: '/add-task',
-                        params: { taskId: task.id },
-                      })
-                    }
-                    style={[styles.untimedCard, { backgroundColor: color.bg }]}>
-                    <AnimatedPressable
-                      onPress={() =>
-                        toggleTaskComplete(task.id, !task.completed).then(() =>
-                          loadDay(selectedDate)
-                        )
-                      }>
-                      <View
-                        style={[
-                          styles.checkbox,
-                          task.completed && {
-                            backgroundColor: color.text,
-                            borderColor: color.text,
-                          },
-                        ]}>
-                        {task.completed && (
-                          <Text style={styles.checkmark}>✓</Text>
-                        )}
-                      </View>
-                    </AnimatedPressable>
-                    <Text
-                      style={[
-                        styles.taskTitle,
-                        { color: color.text },
-                        task.completed && styles.taskTitleDone,
-                      ]}>
-                      {task.title}
-                    </Text>
-                  </AnimatedPressable>
-                </MotiView>
-              );
-            })}
+        <Text style={styles.sectionTitle}>Today’s Summary</Text>
+
+        <View style={styles.summaryGrid}>
+          {summary.map((tile, index) => (
+            <MotiView
+              key={tile.caption}
+              from={{ opacity: 0, scale: 0.92 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{
+                type: 'timing',
+                duration: Motion.base,
+                delay: 100 + index * Motion.stagger,
+              }}
+              style={styles.summaryCard}>
+              <Text style={styles.summaryValue} numberOfLines={1}>
+                {tile.value}
+              </Text>
+              <Text style={styles.summaryCaption}>{tile.caption}</Text>
+            </MotiView>
+          ))}
+        </View>
+
+        <Text style={styles.sectionTitle}>Upcoming</Text>
+
+        {!!error && (
+          <View style={styles.errorCard}>
+            <Text style={styles.errorText}>{error}</Text>
+            <AnimatedPressable onPress={() => void loadDay(selectedDate)}>
+              <Text style={styles.errorRetry}>Try again</Text>
+            </AnimatedPressable>
           </View>
         )}
 
-        {/* Timeline */}
-        <View style={styles.timeline}>
-          {timeline.length === 0 && untimedTasks.length === 0 && !loading && (
-            <MotiView
-              from={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>
-                Nothing scheduled for this day
-              </Text>
-            </MotiView>
-          )}
+        {loading ? (
+          <View style={styles.loading}>
+            <ActivityIndicator color={Colors.primary} />
+          </View>
+        ) : timeline.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <View style={styles.emptyTile}>
+              <CalendarDays size={26} color={Colors.primary} strokeWidth={1.8} />
+            </View>
+            <Text style={styles.emptyTitle}>Nothing scheduled</Text>
+            <Text style={styles.emptySubtitle}>
+              Add a task and it will show up here alongside the meals and doses
+              you log that day.
+            </Text>
+          </View>
+        ) : (
+          timeline.map((entry, index) => {
+            const visual =
+              entry.type === 'task'
+                ? CATEGORY_VISUALS[entry.task.category]
+                : CONTEXT_VISUALS[entry.item.kind];
+            const Icon = visual.icon;
+            const done =
+              entry.type === 'task'
+                ? entry.task.completed
+                : entry.item.status === 'done';
+            const time =
+              entry.type === 'task'
+                ? entry.task.time
+                  ? formatTime12h(entry.task.time)
+                  : 'All day'
+                : formatTime12h(entry.item.time);
 
-          {timeline.map((item, index) => {
-            const color = PALETTE[index % PALETTE.length];
+            const body = (
+              <>
+                <Text style={[styles.rowTime, { color: visual.accent.main }]}>
+                  {time}
+                </Text>
+                <View
+                  style={[
+                    styles.rowTile,
+                    { backgroundColor: visual.accent.tint },
+                  ]}>
+                  <Icon size={18} color={visual.accent.main} strokeWidth={2} />
+                </View>
+                <View style={styles.rowText}>
+                  <Text
+                    style={[styles.rowTitle, done && styles.rowTitleDone]}
+                    numberOfLines={1}>
+                    {entry.type === 'task'
+                      ? entry.task.title
+                      : entry.item.label}
+                  </Text>
+                  <Text style={styles.rowSubtitle} numberOfLines={1}>
+                    {entry.type === 'task'
+                      ? entry.task.category
+                      : entry.item.detail}
+                  </Text>
+                </View>
+              </>
+            );
+
             return (
               <MotiView
-                key={index}
-                from={{ opacity: 0, translateY: 14 }}
-                animate={{ opacity: 1, translateY: 0 }}
+                key={entry.key}
+                from={{ opacity: 0, translateX: -12 }}
+                animate={{ opacity: 1, translateX: 0 }}
                 transition={{
                   type: 'timing',
-                  duration: 260,
-                  delay: 100 + index * 60,
-                }}
-                style={styles.timelineRow}>
-                <Text style={styles.timelineTime}>
-                  {formatTime12h(item.time)}
-                </Text>
-
-                {item.type === 'context' ? (
-                  <View style={[styles.block, { backgroundColor: color.bg }]}>
-                    <Text style={[styles.blockTitle, { color: color.text }]}>
-                      {item.icon} {item.label}
-                    </Text>
-                    {item.status === 'done' && (
-                      <Text style={[styles.blockCheck, { color: color.text }]}>
-                        ✓
-                      </Text>
-                    )}
-                  </View>
-                ) : (
+                  duration: Motion.fast,
+                  delay: Motion.enterDelay + index * Motion.stagger,
+                }}>
+                {entry.type === 'task' ? (
                   <AnimatedPressable
                     onPress={() =>
                       router.push({
                         pathname: '/add-task',
-                        params: { taskId: item.task.id },
+                        params: { taskId: entry.task.id },
                       })
                     }
-                    style={[styles.block, { backgroundColor: color.bg }]}>
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        style={[
-                          styles.blockTitle,
-                          { color: color.text },
-                          item.task.completed && styles.taskTitleDone,
-                        ]}>
-                        {item.task.title}
-                      </Text>
-                      <Text
-                        style={[styles.blockSubtitle, { color: color.text }]}>
-                        {formatTime12h(item.task.time!)} · {item.task.category}
-                      </Text>
-                    </View>
+                    style={styles.row}>
+                    {body}
                     <AnimatedPressable
-                      onPress={() =>
-                        toggleTaskComplete(
-                          item.task.id,
-                          !item.task.completed
-                        ).then(() => loadDay(selectedDate))
-                      }>
-                      <View
-                        style={[
-                          styles.checkbox,
-                          item.task.completed && {
-                            backgroundColor: color.text,
-                            borderColor: color.text,
-                          },
-                        ]}>
-                        {item.task.completed && (
-                          <Text style={styles.checkmark}>✓</Text>
+                      onPress={() => void toggleTask(entry.task)}>
+                      <View style={[styles.check, done && styles.checkDone]}>
+                        {done && (
+                          <Check
+                            size={13}
+                            color={Colors.textInverse}
+                            strokeWidth={3}
+                          />
                         )}
                       </View>
                     </AnimatedPressable>
                   </AnimatedPressable>
+                ) : (
+                  // Meals and doses are mirrored here for context only — they
+                  // are edited on their own tabs, so this row is not tappable.
+                  <View style={styles.row}>
+                    {body}
+                    <View style={[styles.check, done && styles.checkDone]}>
+                      {done && (
+                        <Check
+                          size={13}
+                          color={Colors.textInverse}
+                          strokeWidth={3}
+                        />
+                      )}
+                    </View>
+                  </View>
                 )}
               </MotiView>
             );
-          })}
-        </View>
-      </ScrollView>
-
-      {/* Floating add button */}
-      <AnimatedPressable
-        onPress={() =>
-          router.push({
-            pathname: '/add-task',
-            params: { date: toDateString(selectedDate) },
           })
-        }
-        style={styles.fab}>
-        <Text style={styles.fabText}>+</Text>
-      </AnimatedPressable>
+        )}
+
+        <AnimatedPressable
+          onPress={() =>
+            router.push({
+              pathname: '/add-task',
+              params: { date: selectedKey },
+            })
+          }
+          style={styles.addButton}>
+          <LinearGradient
+            colors={Gradients.primary}
+            start={Gradients.horizontal.start}
+            end={Gradients.horizontal.end}
+            style={styles.addButtonFill}>
+            <Plus size={20} color={Colors.textInverse} strokeWidth={2.4} />
+            <Text style={styles.addButtonText}>Add Task</Text>
+          </LinearGradient>
+        </AnimatedPressable>
+
+        <View style={{ height: Spacing.navClearance }} />
+      </ScrollView>
 
       <FloatingNav />
     </SafeAreaView>
@@ -328,105 +467,233 @@ export default function PlannerScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-
-  weekCard: {
-    backgroundColor: Colors.surfaceMuted,
-    borderRadius: Radius.lg,
-    margin: Spacing.md,
-    padding: Spacing.md,
+  scrollContent: {
+    paddingHorizontal: Spacing.screen,
+    paddingTop: Spacing.lg,
   },
-  weekCardHeader: {
+
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.xl,
   },
-  weekCardTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
-  seeAll: { fontSize: 12, color: Colors.textMuted, fontWeight: '600' },
-  weekRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  dayPillWrap: { alignItems: 'center', gap: 6 },
-  dayLabel: { fontSize: 10, color: Colors.textMuted, fontWeight: '600' },
-  dayPill: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+  screenTitle: {
+    ...Typography.screenTitle,
+    color: Colors.textPrimary,
+  },
+  todayButton: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.round,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  dayNumber: { fontSize: 13, fontWeight: '700', color: Colors.textPrimary },
-  dayNumberSelected: { color: 'white' },
 
-  untimedSection: {
-    paddingHorizontal: Spacing.md,
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
+  heroCard: {
+    borderRadius: Radius.xl,
+    overflow: 'hidden',
+    marginBottom: Spacing.xxl,
+    ...Shadow.glow,
   },
-  untimedCard: {
+  heroGradient: {
+    padding: Spacing.xl,
+  },
+  heroGreeting: {
+    ...Typography.cardTitle,
+    color: Colors.onPrimary,
+  },
+  heroSubtitle: {
+    ...Typography.secondary,
+    color: Colors.onPrimaryMuted,
+    marginTop: Spacing.xs,
+  },
+  weekStrip: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.sm,
+    marginTop: Spacing.xl,
+  },
+  dayColumn: {
     alignItems: 'center',
     gap: Spacing.sm,
-    borderRadius: Radius.md,
-    padding: Spacing.sm + 4,
+    flex: 1,
   },
-
-  timeline: { paddingHorizontal: Spacing.md },
-  timelineRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: Spacing.md,
-    gap: Spacing.sm,
-  },
-  timelineTime: {
-    width: 56,
+  dayLabel: {
+    ...Typography.label,
     fontSize: 11,
     color: Colors.textMuted,
-    marginTop: Spacing.sm,
   },
-  block: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  dayPill: {
+    width: 30,
+    height: 30,
+    borderRadius: Radius.round,
+    justifyContent: 'center',
     alignItems: 'center',
+  },
+  dayNumber: {
+    ...Typography.caption,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  dayNumberToday: { color: Colors.primary },
+  dayNumberSelected: { color: Colors.onPrimary },
+
+  sectionTitle: {
+    ...Typography.sectionTitle,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.md,
+  },
+
+  summaryGrid: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginBottom: Spacing.xxl,
+  },
+  summaryCard: {
+    flex: 1,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.sm,
+    alignItems: 'center',
+    ...Shadow.card,
+  },
+  summaryValue: {
+    ...Typography.metricValue,
+    fontSize: 20,
+    lineHeight: 26,
+    color: Colors.textPrimary,
+  },
+  summaryCaption: {
+    ...Typography.label,
+    fontSize: 10,
+    lineHeight: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginTop: Spacing.xs,
+  },
+
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    ...Shadow.card,
+  },
+  rowTime: {
+    ...Typography.label,
+    width: 58,
+  },
+  rowTile: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.tile,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  rowText: { flex: 1 },
+  rowTitle: {
+    ...Typography.optionLabel,
+    fontSize: 15,
+    color: Colors.textPrimary,
+  },
+  rowTitleDone: {
+    textDecorationLine: 'line-through',
+    color: Colors.textMuted,
+  },
+  rowSubtitle: {
+    ...Typography.label,
+    color: Colors.textSecondary,
+    marginTop: 2,
+    textTransform: 'capitalize',
+  },
+  check: {
+    width: 24,
+    height: 24,
+    borderRadius: Radius.round,
+    borderWidth: 1.5,
+    borderColor: Colors.borderStrong,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkDone: {
+    backgroundColor: Colors.success,
+    borderColor: Colors.success,
+  },
+
+  loading: { paddingVertical: Spacing.xxxl, alignItems: 'center' },
+
+  emptyCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: Spacing.xl,
+    alignItems: 'center',
+    ...Shadow.card,
+  },
+  emptyTile: {
+    width: 56,
+    height: 56,
+    borderRadius: Radius.tile,
+    backgroundColor: Colors.primaryTint,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  emptyTitle: {
+    ...Typography.cardTitle,
+    color: Colors.textPrimary,
+  },
+  emptySubtitle: {
+    ...Typography.secondary,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginTop: Spacing.xs,
+  },
+
+  errorCard: {
+    backgroundColor: Colors.errorTint,
     borderRadius: Radius.lg,
     padding: Spacing.md,
+    marginBottom: Spacing.md,
   },
-  blockTitle: { fontSize: 14.5, fontWeight: '700' },
-  blockSubtitle: { fontSize: 11.5, opacity: 0.8, marginTop: 2 },
-  blockCheck: { fontSize: 14, fontWeight: '700' },
+  errorText: { ...Typography.secondary, color: Colors.error },
+  errorRetry: {
+    ...Typography.secondary,
+    fontWeight: '600',
+    color: Colors.error,
+    marginTop: Spacing.xs,
+  },
 
-  taskTitle: { fontSize: 14, fontWeight: '700', flex: 1 },
-  taskTitleDone: { textDecorationLine: 'line-through', opacity: 0.5 },
-
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.15)',
-    justifyContent: 'center',
+  addButton: {
+    borderRadius: Radius.xl,
+    overflow: 'hidden',
+    marginTop: Spacing.sm,
+  },
+  addButtonFill: {
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  checkmark: { color: 'white', fontSize: 12, fontWeight: '700' },
-
-  emptyState: { alignItems: 'center', paddingVertical: Spacing.xl * 2 },
-  emptyStateText: { color: Colors.textMuted, fontSize: 13 },
-
-  fab: {
-    position: 'absolute',
-    right: Spacing.md,
-    // Clears the floating nav pill so the two don't overlap.
-    bottom: 120,
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: Colors.textPrimary,
     justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 5,
+    gap: Spacing.sm,
+    paddingVertical: Spacing.lg,
   },
-  fabText: { color: 'white', fontSize: 26, fontWeight: '600', lineHeight: 28 },
+  addButtonText: {
+    ...Typography.button,
+    color: Colors.textInverse,
+  },
 });

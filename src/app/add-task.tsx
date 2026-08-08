@@ -29,8 +29,18 @@ const REPEAT_OPTIONS: { key: RepeatOption; label: string }[] = [
   { key: 'monthly', label: 'Monthly' },
 ];
 
+/** Formats a Date as a local YYYY-MM-DD key — toISOString() would shift the day
+ *  for anyone not on UTC, saving evening tasks onto the wrong date. */
 function toDateString(d: Date) {
-  return d.toISOString().slice(0, 10);
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${month}-${day}`;
+}
+
+/** Reads a YYYY-MM-DD key back as local midnight on that day. */
+function fromDateString(value: string) {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, month - 1, day);
 }
 function toTimeString(d: Date) {
   return d.toTimeString().slice(0, 5);
@@ -48,7 +58,7 @@ export default function AddTaskScreen() {
 
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<TaskCategory>('personal');
-  const [date, setDate] = useState(params.date ? new Date(params.date) : new Date());
+  const [date, setDate] = useState(params.date ? fromDateString(params.date) : new Date());
   const [time, setTime] = useState<Date | null>(null);
   const [repeat, setRepeat] = useState<RepeatOption>('never');
   const [reminder, setReminder] = useState(true);
@@ -64,7 +74,7 @@ export default function AddTaskScreen() {
         if (!task) return;
         setTitle(task.title);
         setCategory(task.category);
-        setDate(new Date(task.date));
+        setDate(fromDateString(task.date));
         if (task.time) {
           const [h, m] = task.time.split(':').map(Number);
           const t = new Date();
