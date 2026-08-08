@@ -9,16 +9,18 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleQuestionMark,
+  FileText,
   LayoutGrid,
   LogOut,
-  Menu,
   ShieldCheck,
   Stethoscope,
   Target,
   User,
+  Users,
+  Venus,
 } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -31,6 +33,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import FloatingNav from '../components/FloatingNav';
 import {
   Colors,
   Gradients,
@@ -40,6 +43,7 @@ import {
   Spacing,
   Typography,
 } from '../constants/theme';
+import { useWomensHealthEnabled } from '../services/profile';
 import { supabase } from '../services/supabase';
 
 interface ProfileHeaderData {
@@ -55,15 +59,37 @@ interface MenuRow {
   /** Destination for the row; rows without one are not built yet. */
   route?: Href;
   destructive?: boolean;
+  /** Only shown to users whose profile gender is `woman`. */
+  womenOnly?: boolean;
 }
 
-/** The account menu, in the order shown in the approved profile design. */
+/**
+ * The account menu, in the order shown in the approved profile design.
+ *
+ * This screen is the only way into several destinations now: Family and Reports
+ * moved here when the header's hamburger menu went, and Women's Health when the
+ * bottom bar was fixed to the same four tabs for everyone.
+ */
 const MENU_ROWS: MenuRow[] = [
   { key: 'personal', label: 'Personal Information', icon: User },
+  {
+    key: 'women',
+    label: "Women's Health",
+    icon: Venus,
+    route: '/(tabs)/women',
+    womenOnly: true,
+  },
   { key: 'goals', label: 'My Goals', icon: Target },
   { key: 'medical', label: 'Medical Information', icon: Stethoscope },
+  { key: 'family', label: 'Family', icon: Users, route: '/family' },
   { key: 'reminders', label: 'Reminders', icon: Bell },
   { key: 'connected', label: 'Connected Apps', icon: LayoutGrid },
+  {
+    key: 'reports',
+    label: 'Reports & Exports',
+    icon: FileText,
+    route: '/reports',
+  },
   {
     key: 'notifications',
     label: 'Notification Settings',
@@ -76,8 +102,14 @@ const MENU_ROWS: MenuRow[] = [
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
+  const womensHealth = useWomensHealthEnabled();
   const [profile, setProfile] = useState<ProfileHeaderData | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
+
+  const rows = useMemo(
+    () => MENU_ROWS.filter((row) => !row.womenOnly || womensHealth),
+    [womensHealth]
+  );
 
   useEffect(() => {
     loadProfile();
@@ -152,6 +184,8 @@ export default function ProfileScreen() {
         start={Gradients.diagonal.start}
         end={Gradients.diagonal.end}
         style={[styles.hero, { paddingTop: insets.top + Spacing.sm }]}>
+        {/* Profile is a bottom-bar destination now, so the only chrome it needs
+            is a way back to wherever the user came from. */}
         <View style={styles.heroBar}>
           <TouchableOpacity
             onPress={() => router.back()}
@@ -159,15 +193,6 @@ export default function ProfileScreen() {
             accessibilityRole="button"
             accessibilityLabel="Go back">
             <ChevronLeft size={26} color={Colors.onPrimaryMuted} />
-          </TouchableOpacity>
-
-          {/* Same affordance that opened this panel — tapping it closes it. */}
-          <TouchableOpacity
-            onPress={() => router.back()}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Close menu">
-            <Menu size={26} color={Colors.onPrimary} />
           </TouchableOpacity>
         </View>
 
@@ -194,12 +219,9 @@ export default function ProfileScreen() {
 
       <View style={styles.sheet}>
         <ScrollView
-          contentContainerStyle={[
-            styles.sheetContent,
-            { paddingBottom: insets.bottom + Spacing.xl },
-          ]}
+          contentContainerStyle={styles.sheetContent}
           showsVerticalScrollIndicator={false}>
-          {MENU_ROWS.map((row, index) => {
+          {rows.map((row, index) => {
             const Icon = row.icon;
             return (
               <MotiView
@@ -224,7 +246,7 @@ export default function ProfileScreen() {
                   <Text style={styles.rowLabel}>{row.label}</Text>
                   <ChevronRight size={19} color={Colors.textMuted} />
                 </TouchableOpacity>
-                {index < MENU_ROWS.length - 1 && <View style={styles.divider} />}
+                {index < rows.length - 1 && <View style={styles.divider} />}
               </MotiView>
             );
           })}
@@ -247,6 +269,8 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </ScrollView>
       </View>
+
+      <FloatingNav />
     </View>
   );
 }
@@ -303,6 +327,8 @@ const styles = StyleSheet.create({
   sheetContent: {
     paddingHorizontal: Spacing.screen,
     paddingTop: Spacing.lg,
+    // Clears the floating nav, which handles its own safe-area inset.
+    paddingBottom: Spacing.navClearance,
   },
   row: {
     flexDirection: 'row',

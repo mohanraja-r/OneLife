@@ -8,7 +8,14 @@ export interface MealItem {
   protein: number;
   carbs: number;
   fat: number;
+  /** Serving amount the macros above describe, e.g. `120` in "120 g". */
+  quantity?: number;
+  /** Unit the serving is measured in — `g`, `ml`, `cup`, `piece`. */
+  unit?: string;
 }
+
+/** Units the serving-size picker offers, in the order it shows them. */
+export const SERVING_UNITS = ['g', 'ml', 'piece', 'cup', 'tbsp', 'bowl'] as const;
 
 export interface Meal {
   id: string;
@@ -143,6 +150,21 @@ export async function getFrequentMeals(): Promise<Meal[]> {
     .sort((a, b) => b.count - a.count)
     .slice(0, 5)
     .map((g) => g.meal);
+}
+
+/** Formats an item's serving as a short label ("120 g"), or '' when the AI did
+ *  not return a portion for it. */
+export function servingLabel(item: MealItem): string {
+  if (item.quantity === undefined || !item.unit) return '';
+  return `${item.quantity} ${item.unit}`;
+}
+
+/** Names a draft meal for the confirm screen — the single item it holds, or the
+ *  first item plus a count of the rest. */
+export function mealTitle(items: MealItem[]): string {
+  if (items.length === 0) return 'Your meal';
+  if (items.length === 1) return items[0].name;
+  return `${items[0].name} +${items.length - 1}`;
 }
 
 /** Sums the macros across a meal's items. Takes just `items` so callers holding

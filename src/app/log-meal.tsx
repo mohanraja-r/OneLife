@@ -1,17 +1,45 @@
-import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import {
+  ArrowLeft,
+  Camera,
+  Images,
+  Keyboard,
+  Sparkles,
+  UtensilsCrossed,
+} from 'lucide-react-native';
+import { MotiView } from 'moti';
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Colors, Spacing, Radius, Typography } from '../constants/theme';
+import PrimaryButton from '../components/PrimaryButton';
+import {
+  Accents,
+  Colors,
+  Gradients,
+  Motion,
+  Radius,
+  Shadow,
+  Spacing,
+  Typography,
+} from '../constants/theme';
 import { errorMessage } from '../services/errors';
 import { identifyMeal } from '../services/meals';
 
 export default function LogMealScreen() {
   const [identifying, setIdentifying] = useState(false);
 
+  /** Opens the camera or the photo library, then hands the shot to the AI and
+   *  routes to the confirm screen with its guesses. */
   const handlePhoto = async (fromCamera: boolean) => {
     const permission = fromCamera
       ? await ImagePicker.requestCameraPermissionsAsync()
@@ -22,19 +50,23 @@ export default function LogMealScreen() {
       return;
     }
 
+    // `base64: true` asks the picker for the encoded bytes directly. Reading the
+    // file afterwards would mean expo-file-system's legacy API, which throws at
+    // runtime on SDK 54.
+    const options: ImagePicker.ImagePickerOptions = { quality: 0.7, base64: true };
     const result = fromCamera
-      ? await ImagePicker.launchCameraAsync({ quality: 0.7 })
-      : await ImagePicker.launchImageLibraryAsync({ quality: 0.7 });
+      ? await ImagePicker.launchCameraAsync(options)
+      : await ImagePicker.launchImageLibraryAsync(options);
 
-    if (result.canceled || !result.assets[0]) return;
+    const asset = result.assets?.[0];
+    if (result.canceled || !asset?.base64) return;
 
     setIdentifying(true);
     try {
-      const uri = result.assets[0].uri;
-      const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
-      const mediaType = result.assets[0].mimeType ?? 'image/jpeg';
-
-      const identified = await identifyMeal({ imageBase64: base64, mediaType });
+      const identified = await identifyMeal({
+        imageBase64: asset.base64,
+        mediaType: asset.mimeType ?? 'image/jpeg',
+      });
 
       if (identified.error) {
         Alert.alert('Could not identify meal', identified.error);
@@ -45,7 +77,7 @@ export default function LogMealScreen() {
       router.replace({
         pathname: '/confirm-meal',
         params: {
-          photoUri: uri,
+          photoUri: asset.uri,
           items: JSON.stringify(identified.items),
           suggestion: identified.suggestion,
           source: 'photo',
@@ -57,44 +89,108 @@ export default function LogMealScreen() {
     }
   };
 
-  const handleTypeInstead = () => {
-    router.push('/log-meal-manual');
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.cancel}>Cancel</Text>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Go back">
+          <ArrowLeft size={24} color={Colors.textPrimary} strokeWidth={2.2} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Log a meal</Text>
-        <View style={{ width: 50 }} />
+        <Text style={styles.headerTitle}>Log a Meal</Text>
+        <View style={styles.headerSpacer} />
       </View>
 
       <View style={styles.content}>
-        {identifying ? (
-          <View style={styles.identifyingBox}>
-            <ActivityIndicator color={Colors.accent} size="large" />
-            <Text style={styles.identifyingText}>Identifying your meal...</Text>
-          </View>
-        ) : (
-          <View style={styles.captureBox}>
-            <Text style={styles.captureHint}>Point your camera at the plate</Text>
-          </View>
-        )}
+        <MotiView
+          from={{ opacity: 0, translateY: 12 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: Motion.base }}>
+          <Text style={styles.title}>What did you eat?</Text>
+          <Text style={styles.subtitle}>
+            Take a photo of your meal or type it in. We&apos;ll help you log it.
+          </Text>
+        </MotiView>
+
+        <MotiView
+          from={{ opacity: 0, scale: 0.94 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: 'timing', duration: Motion.slow, delay: Motion.enterDelay }}
+          style={styles.hero}>
+          {identifying ? (
+            <View style={styles.heroCenter}>
+              <ActivityIndicator color={Colors.primary} size="large" />
+              <Text style={styles.identifyingText}>Identifying your meal…</Text>
+            </View>
+          ) : (
+            <>
+              <View style={styles.plate}>
+                <UtensilsCrossed size={56} color={Colors.primary} strokeWidth={1.6} />
+              </View>
+              <Sparkles
+                size={20}
+                color={Accents.amber.main}
+                strokeWidth={2}
+                style={styles.sparkleTop}
+              />
+              <Sparkles
+                size={14}
+                color={Accents.pink.main}
+                strokeWidth={2}
+                style={styles.sparkleBottom}
+              />
+              <LinearGradient
+                colors={Gradients.primary}
+                start={Gradients.diagonal.start}
+                end={Gradients.diagonal.end}
+                style={styles.heroBadge}>
+                <Camera size={22} color={Colors.textInverse} strokeWidth={2.2} />
+              </LinearGradient>
+            </>
+          )}
+        </MotiView>
 
         {!identifying && (
-          <>
-            <TouchableOpacity style={styles.primaryButton} onPress={() => void handlePhoto(true)}>
-              <Text style={styles.primaryButtonText}>📷 Take photo</Text>
+          <MotiView
+            from={{ opacity: 0, translateY: 12 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: 'timing', duration: Motion.base, delay: Motion.enterDelay * 2 }}
+            style={styles.actions}>
+            <PrimaryButton
+              label="Take Photo"
+              icon={Camera}
+              hideArrow
+              onPress={() => void handlePhoto(true)}
+            />
+
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              activeOpacity={0.85}
+              onPress={() => router.push('/log-meal-manual')}
+              accessibilityRole="button"
+              accessibilityLabel="Type your meal instead">
+              <Keyboard size={20} color={Colors.textPrimary} strokeWidth={2} />
+              <Text style={styles.secondaryButtonText}>Type Instead</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.secondaryButton} onPress={handleTypeInstead}>
-              <Text style={styles.secondaryButtonText}>⌨️ Type instead</Text>
+
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>Or choose from gallery</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <TouchableOpacity
+              style={styles.galleryLink}
+              activeOpacity={0.7}
+              onPress={() => void handlePhoto(false)}
+              accessibilityRole="button"
+              accessibilityLabel="Open gallery">
+              <Images size={18} color={Colors.primary} strokeWidth={2} />
+              <Text style={styles.galleryLinkText}>Open Gallery</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.galleryLink} onPress={() => void handlePhoto(false)}>
-              <Text style={styles.galleryLinkText}>or choose from gallery</Text>
-            </TouchableOpacity>
-          </>
+          </MotiView>
         )}
       </View>
     </SafeAreaView>
@@ -105,50 +201,87 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    height: 52,
-  },
-  headerTitle: { ...Typography.heading, color: Colors.textPrimary },
-  cancel: { fontSize: 15, color: Colors.accent },
-  content: { flex: 1, padding: Spacing.md, paddingTop: Spacing.lg },
-  captureBox: {
-    height: 220,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    borderStyle: 'dashed',
-    borderRadius: Radius.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: Colors.surfaceMuted,
-    marginBottom: Spacing.lg,
-  },
-  captureHint: { color: Colors.textSecondary, fontSize: 13 },
-  identifyingBox: {
-    height: 220,
-    justifyContent: 'center',
     alignItems: 'center',
     gap: Spacing.md,
-    marginBottom: Spacing.lg,
+    paddingHorizontal: Spacing.screen,
+    height: 52,
   },
-  identifyingText: { color: Colors.textSecondary, fontSize: 14 },
-  primaryButton: {
-    backgroundColor: Colors.textPrimary,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
+  headerTitle: { ...Typography.cardTitle, color: Colors.textPrimary },
+  headerSpacer: { flex: 1 },
+  content: {
+    flex: 1,
+    paddingHorizontal: Spacing.screen,
+    paddingTop: Spacing.lg,
+  },
+  title: { ...Typography.screenTitle, color: Colors.textPrimary },
+  subtitle: {
+    ...Typography.secondary,
+    color: Colors.textSecondary,
+    marginTop: Spacing.sm,
+  },
+  hero: {
+    flex: 1,
+    minHeight: 200,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: Spacing.sm,
+    marginVertical: Spacing.xl,
   },
-  primaryButtonText: { color: 'white', fontSize: 14, fontWeight: '600' },
+  heroCenter: { alignItems: 'center', gap: Spacing.lg },
+  identifyingText: { ...Typography.secondary, color: Colors.textSecondary },
+  plate: {
+    width: 180,
+    height: 180,
+    borderRadius: Radius.round,
+    backgroundColor: Colors.primaryTint,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sparkleTop: { position: 'absolute', top: '18%', right: '20%' },
+  sparkleBottom: { position: 'absolute', bottom: '24%', left: '22%' },
+  heroBadge: {
+    position: 'absolute',
+    right: '20%',
+    bottom: '12%',
+    width: 52,
+    height: 52,
+    borderRadius: Radius.round,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: Colors.background,
+    ...Shadow.glow,
+  },
+  actions: { gap: Spacing.md, paddingBottom: Spacing.xl },
   secondaryButton: {
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.md,
+    borderWidth: 1.5,
+    borderColor: Colors.borderStrong,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.xl,
+    paddingVertical: Spacing.lg,
   },
-  secondaryButtonText: { color: Colors.textPrimary, fontSize: 14, fontWeight: '600' },
-  galleryLink: { alignItems: 'center', marginTop: Spacing.md },
-  galleryLinkText: { color: Colors.textMuted, fontSize: 12 },
+  secondaryButtonText: { ...Typography.button, color: Colors.textPrimary },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    marginTop: Spacing.xs,
+  },
+  dividerLine: { flex: 1, height: 1, backgroundColor: Colors.border },
+  dividerText: { ...Typography.label, color: Colors.textMuted },
+  galleryLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.sm,
+  },
+  galleryLinkText: {
+    ...Typography.button,
+    fontSize: 15,
+    color: Colors.primary,
+  },
 });
