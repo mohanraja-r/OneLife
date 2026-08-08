@@ -20,6 +20,10 @@ export default function RootLayout() {
       <Stack.Screen name="profile" />
       <Stack.Screen name="personal-information" />
       <Stack.Screen name="family" />
+      <Stack.Screen name="family-members" />
+      <Stack.Screen name="family-member" />
+      <Stack.Screen name="add-family-member" />
+      <Stack.Screen name="join-family" />
       <Stack.Screen name="reports" />
       <Stack.Screen name="settings" />
     </Stack>
