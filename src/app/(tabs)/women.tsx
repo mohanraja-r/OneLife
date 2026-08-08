@@ -62,9 +62,9 @@ const TABS: { id: Tab; label: string }[] = [
 /**
  * Women's Health — cycle tracking and pregnancy, behind a segmented control.
  *
- * Only reachable when the signed-in user's profile gender is `woman`; the
- * bottom nav hides the tab for everyone else, and this screen redirects if the
- * route is opened directly.
+ * Reached from the Women's Health row on the Profile screen, which only shows
+ * for users whose profile gender is `woman`. This screen redirects anyone else
+ * who opens the route directly.
  */
 export default function WomenScreen() {
   const profile = useProfileSummary();

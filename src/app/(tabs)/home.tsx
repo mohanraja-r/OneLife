@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Bell, Menu } from 'lucide-react-native';
+import { Bell } from 'lucide-react-native';
 import { MotiView } from 'moti';
 import React, { useEffect, useState } from 'react';
 import {
@@ -8,7 +8,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   SafeAreaView,
 } from 'react-native';
 
@@ -106,18 +105,12 @@ export default function HomeScreen() {
               <Text style={styles.greetingName}>{userName}! 👋</Text>
             </View>
           </View>
+          {/* Profile lives in the bottom bar now, so the header keeps only
+              notifications. */}
           <View style={styles.headerActions}>
             <View style={styles.headerIconButton}>
               <Bell size={18} color={Colors.textSecondary} />
             </View>
-            <TouchableOpacity
-              style={styles.headerIconButton}
-              onPress={() => router.push('/profile')}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Open profile menu">
-              <Menu size={20} color={Colors.textPrimary} />
-            </TouchableOpacity>
           </View>
         </MotiView>
 
