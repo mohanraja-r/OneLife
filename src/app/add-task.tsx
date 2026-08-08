@@ -1,3 +1,5 @@
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState, useEffect } from 'react';
 import {
   View,
@@ -11,10 +13,10 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { addTask, updateTask, deleteTask, getTaskById, TaskCategory, RepeatOption } from '../services/planner';
+
 import { Colors, Spacing, Radius, Typography } from '../constants/theme';
+import { errorMessage } from '../services/errors';
+import { addTask, updateTask, deleteTask, getTaskById, TaskCategory, RepeatOption } from '../services/planner';
 
 const CATEGORIES: { key: TaskCategory; label: string; icon: string }[] = [
   { key: 'work', label: 'Work', icon: '💼' },
@@ -29,8 +31,18 @@ const REPEAT_OPTIONS: { key: RepeatOption; label: string }[] = [
   { key: 'monthly', label: 'Monthly' },
 ];
 
+/** Formats a Date as a local YYYY-MM-DD key — toISOString() would shift the day
+ *  for anyone not on UTC, saving evening tasks onto the wrong date. */
 function toDateString(d: Date) {
-  return d.toISOString().slice(0, 10);
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${month}-${day}`;
+}
+
+/** Reads a YYYY-MM-DD key back as local midnight on that day. */
+function fromDateString(value: string) {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, month - 1, day);
 }
 function toTimeString(d: Date) {
   return d.toTimeString().slice(0, 5);
@@ -48,7 +60,7 @@ export default function AddTaskScreen() {
 
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<TaskCategory>('personal');
-  const [date, setDate] = useState(params.date ? new Date(params.date) : new Date());
+  const [date, setDate] = useState(params.date ? fromDateString(params.date) : new Date());
   const [time, setTime] = useState<Date | null>(null);
   const [repeat, setRepeat] = useState<RepeatOption>('never');
   const [reminder, setReminder] = useState(true);
@@ -64,7 +76,7 @@ export default function AddTaskScreen() {
         if (!task) return;
         setTitle(task.title);
         setCategory(task.category);
-        setDate(new Date(task.date));
+        setDate(fromDateString(task.date));
         if (task.time) {
           const [h, m] = task.time.split(':').map(Number);
           const t = new Date();
@@ -101,8 +113,8 @@ export default function AddTaskScreen() {
         await addTask(input);
       }
       router.back();
-    } catch (err: any) {
-      Alert.alert('Error saving task', err.message ?? 'Something went wrong');
+    } catch (err) {
+      Alert.alert('Error saving task', errorMessage(err, 'Something went wrong'));
     } finally {
       setSaving(false);
     }
@@ -115,9 +127,11 @@ export default function AddTaskScreen() {
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: async () => {
-          await deleteTask(params.taskId!);
-          router.back();
+        onPress: () => {
+          void (async () => {
+            await deleteTask(params.taskId!);
+            router.back();
+          })();
         },
       },
     ]);
@@ -130,7 +144,7 @@ export default function AddTaskScreen() {
           <Text style={styles.headerAction}>Cancel</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{isEditing ? 'Edit Task' : 'New Task'}</Text>
-        <TouchableOpacity onPress={handleSave} disabled={saving}>
+        <TouchableOpacity onPress={() => void handleSave()} disabled={saving}>
           <Text style={[styles.headerAction, styles.headerActionBold]}>{saving ? '...' : 'Add'}</Text>
         </TouchableOpacity>
       </View>

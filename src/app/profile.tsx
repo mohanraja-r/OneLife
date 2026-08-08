@@ -1,221 +1,330 @@
+import { LinearGradient } from 'expo-linear-gradient';
+import { Href, router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import type { LucideIcon } from 'lucide-react-native';
+// lucide v1 renamed HelpCircle → CircleQuestionMark.
+import {
+  Bell,
+  BellRing,
+  ChevronLeft,
+  ChevronRight,
+  CircleQuestionMark,
+  LayoutGrid,
+  LogOut,
+  Menu,
+  ShieldCheck,
+  Stethoscope,
+  Target,
+  User,
+} from 'lucide-react-native';
+import { MotiView } from 'moti';
 import { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Switch } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { supabase } from '../services/supabase';
-import AppHeader from '../components/AppHeader';
-import { Colors, Spacing, Radius, Typography } from '../constants/theme';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-interface ProfileData {
+import {
+  Colors,
+  Gradients,
+  Motion,
+  Radius,
+  Shadow,
+  Spacing,
+  Typography,
+} from '../constants/theme';
+import { supabase } from '../services/supabase';
+
+interface ProfileHeaderData {
   name: string;
-  goal: string;
-  dietary_preference: string;
-  language: string;
+  email: string;
+  avatarUrl: string | null;
 }
 
-const GOAL_LABELS: Record<string, string> = {
-  lose_weight: 'Lose weight',
-  gain_muscle: 'Gain muscle',
-  maintain: 'Maintain',
-  manage_condition: 'Manage a condition',
-};
+interface MenuRow {
+  key: string;
+  label: string;
+  icon: LucideIcon;
+  /** Destination for the row; rows without one are not built yet. */
+  route?: Href;
+  destructive?: boolean;
+}
 
-const DIET_LABELS: Record<string, string> = {
-  veg: 'Vegetarian',
-  non_veg: 'Non-vegetarian',
-  eggetarian: 'Eggetarian',
-};
+/** The account menu, in the order shown in the approved profile design. */
+const MENU_ROWS: MenuRow[] = [
+  { key: 'personal', label: 'Personal Information', icon: User },
+  { key: 'goals', label: 'My Goals', icon: Target },
+  { key: 'medical', label: 'Medical Information', icon: Stethoscope },
+  { key: 'reminders', label: 'Reminders', icon: Bell },
+  { key: 'connected', label: 'Connected Apps', icon: LayoutGrid },
+  {
+    key: 'notifications',
+    label: 'Notification Settings',
+    icon: BellRing,
+    route: '/settings',
+  },
+  { key: 'privacy', label: 'Privacy & Security', icon: ShieldCheck },
+  { key: 'help', label: 'Help & Support', icon: CircleQuestionMark },
+];
 
 export default function ProfileScreen() {
-  const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [medicineReminders, setMedicineReminders] = useState(true);
-  const [plannerReminders, setPlannerReminders] = useState(true);
+  const insets = useSafeAreaInsets();
+  const [profile, setProfile] = useState<ProfileHeaderData | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     loadProfile();
   }, []);
 
+  /** Loads the signed-in user's name, email and avatar for the gradient header. */
   const loadProfile = async () => {
     const { data: sessionData } = await supabase.auth.getSession();
-    const userId = sessionData.session?.user.id;
-    if (!userId) return;
+    const user = sessionData.session?.user;
+    if (!user) return;
 
     const { data } = await supabase
       .from('profiles')
-      .select('name, goal, dietary_preference, language')
-      .eq('id', userId)
-      .single();
+      .select('name, avatar_url')
+      .eq('id', user.id)
+      .maybeSingle();
 
-    if (data) setProfile(data as ProfileData);
+    setProfile({
+      name: data?.name ?? user.email?.split('@')[0] ?? 'Your profile',
+      email: user.email ?? '',
+      avatarUrl: data?.avatar_url ?? null,
+    });
   };
 
+  /** Opens a menu row's screen, or says so when that screen does not exist yet. */
+  const openRow = (row: MenuRow) => {
+    if (!row.route) {
+      Alert.alert(row.label, 'This section is coming soon.');
+      return;
+    }
+    router.push(row.route);
+  };
+
+  /** Signs out of Supabase and sends the user back to the auth screen. */
+  const performLogout = async () => {
+    setLoggingOut(true);
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      // A missing or already-expired session still means the user is signed
+      // out locally, so only surface a failure if a session survived.
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        setLoggingOut(false);
+        Alert.alert('Could not log out', error.message);
+        return;
+      }
+    }
+
+    setLoggingOut(false);
+    router.replace('/signup');
+  };
+
+  /** Asks for confirmation before logging out. */
   const handleLogout = () => {
     Alert.alert('Log out?', 'You can log back in anytime.', [
       { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Log out',
-        style: 'destructive',
-        onPress: async () => {
-          await supabase.auth.signOut();
-          router.replace('/signup');
-        },
-      },
+      { text: 'Log out', style: 'destructive', onPress: () => void performLogout() },
     ]);
   };
 
-  const initials = profile?.name ? profile.name.slice(0, 2).toUpperCase() : '..';
+  const initials = profile?.name
+    ? profile.name.trim().slice(0, 2).toUpperCase()
+    : '';
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <AppHeader showBack />
+    <View style={styles.container}>
+      <StatusBar style="light" />
 
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.pageTitle}>Profile</Text>
+      <LinearGradient
+        colors={Gradients.primary}
+        start={Gradients.diagonal.start}
+        end={Gradients.diagonal.end}
+        style={[styles.hero, { paddingTop: insets.top + Spacing.sm }]}>
+        <View style={styles.heroBar}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Go back">
+            <ChevronLeft size={26} color={Colors.onPrimaryMuted} />
+          </TouchableOpacity>
 
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials}</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.profileName}>{profile?.name ?? '...'}</Text>
-            <Text style={styles.profileSubtext}>
-              Goal: {profile ? GOAL_LABELS[profile.goal] ?? profile.goal : '...'}
-            </Text>
-          </View>
-          <TouchableOpacity>
-            <Text style={styles.editLink}>Edit</Text>
+          {/* Same affordance that opened this panel — tapping it closes it. */}
+          <TouchableOpacity
+            onPress={() => router.back()}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Close menu">
+            <Menu size={26} color={Colors.onPrimary} />
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.sectionLabel}>PREFERENCES</Text>
-        <View style={styles.group}>
-          <TouchableOpacity style={styles.row}>
-            <Text style={styles.rowIcon}>🎯</Text>
-            <Text style={styles.rowLabel}>Goals &amp; targets</Text>
-            <Text style={styles.chevron}>›</Text>
-          </TouchableOpacity>
-          <View style={styles.rowDivider} />
-          <TouchableOpacity style={styles.row}>
-            <Text style={styles.rowIcon}>🥗</Text>
-            <Text style={styles.rowLabel}>Dietary preference</Text>
-            <Text style={styles.rowValue}>
-              {profile ? DIET_LABELS[profile.dietary_preference] ?? profile.dietary_preference : '...'}
-            </Text>
-            <Text style={styles.chevron}>›</Text>
-          </TouchableOpacity>
-          <View style={styles.rowDivider} />
-          <TouchableOpacity style={styles.row}>
-            <Text style={styles.rowIcon}>🌐</Text>
-            <Text style={styles.rowLabel}>Language</Text>
-            <Text style={styles.rowValue}>{profile?.language === 'en' ? 'English' : profile?.language ?? '...'}</Text>
-            <Text style={styles.chevron}>›</Text>
-          </TouchableOpacity>
-        </View>
+        <MotiView
+          from={{ opacity: 0, translateY: 12 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: Motion.base }}>
+          {profile?.avatarUrl ? (
+            <Image source={{ uri: profile.avatarUrl }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatar, styles.avatarFallback]}>
+              <Text style={styles.avatarInitials}>{initials}</Text>
+            </View>
+          )}
 
-        <Text style={styles.sectionLabel}>NOTIFICATIONS</Text>
-        <View style={styles.group}>
-          <View style={styles.row}>
-            <Text style={styles.rowIcon}>💊</Text>
-            <Text style={styles.rowLabel}>Medicine reminders</Text>
-            <Switch
-              value={medicineReminders}
-              onValueChange={setMedicineReminders}
-              trackColor={{ false: Colors.border, true: Colors.accent }}
-            />
-          </View>
-          <View style={styles.rowDivider} />
-          <View style={styles.row}>
-            <Text style={styles.rowIcon}>📅</Text>
-            <Text style={styles.rowLabel}>Planner reminders</Text>
-            <Switch
-              value={plannerReminders}
-              onValueChange={setPlannerReminders}
-              trackColor={{ false: Colors.border, true: Colors.accent }}
-            />
-          </View>
-        </View>
+          <Text style={styles.name} numberOfLines={1}>
+            {profile?.name ?? ' '}
+          </Text>
+          <Text style={styles.email} numberOfLines={1}>
+            {profile?.email ?? ' '}
+          </Text>
+        </MotiView>
+      </LinearGradient>
 
-        <Text style={styles.sectionLabel}>FAMILY &amp; DATA</Text>
-        <View style={styles.group}>
-          <TouchableOpacity style={styles.row} onPress={() => router.push('/family')}>
-            <Text style={styles.rowIcon}>👨‍👩‍👧</Text>
-            <Text style={styles.rowLabel}>Manage family</Text>
-            <Text style={styles.chevron}>›</Text>
-          </TouchableOpacity>
-          <View style={styles.rowDivider} />
-          <TouchableOpacity style={styles.row}>
-            <Text style={styles.rowIcon}>📄</Text>
-            <Text style={styles.rowLabel}>Export health report</Text>
-            <Text style={styles.chevron}>›</Text>
-          </TouchableOpacity>
-          <View style={styles.rowDivider} />
-          <TouchableOpacity style={styles.row}>
-            <Text style={styles.rowIcon}>🔒</Text>
-            <Text style={styles.rowLabel}>Privacy &amp; data</Text>
-            <Text style={styles.chevron}>›</Text>
-          </TouchableOpacity>
-        </View>
+      <View style={styles.sheet}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.sheetContent,
+            { paddingBottom: insets.bottom + Spacing.xl },
+          ]}
+          showsVerticalScrollIndicator={false}>
+          {MENU_ROWS.map((row, index) => {
+            const Icon = row.icon;
+            return (
+              <MotiView
+                key={row.key}
+                from={{ opacity: 0, translateX: -10 }}
+                animate={{ opacity: 1, translateX: 0 }}
+                transition={{
+                  type: 'timing',
+                  duration: Motion.fast,
+                  delay: Motion.enterDelay + index * Motion.stagger,
+                }}>
+                <TouchableOpacity
+                  style={styles.row}
+                  onPress={() => openRow(row)}
+                  accessibilityRole="button"
+                  activeOpacity={0.6}>
+                  <Icon
+                    size={21}
+                    color={Colors.textPrimary}
+                    strokeWidth={1.7}
+                  />
+                  <Text style={styles.rowLabel}>{row.label}</Text>
+                  <ChevronRight size={19} color={Colors.textMuted} />
+                </TouchableOpacity>
+                {index < MENU_ROWS.length - 1 && <View style={styles.divider} />}
+              </MotiView>
+            );
+          })}
 
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutText}>Log out</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
+          <View style={styles.logoutSeparator} />
+
+          <TouchableOpacity
+            style={styles.row}
+            onPress={handleLogout}
+            disabled={loggingOut}
+            accessibilityRole="button"
+            activeOpacity={0.6}>
+            {loggingOut ? (
+              <ActivityIndicator size="small" color={Colors.danger} />
+            ) : (
+              <LogOut size={21} color={Colors.danger} strokeWidth={1.7} />
+            )}
+            <Text style={[styles.rowLabel, styles.logoutLabel]}>Logout</Text>
+            <ChevronRight size={19} color={Colors.danger} />
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: Spacing.md, paddingBottom: Spacing.xl },
-  pageTitle: { fontSize: 28, fontWeight: '800', color: Colors.textPrimary, marginBottom: Spacing.md },
-  profileCard: {
+  container: { flex: 1, backgroundColor: Colors.primary },
+  hero: {
+    paddingHorizontal: Spacing.screen,
+    paddingBottom: Spacing.xxxl + Spacing.lg,
+  },
+  heroBar: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: Spacing.md,
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
     marginBottom: Spacing.lg,
-    borderWidth: 0.5,
-    borderColor: Colors.border,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 1 },
   },
   avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.accentLight,
+    width: 84,
+    height: 84,
+    borderRadius: Radius.round,
+    borderWidth: 3,
+    borderColor: Colors.onPrimaryFaint,
+    marginBottom: Spacing.lg,
+  },
+  avatarFallback: {
+    backgroundColor: Colors.onPrimaryFaint,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  avatarText: { color: '#2F7A1E', fontSize: 18, fontWeight: '700' },
-  profileName: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
-  profileSubtext: { fontSize: 12.5, color: Colors.textMuted, marginTop: 2 },
-  editLink: { fontSize: 13, color: Colors.accent, fontWeight: '600' },
-  sectionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.textMuted,
-    marginBottom: Spacing.sm,
-    letterSpacing: 0.4,
+  avatarInitials: {
+    ...Typography.cardTitle,
+    fontSize: 28,
+    color: Colors.onPrimary,
   },
-  group: {
+  name: {
+    ...Typography.screenTitle,
+    fontSize: 24,
+    lineHeight: 30,
+    color: Colors.onPrimary,
+  },
+  email: {
+    ...Typography.secondary,
+    color: Colors.onPrimaryMuted,
+    marginTop: Spacing.xs,
+  },
+  sheet: {
+    flex: 1,
     backgroundColor: Colors.surface,
-    borderRadius: Radius.md,
-    marginBottom: Spacing.lg,
-    borderWidth: 0.5,
-    borderColor: Colors.border,
-    overflow: 'hidden',
+    borderTopLeftRadius: Radius.xl,
+    borderTopRightRadius: Radius.xl,
+    marginTop: -Spacing.xxl,
+    ...Shadow.floating,
   },
-  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.sm + 5, paddingHorizontal: Spacing.md, gap: Spacing.sm },
-  rowIcon: { fontSize: 16, width: 22 },
-  rowLabel: { flex: 1, fontSize: 15, color: Colors.textPrimary },
-  rowValue: { fontSize: 13, color: Colors.textMuted },
-  chevron: { fontSize: 18, color: '#C7C7CC' },
-  rowDivider: { height: 0.5, backgroundColor: Colors.border, marginLeft: Spacing.md + 22 + Spacing.sm },
-  logoutButton: { paddingVertical: Spacing.md, alignItems: 'center' },
-  logoutText: { color: Colors.danger, fontSize: 15, fontWeight: '600' },
+  sheetContent: {
+    paddingHorizontal: Spacing.screen,
+    paddingTop: Spacing.lg,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.lg,
+    paddingVertical: Spacing.lg + Spacing.xs,
+  },
+  rowLabel: {
+    ...Typography.body,
+    fontSize: 15,
+    flex: 1,
+    color: Colors.textPrimary,
+  },
+  logoutLabel: { color: Colors.danger, fontWeight: '600' },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: Colors.border,
+    marginLeft: 21 + Spacing.lg,
+  },
+  logoutSeparator: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: Colors.border,
+    marginVertical: Spacing.sm,
+  },
 });

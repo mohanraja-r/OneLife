@@ -1,3 +1,7 @@
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { Bell, Menu } from 'lucide-react-native';
+import { MotiView } from 'moti';
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -6,12 +10,10 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Bell } from 'lucide-react-native';
-import { supabase } from '../../services/supabase';
+
+import AnimatedPressable from '../../components/AnimatedPressable';
+import FloatingNav from '../../components/FloatingNav';
 import {
   Colors,
   Gradients,
@@ -20,15 +22,16 @@ import {
   Typography,
   Shadow,
 } from '../../constants/theme';
-import FloatingNav from '../../components/FloatingNav';
-import AnimatedPressable from '../../components/AnimatedPressable';
-import { MotiView } from 'moti';
+import { supabase } from '../../services/supabase';
+
+
+// TODO: replace with the real score once it is computed from logged data.
+const PLACEHOLDER_HEALTH_SCORE = 82;
 
 export default function HomeScreen() {
   const router = useRouter();
   const [userName, setUserName] = useState('RMR');
-  const [healthScore, setHealthScore] = useState(82);
-  const [loading, setLoading] = useState(true);
+  const healthScore = PLACEHOLDER_HEALTH_SCORE;
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -38,18 +41,15 @@ export default function HomeScreen() {
           const name = sessionData.session.user.email.split('@')[0];
           setUserName(name.charAt(0).toUpperCase() + name.slice(1));
         }
-        // TODO: Fetch actual health score from database
       } catch (err) {
         console.error('Error fetching user data:', err);
-      } finally {
-        setLoading(false);
       }
     };
-    fetchUserData();
+    void fetchUserData();
   }, []);
 
   const metrics = [
-    { label: 'Steps', value: '7,842', unit: 'Steps' },
+    { label: 'Steps', value: '7842', unit: 'Steps' },
     { label: 'Sleep', value: '7h', unit: 'Hours' },
     { label: 'BPM', value: '72', unit: 'Heart Rate' },
     { label: 'Calories', value: '392', unit: 'Kcal' },
@@ -106,8 +106,18 @@ export default function HomeScreen() {
               <Text style={styles.greetingName}>{userName}! 👋</Text>
             </View>
           </View>
-          <View style={styles.notificationBell}>
-            <Bell size={18} color={Colors.textSecondary} />
+          <View style={styles.headerActions}>
+            <View style={styles.headerIconButton}>
+              <Bell size={18} color={Colors.textSecondary} />
+            </View>
+            <TouchableOpacity
+              style={styles.headerIconButton}
+              onPress={() => router.push('/profile')}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Open profile menu">
+              <Menu size={20} color={Colors.textPrimary} />
+            </TouchableOpacity>
           </View>
         </MotiView>
 
@@ -131,7 +141,7 @@ export default function HomeScreen() {
               <Text style={styles.healthScoreLabel}>Health Score</Text>
               <Text style={styles.healthScoreTitle}>⭐ Excellent</Text>
               <Text style={styles.healthScoreSubtitle}>
-                You're doing great! Keep tracking to maintain your streak.
+                You&apos;re doing great! Keep tracking to maintain your streak.
               </Text>
             </View>
           </LinearGradient>
@@ -159,7 +169,7 @@ export default function HomeScreen() {
         {/* Today's Plan */}
         <View style={styles.todaysPlanContainer}>
           <View style={styles.todaysPlanHeader}>
-            <Text style={styles.todaysPlanTitle}>Today's Plan</Text>
+            <Text style={styles.todaysPlanTitle}>Today&apos;s Plan</Text>
             <AnimatedPressable onPress={() => router.push('/(tabs)/planner')}>
               <Text style={styles.viewAllLink}>View all</Text>
             </AnimatedPressable>
@@ -243,7 +253,12 @@ const styles = StyleSheet.create({
     ...Typography.cardTitle,
     color: Colors.textPrimary,
   },
-  notificationBell: {
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  headerIconButton: {
     width: 40,
     height: 40,
     borderRadius: Radius.round,

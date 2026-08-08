@@ -10,18 +10,11 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import PrimaryButton from '../../components/PrimaryButton';
 import RulerPicker from '../../components/RulerPicker';
-import {
-  Accent,
-  Accents,
-  Colors,
-  Motion,
-  Radius,
-  Shadow,
-  Spacing,
-  Typography,
-} from '../../constants/theme';
-import ContinueButton from './ContinueButton';
+import { Accent, Accents, Motion, Spacing } from '../../constants/theme';
+
 import OnboardingProgress from './OnboardingProgress';
 import { onboardingStyles as s } from './onboardingStyles';
 import { HeightUnit, WeightUnit, onboardingState } from './state';
@@ -108,14 +101,14 @@ function UnitToggle<T extends string>({
   onChange: (next: T) => void;
 }) {
   return (
-    <View style={styles.toggle}>
+    <View style={s.unitToggleInline}>
       {options.map((option) => {
         const active = value === option;
         return (
           <TouchableOpacity
             key={option}
             style={[
-              styles.toggleOption,
+              s.unitOptionInline,
               active && { backgroundColor: accent.tint },
             ]}
             onPress={() => onChange(option)}
@@ -202,14 +195,18 @@ export default function HeightWeightScreen() {
       <OnboardingProgress step={3} accent={screenAccent} />
 
       <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        style={s.scroll}
+        contentContainerStyle={s.scrollContent}
         showsVerticalScrollIndicator={false}>
         <MotiView
           from={{ opacity: 0, scale: 0.85 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ type: 'timing', duration: Motion.slow }}
-          style={[s.iconTile, styles.iconTile, { backgroundColor: screenAccent.tint }]}>
+          style={[
+            s.iconTile,
+            styles.iconTile,
+            { backgroundColor: screenAccent.tint },
+          ]}>
           <Ruler size={32} color={screenAccent.main} strokeWidth={2} />
         </MotiView>
 
@@ -218,7 +215,7 @@ export default function HeightWeightScreen() {
           Used to calculate your daily calorie and macro targets.
         </Text>
 
-        <View style={styles.row}>
+        <View style={s.measureRow}>
           {/* Height */}
           <MotiView
             from={{ opacity: 0, translateY: 12 }}
@@ -228,20 +225,17 @@ export default function HeightWeightScreen() {
               duration: Motion.base,
               delay: Motion.enterDelay,
             }}
-            style={styles.card}>
-            <View style={styles.cardHeader}>
+            style={s.measureCard}>
+            <View style={s.measureHeader}>
               <View
-                style={[
-                  styles.cardIcon,
-                  { backgroundColor: heightAccent.tint },
-                ]}>
+                style={[s.measureIcon, { backgroundColor: heightAccent.tint }]}>
                 <Ruler size={14} color={heightAccent.main} strokeWidth={2.2} />
               </View>
-              <Text style={styles.cardLabel}>Height</Text>
+              <Text style={s.measureLabel}>Height</Text>
             </View>
 
-            <View style={styles.readout}>
-              <Text style={styles.readoutValue}>
+            <View style={s.readoutCompact}>
+              <Text style={s.readoutCompactValue}>
                 {heightScale.format(height)}
               </Text>
               {!!heightScale.unit && (
@@ -281,20 +275,17 @@ export default function HeightWeightScreen() {
               duration: Motion.base,
               delay: Motion.enterDelay + Motion.stagger,
             }}
-            style={styles.card}>
-            <View style={styles.cardHeader}>
+            style={s.measureCard}>
+            <View style={s.measureHeader}>
               <View
-                style={[
-                  styles.cardIcon,
-                  { backgroundColor: weightAccent.tint },
-                ]}>
+                style={[s.measureIcon, { backgroundColor: weightAccent.tint }]}>
                 <Weight size={14} color={weightAccent.main} strokeWidth={2.2} />
               </View>
-              <Text style={styles.cardLabel}>Weight</Text>
+              <Text style={s.measureLabel}>Weight</Text>
             </View>
 
-            <View style={styles.readout}>
-              <Text style={styles.readoutValue}>
+            <View style={s.readoutCompact}>
+              <Text style={s.readoutCompactValue}>
                 {weightScale.format(weight)}
               </Text>
               <Text style={s.readoutUnit}>{weightScale.unit}</Text>
@@ -326,81 +317,15 @@ export default function HeightWeightScreen() {
       </ScrollView>
 
       <View style={s.footer}>
-        <ContinueButton onPress={handleContinue} accent={screenAccent} />
+        <PrimaryButton onPress={handleContinue} accent={screenAccent} />
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { flex: 1 },
-  scrollContent: {
-    flexGrow: 1,
-    alignItems: 'center',
-    paddingTop: Spacing.xl,
-  },
+  // This screen shows two cards rather than one options list, so the header
+  // block sits tighter than the shared defaults.
   iconTile: { marginBottom: Spacing.lg },
   subtitle: { marginBottom: Spacing.xl },
-
-  row: {
-    flexDirection: 'row',
-    alignSelf: 'stretch',
-    gap: Spacing.md,
-  },
-  card: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Radius.card,
-    paddingVertical: Spacing.lg,
-    paddingHorizontal: Spacing.md,
-    alignItems: 'center',
-    ...Shadow.card,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    marginBottom: Spacing.sm,
-  },
-  cardIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: Radius.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cardLabel: {
-    ...Typography.caption,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-  },
-  readout: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'center',
-    gap: 4,
-    marginBottom: Spacing.sm,
-  },
-  readoutValue: {
-    ...Typography.largeNumber,
-    fontSize: 30,
-    lineHeight: 36,
-    color: Colors.textPrimary,
-  },
-  toggle: {
-    flexDirection: 'row',
-    alignSelf: 'stretch',
-    backgroundColor: Colors.surfaceSunken,
-    borderRadius: Radius.pill,
-    padding: 4,
-    marginTop: Spacing.md,
-  },
-  toggleOption: {
-    flex: 1,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.pill,
-    alignItems: 'center',
-  },
 });

@@ -1,9 +1,11 @@
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
-import { saveMeal, MealItem, calculateMealTotals } from '../services/meals';
+
 import { Colors, Spacing, Radius, Typography } from '../constants/theme';
+import { errorMessage } from '../services/errors';
+import { saveMeal, MealItem, calculateMealTotals } from '../services/meals';
 
 export default function ConfirmMealScreen() {
   const params = useLocalSearchParams<{
@@ -15,14 +17,14 @@ export default function ConfirmMealScreen() {
 
   const [items, setItems] = useState<MealItem[]>(() => {
     try {
-      return JSON.parse(params.items ?? '[]');
+      return JSON.parse(params.items ?? '[]') as MealItem[];
     } catch {
       return [];
     }
   });
   const [saving, setSaving] = useState(false);
 
-  const totals = calculateMealTotals({ items } as any);
+  const totals = calculateMealTotals({ items });
 
   const updateItemName = (index: number, name: string) => {
     const updated = [...items];
@@ -43,8 +45,8 @@ export default function ConfirmMealScreen() {
         aiSuggestion: params.suggestion ?? '',
       });
       router.replace('/(tabs)/home');
-    } catch (err: any) {
-      Alert.alert('Error saving meal', err.message ?? 'Something went wrong');
+    } catch (err) {
+      Alert.alert('Error saving meal', errorMessage(err, 'Something went wrong'));
     } finally {
       setSaving(false);
     }
@@ -111,7 +113,7 @@ export default function ConfirmMealScreen() {
 
         <TouchableOpacity
           style={[styles.saveButton, (items.length === 0 || saving) && styles.saveButtonDisabled]}
-          onPress={handleSave}
+          onPress={() => void handleSave()}
           disabled={items.length === 0 || saving}
         >
           <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save to log'}</Text>

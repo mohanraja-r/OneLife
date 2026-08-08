@@ -1,23 +1,65 @@
-import { useState } from 'react';
-import { View, Text } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import OnboardingProgress from './OnboardingProgress';
-import OptionCard from './OptionCard';
-import ContinueButton from './ContinueButton';
-import { onboardingState, Goal } from './state';
-import { onboardingStyles as s } from './onboardingStyles';
+import type { LucideIcon } from 'lucide-react-native';
+import {
+  Dumbbell,
+  HeartPulse,
+  Scale,
+  Target,
+  TrendingDown,
+  TrendingUp,
+} from 'lucide-react-native';
+import { useState } from 'react';
 
-const OPTIONS: { value: Goal; emoji: string; title: string }[] = [
-  { value: 'lose_weight', emoji: '🏃', title: 'Lose Weight' },
-  { value: 'maintain', emoji: '⚖️', title: 'Maintain Weight' },
-  { value: 'gain_weight', emoji: '💪', title: 'Gain Weight' },
-  { value: 'improve_health', emoji: '❤️', title: 'Improve Overall Health' },
-  { value: 'build_muscle', emoji: '🏋️', title: 'Build Muscle' },
+import { Accent, Accents } from '../../constants/theme';
+
+import OptionCard from './OptionCard';
+import QuestionScreen, { StaggeredOption } from './QuestionScreen';
+import { Goal, onboardingState } from './state';
+
+const accent = Accents.violet;
+
+const OPTIONS: {
+  value: Goal;
+  icon: LucideIcon;
+  title: string;
+  iconAccent: Accent;
+}[] = [
+  {
+    value: 'lose_weight',
+    icon: TrendingDown,
+    title: 'Lose Weight',
+    iconAccent: Accents.violet,
+  },
+  {
+    value: 'maintain',
+    icon: Scale,
+    title: 'Maintain Weight',
+    iconAccent: Accents.green,
+  },
+  {
+    value: 'build_muscle',
+    icon: Dumbbell,
+    title: 'Build Muscle',
+    iconAccent: Accents.orange,
+  },
+  {
+    value: 'improve_health',
+    icon: HeartPulse,
+    title: 'Improve Overall Health',
+    iconAccent: Accents.blue,
+  },
+  {
+    value: 'gain_weight',
+    icon: TrendingUp,
+    title: 'Gain Weight',
+    iconAccent: Accents.amber,
+  },
 ];
 
 export default function GoalScreen() {
-  const [selected, setSelected] = useState<Goal | null>(onboardingState.goal ?? null);
+  const [selected, setSelected] = useState<Goal | null>(
+    onboardingState.goal ?? null
+  );
 
   const handleContinue = () => {
     if (!selected) return;
@@ -26,24 +68,26 @@ export default function GoalScreen() {
   };
 
   return (
-    <SafeAreaView style={s.container}>
-      <OnboardingProgress step={5} />
-      <Text style={s.title}>What's your primary goal?</Text>
-
-      <View style={s.options}>
-        {OPTIONS.map((o) => (
+    <QuestionScreen
+      step={5}
+      icon={Target}
+      accent={accent}
+      title="What is your primary goal?"
+      subtitle="Your goal helps us build a plan that's right for you."
+      onContinue={handleContinue}
+      continueDisabled={!selected}>
+      {OPTIONS.map((option, index) => (
+        <StaggeredOption key={option.value} index={index}>
           <OptionCard
-            key={o.value}
-            emoji={o.emoji}
-            title={o.title}
-            selected={selected === o.value}
-            onPress={() => setSelected(o.value)}
+            icon={option.icon}
+            title={option.title}
+            selected={selected === option.value}
+            onPress={() => setSelected(option.value)}
+            accent={accent}
+            iconAccent={option.iconAccent}
           />
-        ))}
-      </View>
-
-      <View style={{ flex: 1 }} />
-      <ContinueButton onPress={handleContinue} disabled={!selected} />
-    </SafeAreaView>
+        </StaggeredOption>
+      ))}
+    </QuestionScreen>
   );
 }

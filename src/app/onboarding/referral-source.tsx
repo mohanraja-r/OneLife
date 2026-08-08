@@ -1,28 +1,81 @@
-import { useState } from 'react';
-import { Text, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import OnboardingProgress from './OnboardingProgress';
-import OptionCard from './OptionCard';
-import ContinueButton from './ContinueButton';
-import { onboardingState } from './state';
-import { onboardingStyles as s } from './onboardingStyles';
+import type { LucideIcon } from 'lucide-react-native';
+// lucide v1 no longer ships brand marks — AtSign/CirclePlay stand in for the
+// social and video sources.
+import {
+  AtSign,
+  CirclePlay,
+  Ellipsis,
+  Globe,
+  Megaphone,
+  Search,
+  Store,
+  Users,
+} from 'lucide-react-native';
+import { useState } from 'react';
 
-const SOURCES = [
-  { value: 'instagram', emoji: '📷', title: 'Instagram' },
-  { value: 'facebook', emoji: '📘', title: 'Facebook' },
-  { value: 'youtube', emoji: '▶️', title: 'YouTube' },
-  { value: 'google', emoji: '🔍', title: 'Google' },
-  { value: 'friend', emoji: '👥', title: 'Friend' },
-  { value: 'linkedin', emoji: '💼', title: 'LinkedIn' },
-  { value: 'tiktok', emoji: '🎵', title: 'TikTok' },
-  { value: 'play_store', emoji: '▶️', title: 'Play Store' },
-  { value: 'app_store', emoji: '🍎', title: 'App Store' },
-  { value: 'other', emoji: '❔', title: 'Other' },
+import { Accent, Accents } from '../../constants/theme';
+
+import OptionCard from './OptionCard';
+import QuestionScreen, { StaggeredOption } from './QuestionScreen';
+import { onboardingState } from './state';
+
+const accent = Accents.violet;
+
+const SOURCES: {
+  value: string;
+  icon: LucideIcon;
+  title: string;
+  iconAccent: Accent;
+}[] = [
+  {
+    value: 'friend',
+    icon: Users,
+    title: 'Friend or family',
+    iconAccent: Accents.violet,
+  },
+  {
+    value: 'social_media',
+    icon: AtSign,
+    title: 'Social media',
+    iconAccent: Accents.pink,
+  },
+  {
+    value: 'google',
+    icon: Search,
+    title: 'Google search',
+    iconAccent: Accents.blue,
+  },
+  {
+    value: 'app_store',
+    icon: Store,
+    title: 'App Store / Play Store',
+    iconAccent: Accents.green,
+  },
+  {
+    value: 'blog',
+    icon: Globe,
+    title: 'Blog or website',
+    iconAccent: Accents.amber,
+  },
+  {
+    value: 'youtube',
+    icon: CirclePlay,
+    title: 'YouTube',
+    iconAccent: Accents.rose,
+  },
+  {
+    value: 'other',
+    icon: Ellipsis,
+    title: 'Other',
+    iconAccent: Accents.neutral,
+  },
 ];
 
 export default function ReferralSourceScreen() {
-  const [selected, setSelected] = useState<string | null>(onboardingState.referralSource ?? null);
+  const [selected, setSelected] = useState<string | null>(
+    onboardingState.referralSource ?? null
+  );
 
   const handleContinue = () => {
     onboardingState.referralSource = selected ?? undefined;
@@ -30,23 +83,26 @@ export default function ReferralSourceScreen() {
   };
 
   return (
-    <SafeAreaView style={s.container}>
-      <OnboardingProgress step={12} />
-      <Text style={s.title}>Where did you hear about us?</Text>
-
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {SOURCES.map((so) => (
+    <QuestionScreen
+      step={12}
+      icon={Megaphone}
+      accent={accent}
+      title="How did you hear about OneLife?"
+      subtitle="Your feedback helps us reach more people like you."
+      onContinue={handleContinue}
+      continueDisabled={!selected}>
+      {SOURCES.map((source, index) => (
+        <StaggeredOption key={source.value} index={index}>
           <OptionCard
-            key={so.value}
-            emoji={so.emoji}
-            title={so.title}
-            selected={selected === so.value}
-            onPress={() => setSelected(so.value)}
+            icon={source.icon}
+            title={source.title}
+            selected={selected === source.value}
+            onPress={() => setSelected(source.value)}
+            accent={accent}
+            iconAccent={source.iconAccent}
           />
-        ))}
-      </ScrollView>
-
-      <ContinueButton onPress={handleContinue} disabled={!selected} />
-    </SafeAreaView>
+        </StaggeredOption>
+      ))}
+    </QuestionScreen>
   );
 }

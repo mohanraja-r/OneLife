@@ -1,18 +1,19 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
-import { CalendarDays, Cake } from 'lucide-react-native';
+import { Cake, CalendarDays } from 'lucide-react-native';
 import { MotiView } from 'moti';
 import { useState } from 'react';
-import { Platform, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Platform, StyleSheet, Text, View } from 'react-native';
+
 import { Accents, Colors, Motion, Radius } from '../../constants/theme';
-import ContinueButton from './ContinueButton';
-import OnboardingProgress from './OnboardingProgress';
+
 import { onboardingStyles as s } from './onboardingStyles';
+import QuestionScreen from './QuestionScreen';
 import { onboardingState } from './state';
 
 const accent = Accents.violet;
 
+/** Returns whole years elapsed between a birth date and today. */
 function calculateAge(dob: Date): number {
   const today = new Date();
   let age = today.getFullYear() - dob.getFullYear();
@@ -37,66 +38,50 @@ export default function DateOfBirthScreen() {
   };
 
   return (
-    <SafeAreaView style={s.container}>
-      <OnboardingProgress step={2} accent={accent} />
+    <QuestionScreen
+      step={2}
+      icon={CalendarDays}
+      accent={accent}
+      title="What's your date of birth?"
+      subtitle="Your age helps us tailor your plan better."
+      onContinue={handleContinue}>
+      <View style={s.pickerWrapper}>
+        <DateTimePicker
+          value={date}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          maximumDate={new Date()}
+          accentColor={accent.main}
+          textColor={Colors.textPrimary}
+          onChange={(_, selectedDate) => selectedDate && setDate(selectedDate)}
+        />
+      </View>
 
-      <View style={s.content}>
-        <MotiView
-          from={{ opacity: 0, scale: 0.85 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ type: 'timing', duration: Motion.slow }}
-          style={[s.iconTile, { backgroundColor: accent.tint }]}>
-          <CalendarDays size={32} color={accent.main} strokeWidth={2} />
-        </MotiView>
-
-        <Text style={s.title}>What&apos;s your date of birth?</Text>
-        <Text style={s.subtitle}>
-          Your age helps us tailor your plan better.
-        </Text>
-
-        <View style={s.pickerWrapper}>
-          <DateTimePicker
-            value={date}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            maximumDate={new Date()}
-            accentColor={accent.main}
-            textColor={Colors.textPrimary}
-            onChange={(_, selectedDate) =>
-              selectedDate && setDate(selectedDate)
-            }
-          />
+      <MotiView
+        key={age}
+        from={{ opacity: 0, translateY: 8 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: Motion.fast }}
+        style={[s.agePreview, { backgroundColor: accent.tint }]}>
+        <View style={styles.ageIcon}>
+          <Cake size={20} color={accent.main} strokeWidth={2} />
         </View>
-
-        <MotiView
-          key={age}
-          from={{ opacity: 0, translateY: 8 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: Motion.fast }}
-          style={[s.agePreview, { backgroundColor: accent.tint }]}>
-          <View style={[styles.ageIcon, { backgroundColor: Colors.surface }]}>
-            <Cake size={20} color={accent.main} strokeWidth={2} />
-          </View>
-          <View>
-            <Text style={s.agePreviewLabel}>You are</Text>
-            <Text style={s.agePreviewValue}>{age} years old</Text>
-          </View>
-        </MotiView>
-      </View>
-
-      <View style={s.footer}>
-        <ContinueButton onPress={handleContinue} accent={accent} />
-      </View>
-    </SafeAreaView>
+        <View>
+          <Text style={s.agePreviewLabel}>You are</Text>
+          <Text style={s.agePreviewValue}>{age} years old</Text>
+        </View>
+      </MotiView>
+    </QuestionScreen>
   );
 }
 
-const styles = {
+const styles = StyleSheet.create({
   ageIcon: {
     width: 40,
     height: 40,
     borderRadius: Radius.md,
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
+    backgroundColor: Colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-};
+});

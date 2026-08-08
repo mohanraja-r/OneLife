@@ -1,14 +1,32 @@
 // In-memory onboarding state across all screens. Persisted to Supabase
 // only at the very end (after account creation on the final screen).
 
-export type Gender = 'woman' | 'man' | 'non_binary' | 'unspecified';
+// Gender lives with the profile service because the nav and other screens read
+// it back off `profiles` long after onboarding is done.
+import type { Gender } from '../../services/profile';
+
+export type { Gender };
+
 export type HeightUnit = 'cm' | 'ft_in';
 export type WeightUnit = 'kg' | 'lb';
 export type WorkoutFrequency = 'rarely' | 'sometimes' | 'frequently';
-export type Goal = 'lose_weight' | 'maintain' | 'gain_weight' | 'improve_health' | 'build_muscle';
+export type Goal =
+  | 'lose_weight'
+  | 'maintain'
+  | 'gain_weight'
+  | 'improve_health'
+  | 'build_muscle';
 export type EatingStyle =
-  | 'balanced' | 'whole_foods' | 'vegetarian' | 'vegan' | 'keto' | 'paleo' | 'high_protein' | 'no_special_diet';
-export type ProfessionalGuidance = 'personal_trainer' | 'dietitian' | 'both' | 'neither';
+  | 'balanced'
+  | 'whole_foods'
+  | 'vegetarian'
+  | 'vegan'
+  | 'keto'
+  | 'paleo'
+  | 'high_protein'
+  | 'no_special_diet';
+export type ProfessionalGuidance =
+  'personal_trainer' | 'dietitian' | 'both' | 'neither';
 
 interface OnboardingState {
   gender?: Gender;
@@ -31,8 +49,11 @@ interface OnboardingState {
 
 export const onboardingState: OnboardingState = {};
 
+/** Clears every answer, so a finished or abandoned run does not leak into the next. */
 export function resetOnboardingState() {
-  Object.keys(onboardingState).forEach((key) => delete (onboardingState as any)[key]);
+  Object.keys(onboardingState).forEach(
+    (key) => delete (onboardingState as Record<string, unknown>)[key]
+  );
 }
 
 // Updated from 13 to 12 — Height and Weight are now a single combined step.

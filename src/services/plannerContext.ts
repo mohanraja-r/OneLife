@@ -1,9 +1,27 @@
 import { supabase } from './supabase';
 
-interface ContextItem {
+/** Shape of the joined rows this module reads; the client is untyped, so the
+ *  queries below are cast to these rather than passed around as `any`. */
+interface MealRow {
+  logged_at: string;
+  items: { name?: string | null }[] | null;
+}
+
+interface DoseRow {
+  scheduled_for: string;
+  status: string;
+  medicines: { name?: string | null; dosage?: string | null } | null;
+}
+
+/** Which tracker a read-only timeline marker came from. */
+export type ContextKind = 'meal' | 'medicine';
+
+export interface ContextItem {
   time: string; // HH:MM
   label: string;
-  icon: string;
+  /** Sub-line under the label — the dosage, or how many items the meal had. */
+  detail: string;
+  kind: ContextKind;
   status: 'done' | 'due' | 'neutral';
 }
 
@@ -29,14 +47,15 @@ export async function getTasksContextForDate(date: string): Promise<ContextItem[
     .gte('logged_at', `${date}T00:00:00`)
     .lte('logged_at', `${date}T23:59:59`);
 
-  (meals ?? []).forEach((meal: any) => {
+  ((meals ?? []) as MealRow[]).forEach((meal) => {
     const time = new Date(meal.logged_at).toTimeString().slice(0, 5);
     const firstItem = meal.items?.[0]?.name ?? 'Meal';
-    const extra = (meal.items?.length ?? 1) - 1;
+    const count = meal.items?.length ?? 1;
     items.push({
       time,
-      label: extra > 0 ? `${firstItem} +${extra} more` : firstItem,
-      icon: '🍽️',
+      label: firstItem,
+      detail: count > 1 ? `${count} items logged` : 'Logged',
+      kind: 'meal',
       status: 'done',
     });
   });
@@ -49,13 +68,16 @@ export async function getTasksContextForDate(date: string): Promise<ContextItem[
     .gte('scheduled_for', `${date}T00:00:00`)
     .lte('scheduled_for', `${date}T23:59:59`);
 
-  (doses ?? []).forEach((dose: any) => {
+  ((doses ?? []) as DoseRow[]).forEach((dose) => {
     const time = new Date(dose.scheduled_for).toTimeString().slice(0, 5);
     const name = dose.medicines?.name ?? 'Medicine';
+    const dosage = dose.medicines?.dosage ?? '';
+    const state = dose.status === 'taken' ? 'Taken' : dose.status === 'missed' ? 'Missed' : 'Due';
     items.push({
       time,
-      label: `${name} ${dose.status === 'taken' ? '— taken' : '— due'}`,
-      icon: '💊',
+      label: name,
+      detail: dosage ? `${dosage} · ${state}` : state,
+      kind: 'medicine',
       status: dose.status === 'taken' ? 'done' : dose.status === 'missed' ? 'due' : 'neutral',
     });
   });

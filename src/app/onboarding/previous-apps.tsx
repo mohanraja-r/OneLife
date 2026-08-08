@@ -1,66 +1,135 @@
-import { useState } from 'react';
-import { View, Text, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import OnboardingProgress from './OnboardingProgress';
-import OptionCard from './OptionCard';
-import ContinueButton from './ContinueButton';
-import { onboardingState } from './state';
-import { onboardingStyles as s } from './onboardingStyles';
+import type { LucideIcon } from 'lucide-react-native';
+import {
+  Activity,
+  Apple,
+  CircleSlash,
+  Footprints,
+  Heart,
+  Ellipsis,
+  Smartphone,
+  Watch,
+} from 'lucide-react-native';
+import { MotiView } from 'moti';
+import { useState } from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
 
-const APP_OPTIONS = [
-  'MyFitnessPal', 'HealthifyMe', 'Fitbit', 'Medisafe', 'Google Fit', 'Apple Health', 'Samsung Health', 'Other',
+import { Accent, Accents, Motion } from '../../constants/theme';
+
+import { onboardingStyles as s } from './onboardingStyles';
+import OptionCard from './OptionCard';
+import QuestionScreen, { StaggeredOption } from './QuestionScreen';
+import { onboardingState } from './state';
+
+const accent = Accents.violet;
+
+const APP_OPTIONS: { name: string; icon: LucideIcon; iconAccent: Accent }[] = [
+  { name: 'MyFitnessPal', icon: Activity, iconAccent: Accents.blue },
+  { name: 'Strava', icon: Footprints, iconAccent: Accents.orange },
+  { name: 'Fitbit', icon: Watch, iconAccent: Accents.green },
+  { name: 'Apple Health', icon: Heart, iconAccent: Accents.rose },
+  { name: 'Google Fit', icon: Apple, iconAccent: Accents.amber },
+  { name: 'Other', icon: Ellipsis, iconAccent: Accents.neutral },
 ];
 
 export default function PreviousAppsScreen() {
-  const [usedBefore, setUsedBefore] = useState<boolean | null>(onboardingState.usedPreviousApp ?? null);
-  const [selectedApp, setSelectedApp] = useState<string | null>(onboardingState.previousAppName ?? null);
+  const [usedBefore, setUsedBefore] = useState<boolean | null>(
+    onboardingState.usedPreviousApp ?? null
+  );
+  const [selectedApp, setSelectedApp] = useState<string | null>(
+    onboardingState.previousAppName ?? null
+  );
 
   const handleContinue = () => {
     onboardingState.usedPreviousApp = usedBefore ?? false;
-    onboardingState.previousAppName = usedBefore ? selectedApp ?? undefined : undefined;
+    onboardingState.previousAppName = usedBefore
+      ? (selectedApp ?? undefined)
+      : undefined;
     router.push('/onboarding/referral');
   };
 
-  const canContinue = usedBefore === false || (usedBefore === true && !!selectedApp);
+  const canContinue =
+    usedBefore === false || (usedBefore === true && !!selectedApp);
 
   return (
-    <SafeAreaView style={s.container}>
-      <OnboardingProgress step={10} />
-      <Text style={s.title}>Have you used another health app before?</Text>
-
-      <View style={s.options}>
-        <OptionCard emoji="✅" title="Yes" selected={usedBefore === true} onPress={() => setUsedBefore(true)} />
+    <QuestionScreen
+      step={10}
+      icon={Smartphone}
+      accent={accent}
+      title="Have you used any health or fitness apps before?"
+      subtitle="This helps us personalize your experience."
+      onContinue={handleContinue}
+      continueDisabled={!canContinue}>
+      <StaggeredOption index={0}>
         <OptionCard
-          emoji="❌"
-          title="No"
+          icon={Smartphone}
+          title="Yes, I have used apps"
+          selected={usedBefore === true}
+          onPress={() => setUsedBefore(true)}
+          accent={Accents.green}
+          iconAccent={Accents.green}
+        />
+      </StaggeredOption>
+
+      <StaggeredOption index={1}>
+        <OptionCard
+          icon={CircleSlash}
+          title="No, this is my first time"
           selected={usedBefore === false}
           onPress={() => {
             setUsedBefore(false);
             setSelectedApp(null);
           }}
+          accent={accent}
+          iconAccent={Accents.neutral}
         />
-      </View>
+      </StaggeredOption>
 
-      {usedBefore && (
-        <>
-          <Text style={s.label}>Which one?</Text>
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {APP_OPTIONS.map((app) => (
-              <OptionCard
-                key={app}
-                emoji="📱"
-                title={app}
-                selected={selectedApp === app}
-                onPress={() => setSelectedApp(app)}
-              />
-            ))}
-          </ScrollView>
-        </>
+      {usedBefore === true && (
+        <MotiView
+          from={{ opacity: 0, translateY: 12 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: Motion.base }}>
+          <Text style={s.sectionLabel}>Popular apps you may have used</Text>
+
+          <View style={s.grid}>
+            {APP_OPTIONS.map((app) => {
+              const isSelected = selectedApp === app.name;
+              return (
+                <TouchableOpacity
+                  key={app.name}
+                  style={[
+                    s.gridTile,
+                    isSelected && {
+                      borderColor: accent.main,
+                      backgroundColor: accent.tint,
+                    },
+                  ]}
+                  onPress={() => setSelectedApp(app.name)}
+                  activeOpacity={0.85}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: isSelected }}
+                  accessibilityLabel={app.name}>
+                  <View
+                    style={[
+                      s.gridTileIcon,
+                      { backgroundColor: app.iconAccent.tint },
+                    ]}>
+                    <app.icon
+                      size={18}
+                      color={app.iconAccent.main}
+                      strokeWidth={2.2}
+                    />
+                  </View>
+                  <Text style={s.gridTileLabel} numberOfLines={1}>
+                    {app.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </MotiView>
       )}
-
-      <View style={{ flex: 1 }} />
-      <ContinueButton onPress={handleContinue} disabled={!canContinue} />
-    </SafeAreaView>
+    </QuestionScreen>
   );
 }

@@ -1,29 +1,94 @@
-import { useState } from 'react';
-import { Text, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import OnboardingProgress from './OnboardingProgress';
-import OptionCard from './OptionCard';
-import ContinueButton from './ContinueButton';
-import { onboardingState } from './state';
-import { onboardingStyles as s } from './onboardingStyles';
+import type { LucideIcon } from 'lucide-react-native';
+import {
+  Activity,
+  BatteryCharging,
+  CalendarCheck,
+  Heart,
+  Moon,
+  Smile,
+  Sparkles,
+  Trophy,
+  Users,
+} from 'lucide-react-native';
+import { useState } from 'react';
 
-const OPTIONS = [
-  { value: 'eat_healthier', emoji: '❤️', title: 'Eat healthier' },
-  { value: 'boost_energy', emoji: '⚡', title: 'Boost energy' },
-  { value: 'improve_mood', emoji: '😊', title: 'Improve mood' },
-  { value: 'build_habits', emoji: '💪', title: 'Build healthy habits' },
-  { value: 'stay_consistent', emoji: '📅', title: 'Stay consistent' },
-  { value: 'reduce_stress', emoji: '🧘', title: 'Reduce stress' },
-  { value: 'sleep_better', emoji: '😴', title: 'Sleep better' },
-  { value: 'become_active', emoji: '🏃', title: 'Become more active' },
+import { Accent, Accents } from '../../constants/theme';
+
+import OptionCard from './OptionCard';
+import QuestionScreen, { StaggeredOption } from './QuestionScreen';
+import { onboardingState } from './state';
+
+const accent = Accents.violet;
+
+const OPTIONS: {
+  value: string;
+  icon: LucideIcon;
+  title: string;
+  iconAccent: Accent;
+}[] = [
+  {
+    value: 'eat_healthier',
+    icon: Heart,
+    title: 'Be the best version of myself',
+    iconAccent: Accents.violet,
+  },
+  {
+    value: 'build_habits',
+    icon: Sparkles,
+    title: 'Live a longer, healthier life',
+    iconAccent: Accents.green,
+  },
+  {
+    value: 'stay_consistent',
+    icon: CalendarCheck,
+    title: 'Stay consistent every day',
+    iconAccent: Accents.blue,
+  },
+  {
+    value: 'improve_mood',
+    icon: Users,
+    title: 'Family and loved ones',
+    iconAccent: Accents.amber,
+  },
+  {
+    value: 'boost_energy',
+    icon: BatteryCharging,
+    title: 'Boost my energy',
+    iconAccent: Accents.orange,
+  },
+  {
+    value: 'reduce_stress',
+    icon: Smile,
+    title: 'Build confidence',
+    iconAccent: Accents.pink,
+  },
+  {
+    value: 'sleep_better',
+    icon: Moon,
+    title: 'Sleep better',
+    iconAccent: Accents.blue,
+  },
+  {
+    value: 'become_active',
+    icon: Activity,
+    title: 'Become more active',
+    iconAccent: Accents.rose,
+  },
 ];
 
 export default function AchieveTargetsScreen() {
-  const [selected, setSelected] = useState<string[]>(onboardingState.achieveTargets ?? []);
+  const [selected, setSelected] = useState<string[]>(
+    onboardingState.achieveTargets ?? []
+  );
 
+  /** Adds or removes a motivation from the multi-select answer. */
   const toggle = (value: string) => {
-    setSelected((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
+    setSelected((prev) =>
+      prev.includes(value)
+        ? prev.filter((item) => item !== value)
+        : [...prev, value]
+    );
   };
 
   const handleContinue = () => {
@@ -32,25 +97,28 @@ export default function AchieveTargetsScreen() {
   };
 
   return (
-    <SafeAreaView style={s.container}>
-      <OnboardingProgress step={9} />
-      <Text style={s.title}>What would you like OneLife to help you with?</Text>
-      <Text style={s.hint}>Select all that apply</Text>
-
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {OPTIONS.map((o) => (
+    <QuestionScreen
+      step={9}
+      icon={Trophy}
+      accent={accent}
+      title="What motivates you to succeed?"
+      subtitle="Choose what inspires you the most."
+      hint="Select all that apply"
+      onContinue={handleContinue}
+      continueDisabled={selected.length === 0}>
+      {OPTIONS.map((option, index) => (
+        <StaggeredOption key={option.value} index={index}>
           <OptionCard
-            key={o.value}
-            emoji={o.emoji}
-            title={o.title}
-            selected={selected.includes(o.value)}
-            onPress={() => toggle(o.value)}
+            icon={option.icon}
+            title={option.title}
+            selected={selected.includes(option.value)}
+            onPress={() => toggle(option.value)}
+            accent={accent}
+            iconAccent={option.iconAccent}
             multiSelect
           />
-        ))}
-      </ScrollView>
-
-      <ContinueButton onPress={handleContinue} disabled={selected.length === 0} />
-    </SafeAreaView>
+        </StaggeredOption>
+      ))}
+    </QuestionScreen>
   );
 }

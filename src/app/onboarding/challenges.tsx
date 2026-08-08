@@ -1,28 +1,87 @@
-import { useState } from 'react';
-import { View, Text, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import OnboardingProgress from './OnboardingProgress';
-import OptionCard from './OptionCard';
-import ContinueButton from './ContinueButton';
-import { onboardingState } from './state';
-import { onboardingStyles as s } from './onboardingStyles';
+import type { LucideIcon } from 'lucide-react-native';
+import {
+  CalendarClock,
+  Clock,
+  CookingPot,
+  Flag,
+  Frown,
+  Ellipsis,
+  Users,
+  Utensils,
+} from 'lucide-react-native';
+import { useState } from 'react';
 
-const OPTIONS = [
-  { value: 'lack_of_consistency', emoji: '✅', title: 'Lack of consistency' },
-  { value: 'busy_schedule', emoji: '✅', title: 'Busy schedule' },
-  { value: 'unhealthy_eating', emoji: '✅', title: 'Unhealthy eating habits' },
-  { value: 'lack_of_motivation', emoji: '✅', title: 'Lack of motivation' },
-  { value: 'lack_of_support', emoji: '✅', title: 'Lack of support' },
-  { value: 'meal_planning_hard', emoji: '✅', title: 'Meal planning is difficult' },
-  { value: 'dont_know_where_to_start', emoji: '✅', title: "Don't know where to start" },
+import { Accent, Accents } from '../../constants/theme';
+
+import OptionCard from './OptionCard';
+import QuestionScreen, { StaggeredOption } from './QuestionScreen';
+import { onboardingState } from './state';
+
+const accent = Accents.violet;
+
+const OPTIONS: {
+  value: string;
+  icon: LucideIcon;
+  title: string;
+  iconAccent: Accent;
+}[] = [
+  {
+    value: 'lack_of_consistency',
+    icon: CalendarClock,
+    title: 'Staying consistent',
+    iconAccent: Accents.violet,
+  },
+  {
+    value: 'unhealthy_eating',
+    icon: Utensils,
+    title: 'Unhealthy eating habits',
+    iconAccent: Accents.blue,
+  },
+  {
+    value: 'lack_of_motivation',
+    icon: Frown,
+    title: 'Lack of motivation',
+    iconAccent: Accents.rose,
+  },
+  {
+    value: 'busy_schedule',
+    icon: Clock,
+    title: 'Time management',
+    iconAccent: Accents.amber,
+  },
+  {
+    value: 'meal_planning_hard',
+    icon: CookingPot,
+    title: 'Meal planning is difficult',
+    iconAccent: Accents.green,
+  },
+  {
+    value: 'lack_of_support',
+    icon: Users,
+    title: 'Lack of support',
+    iconAccent: Accents.orange,
+  },
+  {
+    value: 'dont_know_where_to_start',
+    icon: Ellipsis,
+    title: "Don't know where to start",
+    iconAccent: Accents.neutral,
+  },
 ];
 
 export default function ChallengesScreen() {
-  const [selected, setSelected] = useState<string[]>(onboardingState.biggestChallenges ?? []);
+  const [selected, setSelected] = useState<string[]>(
+    onboardingState.biggestChallenges ?? []
+  );
 
+  /** Adds or removes a challenge from the multi-select answer. */
   const toggle = (value: string) => {
-    setSelected((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
+    setSelected((prev) =>
+      prev.includes(value)
+        ? prev.filter((item) => item !== value)
+        : [...prev, value]
+    );
   };
 
   const handleContinue = () => {
@@ -31,29 +90,28 @@ export default function ChallengesScreen() {
   };
 
   return (
-    <SafeAreaView style={s.container}>
-      <OnboardingProgress step={6} />
-      <Text style={s.title}>What's holding you back?</Text>
-      <Text style={s.hint}>Select all that apply</Text>
-
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {OPTIONS.map((o) => (
+    <QuestionScreen
+      step={6}
+      icon={Flag}
+      accent={accent}
+      title="What's your biggest challenge?"
+      subtitle="This helps us understand you better and provide support."
+      hint="Select all that apply"
+      onContinue={handleContinue}
+      continueDisabled={selected.length === 0}>
+      {OPTIONS.map((option, index) => (
+        <StaggeredOption key={option.value} index={index}>
           <OptionCard
-            key={o.value}
-            emoji={o.emoji}
-            title={o.title}
-            selected={selected.includes(o.value)}
-            onPress={() => toggle(o.value)}
+            icon={option.icon}
+            title={option.title}
+            selected={selected.includes(option.value)}
+            onPress={() => toggle(option.value)}
+            accent={accent}
+            iconAccent={option.iconAccent}
             multiSelect
           />
-        ))}
-      </ScrollView>
-
-      <View style={{ flex: 1 }} />
-      <ContinueButton
-        onPress={handleContinue}
-        disabled={selected.length === 0}
-      />
-    </SafeAreaView>
+        </StaggeredOption>
+      ))}
+    </QuestionScreen>
   );
 }
