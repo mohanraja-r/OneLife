@@ -1,9 +1,8 @@
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 
 import { Colors, Spacing, Radius, Typography } from '../constants/theme';
-import { supabase } from '../services/supabase';
+import { useProfileSummary } from '../services/profile';
 
 interface AppHeaderProps {
   title?: string;
@@ -17,30 +16,11 @@ interface AppHeaderProps {
 // destination now, and the secondary screens it held (family, reports,
 // settings) are rows on the Profile screen itself.
 export default function AppHeader({ title, showBack }: AppHeaderProps) {
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [initials, setInitials] = useState('..');
-
-  useEffect(() => {
-    loadProfile();
-  }, []);
-
-  const loadProfile = async () => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const userId = sessionData.session?.user.id;
-    if (!userId) return;
-
-    // Rows are untyped until DB types are generated (`supabase gen types`), so
-    // declare the columns this query actually selects.
-    const { data } = await supabase
-      .from('profiles')
-      .select('name, avatar_url')
-      .eq('id', userId)
-      .maybeSingle()
-      .overrideTypes<{ name: string | null; avatar_url: string | null }>();
-
-    if (data?.name) setInitials(data.name.slice(0, 2).toUpperCase());
-    if (data?.avatar_url) setAvatarUrl(data.avatar_url);
-  };
+  // The profile service owns this read: it caches across screens and hands back
+  // a signed URL, which the private avatar bucket requires.
+  const profile = useProfileSummary();
+  const avatarUrl = profile?.avatarUrl ?? null;
+  const initials = profile ? profile.name.slice(0, 2).toUpperCase() : '..';
 
   return (
     <View style={styles.header}>

@@ -2,7 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Bell } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 
 import AnimatedPressable from '../../components/AnimatedPressable';
+import Avatar from '../../components/Avatar';
 import FloatingNav from '../../components/FloatingNav';
 import {
   Colors,
@@ -21,7 +22,7 @@ import {
   Typography,
   Shadow,
 } from '../../constants/theme';
-import { supabase } from '../../services/supabase';
+import { firstNameOf, useProfileSummary } from '../../services/profile';
 
 
 // TODO: replace with the real score once it is computed from logged data.
@@ -29,23 +30,11 @@ const PLACEHOLDER_HEALTH_SCORE = 82;
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [userName, setUserName] = useState('RMR');
+  // One cached read for both the photo and the name the user set on the
+  // Personal Information screen.
+  const profile = useProfileSummary();
   const healthScore = PLACEHOLDER_HEALTH_SCORE;
-
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        if (sessionData?.session?.user?.email) {
-          const name = sessionData.session.user.email.split('@')[0];
-          setUserName(name.charAt(0).toUpperCase() + name.slice(1));
-        }
-      } catch (err) {
-        console.error('Error fetching user data:', err);
-      }
-    };
-    void fetchUserData();
-  }, []);
+  const greetingName = profile ? firstNameOf(profile.name) : '';
 
   const metrics = [
     { label: 'Steps', value: '7842', unit: 'Steps' },
@@ -94,15 +83,12 @@ export default function HomeScreen() {
           transition={{ type: 'timing', duration: 300 }}
           style={styles.header}>
           <View style={styles.greeting}>
-            <LinearGradient
-              colors={Gradients.avatar}
-              start={Gradients.diagonal.start}
-              end={Gradients.diagonal.end}
-              style={styles.avatar}
-            />
+            <Avatar uri={profile?.avatarUrl ?? null} name={profile?.name} />
             <View>
               <Text style={styles.greetingSubtext}>Good morning,</Text>
-              <Text style={styles.greetingName}>{userName}! 👋</Text>
+              <Text style={styles.greetingName} numberOfLines={1}>
+                {greetingName}! 👋
+              </Text>
             </View>
           </View>
           {/* Profile lives in the bottom bar now, so the header keeps only
@@ -232,11 +218,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.lg,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
   },
   greetingSubtext: {
     ...Typography.secondary,

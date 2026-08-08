@@ -18,6 +18,7 @@ interface Props {
   value: Date;
   mode: 'date' | 'time';
   minimumDate?: Date;
+  maximumDate?: Date;
   /** Tints the confirm button. Defaults to brand violet. */
   accent?: Accent;
   onChange: (value: Date) => void;
@@ -38,6 +39,7 @@ export default function DateTimeSpinnerSheet({
   value,
   mode,
   minimumDate,
+  maximumDate,
   accent = Accents.violet,
   onChange,
   onDone,
@@ -57,6 +59,7 @@ export default function DateTimeSpinnerSheet({
         display="spinner"
         themeVariant="light"
         minimumDate={minimumDate}
+        maximumDate={maximumDate}
         onChange={(_, picked) => {
           if (picked) onChange(picked);
         }}
