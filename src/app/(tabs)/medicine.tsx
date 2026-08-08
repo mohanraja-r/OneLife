@@ -15,17 +15,17 @@ import {
 import { MotiView } from 'moti';
 import { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
+
 import AddMedicineSheet from '../../components/AddMedicineSheet';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FloatingNav from '../../components/FloatingNav';
+import { EmptyState, ErrorNotice, LoadingState } from '../../components/ui';
 import {
   Accent,
   Accents,
@@ -38,6 +38,7 @@ import {
   Typography,
   accentShadow,
 } from '../../constants/theme';
+import { errorMessage } from '../../services/errors';
 import {
   AdherenceSummary,
   ScheduledDose,
@@ -104,7 +105,7 @@ export default function MedicineScreen() {
       setSummary(adherence);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Could not load your medicines.'
+        errorMessage(err, 'Could not load your medicines.')
       );
     } finally {
       setLoading(false);
@@ -117,11 +118,13 @@ export default function MedicineScreen() {
     const user = sessionData.session?.user;
     if (!user) return;
 
+    // Untyped until DB types are generated — declare the selected column.
     const { data } = await supabase
       .from('profiles')
       .select('name')
       .eq('id', user.id)
-      .maybeSingle();
+      .maybeSingle()
+      .overrideTypes<{ name: string | null }>();
 
     const name = data?.name ?? user.email?.split('@')[0];
     if (name) setUserName(name.split(' ')[0]);
@@ -141,7 +144,7 @@ export default function MedicineScreen() {
       await load();
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Could not update that dose.'
+        errorMessage(err, 'Could not update that dose.')
       );
     }
   };
@@ -184,22 +187,13 @@ export default function MedicineScreen() {
           </View>
         </MotiView>
 
-        <Text style={styles.sectionTitle}>Today's Overview</Text>
+        <Text style={styles.sectionTitle}>Today&apos;s Overview</Text>
 
         {loading ? (
-          <View style={styles.loading}>
-            <ActivityIndicator color={Colors.primary} />
-          </View>
+          <LoadingState />
         ) : (
           <>
-            {!!error && (
-              <View style={styles.errorCard}>
-                <Text style={styles.errorText}>{error}</Text>
-                <TouchableOpacity onPress={load} accessibilityRole="button">
-                  <Text style={styles.errorRetry}>Try again</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+            <ErrorNotice message={error} onRetry={() => void load()} />
 
             {/* Next-dose hero. The dial is the ring track plus the pill glyph —
                 a true progress arc needs react-native-svg, which is not a
@@ -226,7 +220,7 @@ export default function MedicineScreen() {
                       {nextDose.name}
                     </Text>
                     <AnimatedPressable
-                      onPress={() => toggleDose(nextDose)}
+                      onPress={() => void toggleDose(nextDose)}
                       style={styles.takeNowButton}>
                       <Text style={styles.takeNowText}>Take Now</Text>
                       <Check
@@ -321,7 +315,7 @@ export default function MedicineScreen() {
             </View>
 
             <View style={styles.scheduleHeader}>
-              <Text style={styles.sectionTitle}>Today's Schedule</Text>
+              <Text style={styles.sectionTitle}>Today&apos;s Schedule</Text>
               <AnimatedPressable onPress={() => router.push('/medicines')}>
                 <Text style={styles.viewAllLink}>View all</Text>
               </AnimatedPressable>
@@ -344,7 +338,7 @@ export default function MedicineScreen() {
                       delay: 160 + index * Motion.stagger,
                     }}>
                     <AnimatedPressable
-                      onPress={() => toggleDose(dose)}
+                      onPress={() => void toggleDose(dose)}
                       style={[styles.doseRow, isNext && styles.doseRowNext]}>
                       <Text style={styles.doseTime}>{dose.label}</Text>
                       <View
@@ -380,16 +374,11 @@ export default function MedicineScreen() {
                 );
               })
             ) : (
-              <View style={styles.emptyCard}>
-                <View style={styles.emptyTile}>
-                  <Pill size={26} color={Colors.primary} strokeWidth={1.8} />
-                </View>
-                <Text style={styles.emptyTitle}>No medicines yet</Text>
-                <Text style={styles.emptySubtitle}>
-                  Scan a prescription or add one by hand — we'll remind you when
-                  each dose is due.
-                </Text>
-              </View>
+              <EmptyState
+                icon={Pill}
+                title="No medicines yet"
+                subtitle="Scan a prescription or add one by hand — we'll remind you when each dose is due."
+              />
             )}
           </>
         )}
@@ -480,30 +469,6 @@ const styles = StyleSheet.create({
     ...Typography.sectionTitle,
     color: Colors.textPrimary,
     marginBottom: Spacing.md,
-  },
-  loading: {
-    paddingVertical: Spacing.max,
-    alignItems: 'center',
-  },
-  errorCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.md,
-    backgroundColor: Colors.errorTint,
-    borderRadius: Radius.lg,
-    padding: Spacing.lg,
-    marginBottom: Spacing.lg,
-  },
-  errorText: {
-    ...Typography.caption,
-    color: Colors.error,
-    flex: 1,
-  },
-  errorRetry: {
-    ...Typography.caption,
-    color: Colors.error,
-    fontWeight: '700',
   },
   heroCard: {
     marginBottom: Spacing.xl,
@@ -706,35 +671,6 @@ const styles = StyleSheet.create({
   doseCheckDone: {
     backgroundColor: Colors.success,
     borderColor: Colors.success,
-  },
-  emptyCard: {
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingVertical: Spacing.xxxl,
-    paddingHorizontal: Spacing.xl,
-    ...Shadow.card,
-  },
-  emptyTile: {
-    width: 56,
-    height: 56,
-    borderRadius: Radius.tile,
-    backgroundColor: Colors.primaryTint,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: Spacing.lg,
-  },
-  emptyTitle: {
-    ...Typography.cardTitle,
-    color: Colors.textPrimary,
-  },
-  emptySubtitle: {
-    ...Typography.secondary,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginTop: Spacing.xs,
   },
   addButton: {
     marginTop: Spacing.xl,

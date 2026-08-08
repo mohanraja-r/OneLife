@@ -9,7 +9,9 @@ import {
   TrendingUp,
 } from 'lucide-react-native';
 import { useState } from 'react';
+
 import { Accent, Accents } from '../../constants/theme';
+
 import OptionCard from './OptionCard';
 import QuestionScreen, { StaggeredOption } from './QuestionScreen';
 import { Goal, onboardingState } from './state';

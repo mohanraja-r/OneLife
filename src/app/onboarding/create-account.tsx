@@ -16,6 +16,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import PrimaryButton from '../../components/PrimaryButton';
 import {
   Accents,
   Colors,
@@ -25,10 +27,12 @@ import {
   Spacing,
   Typography,
 } from '../../constants/theme';
+import { errorMessage } from '../../services/errors';
 import { supabase } from '../../services/supabase';
-import PrimaryButton from '../../components/PrimaryButton';
+
+import LoginPrompt from './LoginPrompt';
 import { onboardingStyles as s } from './onboardingStyles';
-import { onboardingState, resetOnboardingState } from './state';
+import { onboardingState, resetOnboardingState } from './state';
 
 const accent = Accents.violet;
 
@@ -184,8 +188,8 @@ export default function CreateAccountScreen() {
       await saveEverything(data.user.id, email);
       resetOnboardingState();
       router.replace('/(tabs)/home');
-    } catch (err: any) {
-      Alert.alert('Error', err.message ?? 'Something went wrong');
+    } catch (err) {
+      Alert.alert('Error', errorMessage(err, 'Something went wrong'));
     } finally {
       setSaving(false);
     }
@@ -266,7 +270,7 @@ export default function CreateAccountScreen() {
               icon={Mail}
               hideArrow
               disabled={saving}
-              onPress={handleEmailSignUp}
+              onPress={() => void handleEmailSignUp()}
             />
 
             <SocialButton
@@ -281,14 +285,7 @@ export default function CreateAccountScreen() {
             />
           </View>
 
-          <View style={styles.loginRow}>
-            <Text style={styles.loginPrompt}>Already have an account? </Text>
-            <TouchableOpacity
-              onPress={() => router.push('/signup')}
-              hitSlop={8}>
-              <Text style={styles.loginLink}>Log in</Text>
-            </TouchableOpacity>
-          </View>
+          <LoginPrompt accent={accent} style={styles.loginRow} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -316,19 +313,5 @@ const styles = StyleSheet.create({
     ...Typography.optionLabel,
     color: Colors.textPrimary,
   },
-  loginRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingBottom: Spacing.xxl,
-  },
-  loginPrompt: {
-    ...Typography.caption,
-    color: Colors.textSecondary,
-  },
-  loginLink: {
-    ...Typography.caption,
-    fontWeight: '700',
-    color: accent.main,
-  },
+  loginRow: { paddingBottom: Spacing.xxl },
 });

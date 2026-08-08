@@ -14,7 +14,6 @@ import {
 import { MotiView } from 'moti';
 import { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -25,6 +24,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FloatingNav from '../../components/FloatingNav';
+import { EmptyState, ErrorNotice, LoadingState } from '../../components/ui';
 import {
   Accent,
   Accents,
@@ -36,6 +36,7 @@ import {
   Spacing,
   Typography,
 } from '../../constants/theme';
+import { errorMessage } from '../../services/errors';
 import {
   PlannerTask,
   TaskCategory,
@@ -132,7 +133,7 @@ export default function PlannerScreen() {
       setTasks(taskList);
       setContextItems(context);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not load this day.');
+      setError(errorMessage(err, 'Could not load this day.'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -169,7 +170,7 @@ export default function PlannerScreen() {
       await toggleTaskComplete(task.id, !task.completed);
       await loadDay(selectedDate);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not update that task.');
+      setError(errorMessage(err, 'Could not update that task.'));
     }
   };
 
@@ -314,30 +315,19 @@ export default function PlannerScreen() {
 
         <Text style={styles.sectionTitle}>Upcoming</Text>
 
-        {!!error && (
-          <View style={styles.errorCard}>
-            <Text style={styles.errorText}>{error}</Text>
-            <AnimatedPressable onPress={() => void loadDay(selectedDate)}>
-              <Text style={styles.errorRetry}>Try again</Text>
-            </AnimatedPressable>
-          </View>
-        )}
+        <ErrorNotice
+          message={error}
+          onRetry={() => void loadDay(selectedDate)}
+        />
 
         {loading ? (
-          <View style={styles.loading}>
-            <ActivityIndicator color={Colors.primary} />
-          </View>
+          <LoadingState />
         ) : timeline.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <View style={styles.emptyTile}>
-              <CalendarDays size={26} color={Colors.primary} strokeWidth={1.8} />
-            </View>
-            <Text style={styles.emptyTitle}>Nothing scheduled</Text>
-            <Text style={styles.emptySubtitle}>
-              Add a task and it will show up here alongside the meals and doses
-              you log that day.
-            </Text>
-          </View>
+          <EmptyState
+            icon={CalendarDays}
+            title="Nothing scheduled"
+            subtitle="Add a task and it will show up here alongside the meals and doses you log that day."
+          />
         ) : (
           timeline.map((entry, index) => {
             const visual =
@@ -633,51 +623,6 @@ const styles = StyleSheet.create({
   checkDone: {
     backgroundColor: Colors.success,
     borderColor: Colors.success,
-  },
-
-  loading: { paddingVertical: Spacing.xxxl, alignItems: 'center' },
-
-  emptyCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: Spacing.xl,
-    alignItems: 'center',
-    ...Shadow.card,
-  },
-  emptyTile: {
-    width: 56,
-    height: 56,
-    borderRadius: Radius.tile,
-    backgroundColor: Colors.primaryTint,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  emptyTitle: {
-    ...Typography.cardTitle,
-    color: Colors.textPrimary,
-  },
-  emptySubtitle: {
-    ...Typography.secondary,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginTop: Spacing.xs,
-  },
-
-  errorCard: {
-    backgroundColor: Colors.errorTint,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
-  },
-  errorText: { ...Typography.secondary, color: Colors.error },
-  errorRetry: {
-    ...Typography.secondary,
-    fontWeight: '600',
-    color: Colors.error,
-    marginTop: Spacing.xs,
   },
 
   addButton: {

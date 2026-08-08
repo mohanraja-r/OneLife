@@ -2,15 +2,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import type { LucideIcon } from 'lucide-react-native';
 import { ChevronRight, NotebookPen, ScanLine } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import {
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
 import {
   Accents,
   Colors,
@@ -21,7 +14,9 @@ import {
   Spacing,
   Typography,
 } from '../constants/theme';
+
 import AnimatedPressable from './AnimatedPressable';
+import { BottomSheet, sheetStyles } from './ui';
 
 /** How long the sheet takes to leave, before the chosen screen is presented. */
 const DISMISS_MS = 260;
@@ -70,8 +65,6 @@ export default function AddMedicineSheet({
   onScan,
   onManual,
 }: Props) {
-  const insets = useSafeAreaInsets();
-
   /** Closes the sheet, then runs the picked option's action. */
   const choose = (key: string) => {
     onClose();
@@ -84,122 +77,64 @@ export default function AddMedicineSheet({
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      statusBarTranslucent
-      onRequestClose={onClose}>
-      <Pressable
-        style={styles.overlay}
-        onPress={onClose}
-        accessibilityRole="button"
-        accessibilityLabel="Dismiss">
-        {/* Swallows taps on the sheet itself so they do not close it. */}
-        <Pressable onPress={() => {}}>
+    <BottomSheet visible={visible} onClose={onClose}>
+      <Text style={sheetStyles.title}>Add Medicine</Text>
+      <Text style={styles.subtitle}>How would you like to add it?</Text>
+
+      {OPTIONS.map((option, index) => {
+        const Icon = option.icon;
+        return (
           <MotiView
-            from={{ opacity: 0, translateY: 32 }}
+            key={option.key}
+            from={{ opacity: 0, translateY: 12 }}
             animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: 'timing', duration: Motion.base }}
-            style={[
-              styles.sheet,
-              { paddingBottom: insets.bottom + Spacing.xl },
-            ]}>
-            <View style={styles.grabber} />
+            transition={{
+              type: 'timing',
+              duration: Motion.fast,
+              delay: Motion.enterDelay + index * Motion.stagger,
+            }}>
+            <AnimatedPressable
+              onPress={() => choose(option.key)}
+              style={styles.option}>
+              {option.featured ? (
+                <LinearGradient
+                  colors={Gradients.primary}
+                  start={Gradients.diagonal.start}
+                  end={Gradients.diagonal.end}
+                  style={styles.tile}>
+                  <Icon size={22} color={Colors.onPrimary} strokeWidth={2} />
+                </LinearGradient>
+              ) : (
+                <View style={[styles.tile, styles.tileMuted]}>
+                  <Icon size={22} color={Accents.violet.main} strokeWidth={2} />
+                </View>
+              )}
 
-            <Text style={styles.title}>Add Medicine</Text>
-            <Text style={styles.subtitle}>How would you like to add it?</Text>
+              <View style={styles.optionText}>
+                <Text style={styles.optionTitle}>{option.title}</Text>
+                <Text style={styles.optionSubtitle}>{option.subtitle}</Text>
+              </View>
 
-            {OPTIONS.map((option, index) => {
-              const Icon = option.icon;
-              return (
-                <MotiView
-                  key={option.key}
-                  from={{ opacity: 0, translateY: 12 }}
-                  animate={{ opacity: 1, translateY: 0 }}
-                  transition={{
-                    type: 'timing',
-                    duration: Motion.fast,
-                    delay: Motion.enterDelay + index * Motion.stagger,
-                  }}>
-                  <AnimatedPressable
-                    onPress={() => choose(option.key)}
-                    style={styles.option}>
-                    {option.featured ? (
-                      <LinearGradient
-                        colors={Gradients.primary}
-                        start={Gradients.diagonal.start}
-                        end={Gradients.diagonal.end}
-                        style={styles.tile}>
-                        <Icon
-                          size={22}
-                          color={Colors.onPrimary}
-                          strokeWidth={2}
-                        />
-                      </LinearGradient>
-                    ) : (
-                      <View style={[styles.tile, styles.tileMuted]}>
-                        <Icon
-                          size={22}
-                          color={Accents.violet.main}
-                          strokeWidth={2}
-                        />
-                      </View>
-                    )}
-
-                    <View style={styles.optionText}>
-                      <Text style={styles.optionTitle}>{option.title}</Text>
-                      <Text style={styles.optionSubtitle}>
-                        {option.subtitle}
-                      </Text>
-                    </View>
-
-                    <ChevronRight size={20} color={Colors.textMuted} />
-                  </AnimatedPressable>
-                </MotiView>
-              );
-            })}
-
-            <TouchableOpacity
-              onPress={onClose}
-              style={styles.cancel}
-              accessibilityRole="button"
-              activeOpacity={0.6}>
-              <Text style={styles.cancelText}>Cancel</Text>
-            </TouchableOpacity>
+              <ChevronRight size={20} color={Colors.textMuted} />
+            </AnimatedPressable>
           </MotiView>
-        </Pressable>
-      </Pressable>
-    </Modal>
+        );
+      })}
+
+      <TouchableOpacity
+        onPress={onClose}
+        style={styles.cancel}
+        accessibilityRole="button"
+        activeOpacity={0.6}>
+        <Text style={sheetStyles.cancelText}>Cancel</Text>
+      </TouchableOpacity>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: Colors.overlay,
-  },
-  sheet: {
-    backgroundColor: Colors.surface,
-    borderTopLeftRadius: Radius.xxl,
-    borderTopRightRadius: Radius.xxl,
-    paddingHorizontal: Spacing.screen,
-    paddingTop: Spacing.md,
-    ...Shadow.floating,
-  },
-  grabber: {
-    alignSelf: 'center',
-    width: 44,
-    height: 5,
-    borderRadius: Radius.round,
-    backgroundColor: Colors.borderStrong,
-    marginBottom: Spacing.xl,
-  },
-  title: {
-    ...Typography.sectionTitle,
-    color: Colors.textPrimary,
-  },
+  // The only divergence from `sheetStyles.subtitle`: this sheet's options need
+  // a full gap under the intro line.
   subtitle: {
     ...Typography.secondary,
     color: Colors.textSecondary,
@@ -244,10 +179,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.lg,
     marginTop: Spacing.xs,
-  },
-  cancelText: {
-    ...Typography.button,
-    fontSize: 15,
-    color: Colors.textSecondary,
   },
 });

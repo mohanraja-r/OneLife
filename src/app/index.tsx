@@ -1,8 +1,9 @@
+import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { Redirect } from 'expo-router';
-import { supabase } from '../services/supabase';
+
 import { Colors } from '../constants/theme';
+import { supabase } from '../services/supabase';
 
 type RouteDecision = 'loading' | 'onboarding' | 'home';
 

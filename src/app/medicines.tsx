@@ -19,7 +19,6 @@ import {
 import { MotiView } from 'moti';
 import { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -28,8 +27,16 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import AddMedicineSheet from '../components/AddMedicineSheet';
 import AnimatedPressable from '../components/AnimatedPressable';
+import {
+  ChipOption,
+  ChipRow,
+  EmptyState,
+  ErrorNotice,
+  LoadingState,
+} from '../components/ui';
 import {
   Accent,
   Accents,
@@ -42,6 +49,7 @@ import {
   Typography,
   accentShadow,
 } from '../constants/theme';
+import { errorMessage } from '../services/errors';
 import {
   Medicine,
   formatTimeLabel,
@@ -50,7 +58,7 @@ import {
 
 type Filter = 'all' | 'active' | 'paused';
 
-const FILTERS: { value: Filter; label: string }[] = [
+const FILTERS: ChipOption<Filter>[] = [
   { value: 'all', label: 'All' },
   { value: 'active', label: 'Active' },
   { value: 'paused', label: 'Paused' },
@@ -106,7 +114,7 @@ export default function MedicinesScreen() {
       setMedicines(await getAllMedicines());
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Could not load your medicines.'
+        errorMessage(err, 'Could not load your medicines.')
       );
     } finally {
       setLoading(false);
@@ -165,36 +173,17 @@ export default function MedicinesScreen() {
           />
         </View>
 
-        <View style={styles.chipRow}>
-          {FILTERS.map((option) => {
-            const active = filter === option.value;
-            return (
-              <TouchableOpacity
-                key={option.value}
-                style={[styles.chip, active && styles.chipActive]}
-                onPress={() => setFilter(option.value)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}>
-                <Text
-                  style={[styles.chipText, active && styles.chipTextActive]}>
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+        <ChipRow
+          options={FILTERS}
+          value={filter}
+          onChange={setFilter}
+          style={styles.chipRow}
+        />
 
         {loading ? (
-          <View style={styles.loading}>
-            <ActivityIndicator color={Colors.primary} />
-          </View>
+          <LoadingState />
         ) : error ? (
-          <View style={styles.errorCard}>
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity onPress={load} accessibilityRole="button">
-              <Text style={styles.errorRetry}>Try again</Text>
-            </TouchableOpacity>
-          </View>
+          <ErrorNotice message={error} onRetry={() => void load()} />
         ) : visible.length > 0 ? (
           visible.map((med, index) => {
             const { icon: Icon, accent } = glyphFor(med.name, index);
@@ -259,19 +248,15 @@ export default function MedicinesScreen() {
             );
           })
         ) : (
-          <View style={styles.emptyCard}>
-            <View style={styles.emptyTile}>
-              <Pill size={26} color={Colors.primary} strokeWidth={1.8} />
-            </View>
-            <Text style={styles.emptyTitle}>
-              {medicines.length ? 'Nothing matches' : 'No medicines yet'}
-            </Text>
-            <Text style={styles.emptySubtitle}>
-              {medicines.length
+          <EmptyState
+            icon={Pill}
+            title={medicines.length ? 'Nothing matches' : 'No medicines yet'}
+            subtitle={
+              medicines.length
                 ? 'Try a different search or filter.'
-                : 'Scan a prescription or add one by hand to get started.'}
-            </Text>
-          </View>
+                : 'Scan a prescription or add one by hand to get started.'
+            }
+          />
         )}
 
         <Text style={styles.hint}>
@@ -344,54 +329,7 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     paddingVertical: Spacing.md,
   },
-  chipRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginBottom: Spacing.lg,
-  },
-  chip: {
-    borderRadius: Radius.pill,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
-  },
-  chipActive: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryTint,
-  },
-  chipText: {
-    ...Typography.caption,
-    color: Colors.textSecondary,
-  },
-  chipTextActive: {
-    color: Colors.primaryDark,
-    fontWeight: '700',
-  },
-  loading: {
-    paddingVertical: Spacing.max,
-    alignItems: 'center',
-  },
-  errorCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.md,
-    backgroundColor: Colors.errorTint,
-    borderRadius: Radius.lg,
-    padding: Spacing.lg,
-  },
-  errorText: {
-    ...Typography.caption,
-    color: Colors.error,
-    flex: 1,
-  },
-  errorRetry: {
-    ...Typography.caption,
-    color: Colors.error,
-    fontWeight: '700',
-  },
+  chipRow: { marginBottom: Spacing.lg },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -451,35 +389,6 @@ const styles = StyleSheet.create({
     ...Typography.label,
     color: Colors.primary,
     flex: 1,
-  },
-  emptyCard: {
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingVertical: Spacing.xxxl,
-    paddingHorizontal: Spacing.xl,
-    ...Shadow.card,
-  },
-  emptyTile: {
-    width: 56,
-    height: 56,
-    borderRadius: Radius.tile,
-    backgroundColor: Colors.primaryTint,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: Spacing.lg,
-  },
-  emptyTitle: {
-    ...Typography.cardTitle,
-    color: Colors.textPrimary,
-  },
-  emptySubtitle: {
-    ...Typography.secondary,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginTop: Spacing.xs,
   },
   hint: {
     ...Typography.label,

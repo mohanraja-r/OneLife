@@ -1,8 +1,9 @@
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, Pressable, Image } from 'react-native';
-import { router } from 'expo-router';
-import { supabase } from '../services/supabase';
+
 import { Colors, Spacing, Radius, Typography } from '../constants/theme';
+import { supabase } from '../services/supabase';
 
 interface AppHeaderProps {
   title?: string;
@@ -28,11 +29,14 @@ export default function AppHeader({ title, showBack }: AppHeaderProps) {
     const userId = sessionData.session?.user.id;
     if (!userId) return;
 
+    // Rows are untyped until DB types are generated (`supabase gen types`), so
+    // declare the columns this query actually selects.
     const { data } = await supabase
       .from('profiles')
       .select('name, avatar_url')
       .eq('id', userId)
-      .maybeSingle();
+      .maybeSingle()
+      .overrideTypes<{ name: string | null; avatar_url: string | null }>();
 
     if (data?.name) setInitials(data.name.slice(0, 2).toUpperCase());
     if (data?.avatar_url) setAvatarUrl(data.avatar_url);

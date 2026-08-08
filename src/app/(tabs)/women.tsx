@@ -2,7 +2,6 @@ import { Redirect, useFocusEffect } from 'expo-router';
 import { MotiView } from 'moti';
 import { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   SafeAreaView,
   ScrollView,
@@ -13,6 +12,7 @@ import {
 } from 'react-native';
 
 import FloatingNav from '../../components/FloatingNav';
+import { ErrorNotice, LoadingState } from '../../components/ui';
 import AddCheckupSheet from '../../components/women/AddCheckupSheet';
 import CyclePanel from '../../components/women/CyclePanel';
 import LogSheet, {
@@ -32,6 +32,7 @@ import {
   Typography,
 } from '../../constants/theme';
 import { startOfToday, toDateString } from '../../services/dates';
+import { errorMessage } from '../../services/errors';
 import { useProfileSummary } from '../../services/profile';
 import {
   Checkup,
@@ -89,7 +90,7 @@ export default function WomenScreen() {
       setPregnancy(pregnancyRecord);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Could not load your health data.'
+        errorMessage(err, 'Could not load your health data.')
       );
     } finally {
       setLoading(false);
@@ -155,7 +156,7 @@ export default function WomenScreen() {
   const reportFailure = (err: unknown, fallback: string) => {
     Alert.alert(
       'Could not save',
-      err instanceof Error ? err.message : fallback
+      errorMessage(err, fallback)
     );
   };
 
@@ -254,21 +255,10 @@ export default function WomenScreen() {
           })}
         </View>
 
-        {!!error && (
-          <View style={styles.errorCard}>
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity
-              onPress={() => void load()}
-              accessibilityRole="button">
-              <Text style={styles.errorRetry}>Try again</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        <ErrorNotice message={error} onRetry={() => void load()} />
 
         {loading ? (
-          <View style={styles.loading}>
-            <ActivityIndicator color={Accents.pink.main} />
-          </View>
+          <LoadingState color={Accents.pink.main} />
         ) : (
           <MotiView
             // Keyed on the tab so switching replays the entrance rather than
@@ -348,18 +338,4 @@ const styles = StyleSheet.create({
   segmentActive: { backgroundColor: Colors.primaryTint },
   segmentLabel: { ...Typography.optionLabel, color: Colors.textSecondary },
   segmentLabelActive: { color: Colors.primary },
-  loading: { paddingVertical: Spacing.max, alignItems: 'center' },
-  errorCard: {
-    backgroundColor: Colors.errorTint,
-    borderRadius: Radius.lg,
-    padding: Spacing.lg,
-    marginBottom: Spacing.lg,
-  },
-  errorText: { ...Typography.caption, color: Colors.error },
-  errorRetry: {
-    ...Typography.caption,
-    fontWeight: '700',
-    color: Colors.error,
-    marginTop: Spacing.sm,
-  },
 });

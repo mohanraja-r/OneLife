@@ -1,11 +1,13 @@
+import * as FileSystem from 'expo-file-system';
+import * as ImagePicker from 'expo-image-picker';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
-import { identifyMeal } from '../services/meals';
+
 import { Colors, Spacing, Radius, Typography } from '../constants/theme';
+import { errorMessage } from '../services/errors';
+import { identifyMeal } from '../services/meals';
 
 export default function LogMealScreen() {
   const [identifying, setIdentifying] = useState(false);
@@ -49,8 +51,8 @@ export default function LogMealScreen() {
           source: 'photo',
         },
       });
-    } catch (err: any) {
-      Alert.alert('Error identifying meal', err.message ?? 'Something went wrong');
+    } catch (err) {
+      Alert.alert('Error identifying meal', errorMessage(err, 'Something went wrong'));
       setIdentifying(false);
     }
   };
@@ -83,13 +85,13 @@ export default function LogMealScreen() {
 
         {!identifying && (
           <>
-            <TouchableOpacity style={styles.primaryButton} onPress={() => handlePhoto(true)}>
+            <TouchableOpacity style={styles.primaryButton} onPress={() => void handlePhoto(true)}>
               <Text style={styles.primaryButtonText}>📷 Take photo</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.secondaryButton} onPress={handleTypeInstead}>
               <Text style={styles.secondaryButtonText}>⌨️ Type instead</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.galleryLink} onPress={() => handlePhoto(false)}>
+            <TouchableOpacity style={styles.galleryLink} onPress={() => void handlePhoto(false)}>
               <Text style={styles.galleryLinkText}>or choose from gallery</Text>
             </TouchableOpacity>
           </>

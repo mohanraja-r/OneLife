@@ -4,7 +4,6 @@ import { ChevronLeft, Plus, Trash2 } from 'lucide-react-native';
 import { MotiView } from 'moti';
 import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -17,8 +16,10 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import PrimaryButton from '../components/PrimaryButton';
 import TimePickerField from '../components/TimePickerField';
+import { ChipOption, ChipRow, LoadingState } from '../components/ui';
 import {
   Colors,
   Motion,
@@ -27,6 +28,7 @@ import {
   Spacing,
   Typography,
 } from '../constants/theme';
+import { errorMessage } from '../services/errors';
 import {
   DurationType,
   FoodRelation,
@@ -39,20 +41,20 @@ import {
   updateMedicine,
 } from '../services/medicine';
 
-const FREQUENCIES = [
-  'Once daily',
-  'Twice daily',
-  'Three times daily',
-  'As needed',
+const FREQUENCIES: ChipOption<string>[] = [
+  { value: 'Once daily', label: 'Once daily' },
+  { value: 'Twice daily', label: 'Twice daily' },
+  { value: 'Three times daily', label: 'Three times daily' },
+  { value: 'As needed', label: 'As needed' },
 ];
 
-const FOOD_RELATIONS: { value: FoodRelation; label: string }[] = [
+const FOOD_RELATIONS: ChipOption<FoodRelation>[] = [
   { value: 'before', label: 'Before food' },
   { value: 'after', label: 'After food' },
   { value: 'any', label: 'Any time' },
 ];
 
-const DURATIONS: { value: DurationType; label: string }[] = [
+const DURATIONS: ChipOption<DurationType>[] = [
   { value: 'ongoing', label: 'Ongoing' },
   { value: 'course', label: 'Fixed course' },
 ];
@@ -91,7 +93,7 @@ export default function AddMedicineScreen() {
 
   const [name, setName] = useState('');
   const [dosage, setDosage] = useState('');
-  const [frequency, setFrequency] = useState(FREQUENCIES[0]);
+  const [frequency, setFrequency] = useState(FREQUENCIES[0].value);
   const [times, setTimes] = useState<string[]>(['09:00']);
   const [foodRelation, setFoodRelation] = useState<FoodRelation>('after');
   const [durationType, setDurationType] = useState<DurationType>('ongoing');
@@ -124,7 +126,7 @@ export default function AddMedicineScreen() {
       .catch((err: unknown) =>
         Alert.alert(
           'Error loading medicine',
-          err instanceof Error ? err.message : 'Something went wrong.'
+          errorMessage(err, 'Something went wrong.')
         )
       )
       .finally(() => setLoading(false));
@@ -174,7 +176,7 @@ export default function AddMedicineScreen() {
     } catch (err) {
       Alert.alert(
         'Error saving medicine',
-        err instanceof Error ? err.message : 'Something went wrong.'
+        errorMessage(err, 'Something went wrong.')
       );
     } finally {
       setSaving(false);
@@ -191,16 +193,18 @@ export default function AddMedicineScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteMedicine(medicineId!);
-              router.back();
-            } catch (err) {
-              Alert.alert(
-                'Error deleting medicine',
-                err instanceof Error ? err.message : 'Something went wrong.'
-              );
-            }
+          onPress: () => {
+            void (async () => {
+              try {
+                await deleteMedicine(medicineId!);
+                router.back();
+              } catch (err) {
+                Alert.alert(
+                  'Error deleting medicine',
+                  errorMessage(err, 'Something went wrong.')
+                );
+              }
+            })();
           },
         },
       ]
@@ -236,9 +240,7 @@ export default function AddMedicineScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.loading}>
-          <ActivityIndicator color={Colors.primary} />
-        </View>
+        <LoadingState fill />
       ) : (
         <KeyboardAvoidingView
           style={styles.flex}
@@ -272,27 +274,13 @@ export default function AddMedicineScreen() {
               />
 
               <Text style={styles.label}>Frequency</Text>
-              <View style={styles.chipRow}>
-                {FREQUENCIES.map((option) => {
-                  const active = frequency === option;
-                  return (
-                    <TouchableOpacity
-                      key={option}
-                      style={[styles.chip, active && styles.chipActive]}
-                      onPress={() => setFrequency(option)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: active }}>
-                      <Text
-                        style={[
-                          styles.chipText,
-                          active && styles.chipTextActive,
-                        ]}>
-                        {option}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+              <ChipRow
+                options={FREQUENCIES}
+                value={frequency}
+                onChange={setFrequency}
+                wrap
+                style={styles.chipRow}
+              />
             </MotiView>
 
             <MotiView
@@ -335,50 +323,22 @@ export default function AddMedicineScreen() {
               }}
               style={styles.card}>
               <Text style={styles.label}>Relation to food</Text>
-              <View style={styles.chipRow}>
-                {FOOD_RELATIONS.map((option) => {
-                  const active = foodRelation === option.value;
-                  return (
-                    <TouchableOpacity
-                      key={option.value}
-                      style={[styles.chip, active && styles.chipActive]}
-                      onPress={() => setFoodRelation(option.value)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: active }}>
-                      <Text
-                        style={[
-                          styles.chipText,
-                          active && styles.chipTextActive,
-                        ]}>
-                        {option.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+              <ChipRow
+                options={FOOD_RELATIONS}
+                value={foodRelation}
+                onChange={setFoodRelation}
+                wrap
+                style={styles.chipRow}
+              />
 
               <Text style={styles.label}>Duration</Text>
-              <View style={styles.chipRow}>
-                {DURATIONS.map((option) => {
-                  const active = durationType === option.value;
-                  return (
-                    <TouchableOpacity
-                      key={option.value}
-                      style={[styles.chip, active && styles.chipActive]}
-                      onPress={() => setDurationType(option.value)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: active }}>
-                      <Text
-                        style={[
-                          styles.chipText,
-                          active && styles.chipTextActive,
-                        ]}>
-                        {option.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+              <ChipRow
+                options={DURATIONS}
+                value={durationType}
+                onChange={setDurationType}
+                wrap
+                style={styles.chipRow}
+              />
 
               {durationType === 'course' && (
                 <View style={styles.courseRow}>
@@ -430,7 +390,7 @@ export default function AddMedicineScreen() {
               label={saving ? 'Saving…' : 'Save medicine'}
               hideArrow
               disabled={!canSave || saving}
-              onPress={handleSave}
+              onPress={() => void handleSave()}
             />
           </View>
         </KeyboardAvoidingView>
@@ -454,11 +414,6 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   headerSpacer: { width: 26 },
-  loading: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   content: {
     paddingHorizontal: Spacing.screen,
     paddingTop: Spacing.sm,
@@ -488,32 +443,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     marginBottom: Spacing.lg,
   },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-    marginBottom: Spacing.lg,
-  },
-  chip: {
-    borderRadius: Radius.pill,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
-  },
-  chipActive: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryTint,
-  },
-  chipText: {
-    ...Typography.caption,
-    color: Colors.textSecondary,
-  },
-  chipTextActive: {
-    color: Colors.primaryDark,
-    fontWeight: '700',
-  },
+  chipRow: { marginBottom: Spacing.lg },
   addTimeRow: {
     flexDirection: 'row',
     alignItems: 'center',

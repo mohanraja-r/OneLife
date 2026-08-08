@@ -25,6 +25,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
 import PrimaryButton from '../components/PrimaryButton';
 import {
   Accent,
@@ -231,7 +232,7 @@ export default function SignUpScreen() {
               accent={accent}
               hideArrow
               disabled={loading}
-              onPress={handleSubmit}
+              onPress={() => void handleSubmit()}
             />
           </View>
 

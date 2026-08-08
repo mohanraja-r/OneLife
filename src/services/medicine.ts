@@ -96,6 +96,14 @@ interface MedicineRow {
   active: boolean | null;
 }
 
+/** The `dose_log` columns read when building a day's schedule. */
+interface DoseLogRow {
+  id: string;
+  medicine_id: string;
+  scheduled_for: string;
+  status: string;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -332,7 +340,7 @@ export async function getTodaysDoses(): Promise<ScheduledDose[]> {
   // Doses are identified by medicine + wall-clock slot, so index the logs the
   // same way rather than by their raw timestamp.
   const logBySlot = new Map<string, { id: string; status: DoseStatus }>();
-  for (const log of logs ?? []) {
+  for (const log of (logs ?? []) as DoseLogRow[]) {
     const at = new Date(log.scheduled_for);
     const slot = `${log.medicine_id}|${pad(at.getHours())}:${pad(at.getMinutes())}`;
     logBySlot.set(slot, { id: log.id, status: log.status as DoseStatus });

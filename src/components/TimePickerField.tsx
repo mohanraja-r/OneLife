@@ -1,28 +1,18 @@
-import DateTimePicker, {
-  DateTimePickerAndroid,
-} from '@react-native-community/datetimepicker';
+import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { ChevronDown, Clock, X } from 'lucide-react-native';
-import { MotiView } from 'moti';
 import { useState } from 'react';
 import {
-  Modal,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  Colors,
-  Motion,
-  Radius,
-  Shadow,
-  Spacing,
-  Typography,
-} from '../constants/theme';
+
+import { Colors, Radius, Spacing, Typography } from '../constants/theme';
 import { dateToTime, formatTimeLabel, timeToDate } from '../services/medicine';
+
+import { DateTimeSpinnerSheet } from './ui';
 
 interface Props {
   /** The slot being edited, in 24-hour `HH:MM` form. */
@@ -40,7 +30,6 @@ interface Props {
  * app. Either way the value that comes back is always a valid `HH:MM`.
  */
 export default function TimePickerField({ value, onChange, onRemove }: Props) {
-  const insets = useSafeAreaInsets();
   const [sheetOpen, setSheetOpen] = useState(false);
 
   /** Opens the platform's time picker for this slot. */
@@ -86,49 +75,14 @@ export default function TimePickerField({ value, onChange, onRemove }: Props) {
       )}
 
       {Platform.OS === 'ios' && (
-        <Modal
+        <DateTimeSpinnerSheet
           visible={sheetOpen}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setSheetOpen(false)}>
-          <Pressable
-            style={styles.overlay}
-            onPress={() => setSheetOpen(false)}
-            accessibilityRole="button"
-            accessibilityLabel="Dismiss">
-            {/* Swallows taps on the sheet so they do not close it. */}
-            <Pressable onPress={() => {}}>
-              <MotiView
-                from={{ opacity: 0, translateY: 32 }}
-                animate={{ opacity: 1, translateY: 0 }}
-                transition={{ type: 'timing', duration: Motion.base }}
-                style={[
-                  styles.sheet,
-                  { paddingBottom: insets.bottom + Spacing.lg },
-                ]}>
-                <View style={styles.grabber} />
-                <Text style={styles.sheetTitle}>Reminder time</Text>
-
-                <DateTimePicker
-                  value={timeToDate(value)}
-                  mode="time"
-                  display="spinner"
-                  themeVariant="light"
-                  onChange={(_, date) => {
-                    if (date) onChange(dateToTime(date));
-                  }}
-                />
-
-                <TouchableOpacity
-                  onPress={() => setSheetOpen(false)}
-                  style={styles.done}
-                  accessibilityRole="button">
-                  <Text style={styles.doneText}>Done</Text>
-                </TouchableOpacity>
-              </MotiView>
-            </Pressable>
-          </Pressable>
-        </Modal>
+          onClose={() => setSheetOpen(false)}
+          title="Reminder time"
+          value={timeToDate(value)}
+          mode="time"
+          onChange={(date) => onChange(dateToTime(date))}
+        />
       )}
     </View>
   );
@@ -171,43 +125,5 @@ const styles = StyleSheet.create({
     height: 36,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: Colors.overlay,
-  },
-  sheet: {
-    backgroundColor: Colors.surface,
-    borderTopLeftRadius: Radius.xxl,
-    borderTopRightRadius: Radius.xxl,
-    paddingHorizontal: Spacing.screen,
-    paddingTop: Spacing.md,
-    ...Shadow.floating,
-  },
-  grabber: {
-    alignSelf: 'center',
-    width: 44,
-    height: 5,
-    borderRadius: Radius.round,
-    backgroundColor: Colors.borderStrong,
-    marginBottom: Spacing.lg,
-  },
-  sheetTitle: {
-    ...Typography.cardTitle,
-    color: Colors.textPrimary,
-    textAlign: 'center',
-  },
-  done: {
-    alignItems: 'center',
-    backgroundColor: Colors.primaryTint,
-    borderRadius: Radius.lg,
-    paddingVertical: Spacing.md,
-    marginTop: Spacing.sm,
-  },
-  doneText: {
-    ...Typography.button,
-    fontSize: 16,
-    color: Colors.primary,
   },
 });

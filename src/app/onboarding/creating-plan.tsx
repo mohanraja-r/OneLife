@@ -4,6 +4,7 @@ import { MotiView } from 'moti';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
 import {
   Accents,
   Colors,
@@ -12,6 +13,7 @@ import {
   Spacing,
   Typography,
 } from '../../constants/theme';
+
 import { onboardingStyles as s } from './onboardingStyles';
 
 const accent = Accents.violet;

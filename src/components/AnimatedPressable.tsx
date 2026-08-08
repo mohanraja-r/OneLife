@@ -1,7 +1,7 @@
+import * as Haptics from 'expo-haptics';
+import { MotiPressable } from 'moti/interactions';
 import { ReactNode } from 'react';
 import { StyleProp, ViewStyle } from 'react-native';
-import { MotiPressable } from 'moti/interactions';
-import * as Haptics from 'expo-haptics';
 
 interface AnimatedPressableProps {
   children: ReactNode;
@@ -37,7 +37,7 @@ export default function AnimatedPressable({
         };
       }}
       transition={{ type: 'timing', duration: 120 }}
-      style={style as any}>
+      style={style}>
       {children}
     </MotiPressable>
   );

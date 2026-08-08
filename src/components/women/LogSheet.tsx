@@ -10,13 +10,8 @@ import {
   Thermometer,
   Weight,
 } from 'lucide-react-native';
-import { MotiView } from 'moti';
 import { useEffect, useState } from 'react';
 import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -24,20 +19,18 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   Accent,
   Accents,
   Colors,
-  Motion,
   Radius,
-  Shadow,
   Spacing,
   Typography,
   accentShadow,
 } from '../../constants/theme';
 import AnimatedPressable from '../AnimatedPressable';
+import { BottomSheet, sheetStyles } from '../ui';
 
 /** Everything the "Log today" row can record, across both tabs. */
 export type LogKind =
@@ -244,7 +237,6 @@ export default function LogSheet({
   onClose,
   onSave,
 }: Props) {
-  const insets = useSafeAreaInsets();
   const [choice, setChoice] = useState<string | null>(null);
   const [selection, setSelection] = useState<string[]>([]);
   const [text, setText] = useState('');
@@ -291,197 +283,141 @@ export default function LogSheet({
     config.input === 'multi' ? selection.length > 0 : currentValue() !== null;
 
   return (
-    <Modal
-      visible
-      transparent
-      animationType="fade"
-      statusBarTranslucent
-      onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        style={styles.fill}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Pressable
-          style={styles.overlay}
-          onPress={onClose}
-          accessibilityRole="button"
-          accessibilityLabel="Dismiss">
-          {/* Swallows taps on the sheet itself so they do not close it. */}
-          <Pressable onPress={() => {}}>
-            <MotiView
-              from={{ opacity: 0, translateY: 32 }}
-              animate={{ opacity: 1, translateY: 0 }}
-              transition={{ type: 'timing', duration: Motion.base }}
-              style={[
-                styles.sheet,
-                { paddingBottom: insets.bottom + Spacing.xl },
-              ]}>
-              <View style={styles.grabber} />
+    <BottomSheet visible onClose={onClose} avoidKeyboard>
+      <View style={styles.heading}>
+        <View
+          style={[styles.headingTile, { backgroundColor: config.accent.tint }]}>
+          <Icon size={20} color={config.accent.main} strokeWidth={2} />
+        </View>
+        <View style={styles.headingText}>
+          <Text style={styles.title}>{config.title}</Text>
+          <Text style={styles.subtitle}>{config.subtitle}</Text>
+        </View>
+      </View>
 
-              <View style={styles.heading}>
-                <View
-                  style={[
-                    styles.headingTile,
-                    { backgroundColor: config.accent.tint },
-                  ]}>
-                  <Icon size={20} color={config.accent.main} strokeWidth={2} />
-                </View>
-                <View style={styles.headingText}>
-                  <Text style={styles.title}>{config.title}</Text>
-                  <Text style={styles.subtitle}>{config.subtitle}</Text>
-                </View>
-              </View>
-
-              {config.input === 'choice' && (
-                <View style={styles.choices}>
-                  {config.options?.map((option) => {
-                    const active = choice === option.id;
-                    return (
-                      <AnimatedPressable
-                        key={option.id}
-                        onPress={() => setChoice(active ? null : option.id)}
-                        style={[
-                          styles.choice,
-                          active && {
-                            borderColor: config.accent.main,
-                            backgroundColor: config.accent.tint,
-                          },
-                        ]}>
-                        {!!option.emoji && (
-                          <Text style={styles.choiceEmoji}>{option.emoji}</Text>
-                        )}
-                        <Text
-                          style={[
-                            styles.choiceLabel,
-                            active && { color: config.accent.dark },
-                          ]}>
-                          {option.label}
-                        </Text>
-                      </AnimatedPressable>
-                    );
-                  })}
-                </View>
-              )}
-
-              {config.input === 'multi' && (
-                <ScrollView
-                  style={styles.chipScroll}
-                  showsVerticalScrollIndicator={false}>
-                  <View style={styles.chips}>
-                    {config.options?.map((option) => {
-                      const active = selection.includes(option.id);
-                      return (
-                        <TouchableOpacity
-                          key={option.id}
-                          onPress={() => toggleChip(option.id)}
-                          activeOpacity={0.7}
-                          accessibilityRole="checkbox"
-                          accessibilityState={{ checked: active }}
-                          style={[
-                            styles.chip,
-                            active && {
-                              borderColor: config.accent.main,
-                              backgroundColor: config.accent.tint,
-                            },
-                          ]}>
-                          <Text
-                            style={[
-                              styles.chipLabel,
-                              active && { color: config.accent.dark },
-                            ]}>
-                            {option.label}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </ScrollView>
-              )}
-
-              {config.input === 'number' && (
-                <View style={styles.numberField}>
-                  <TextInput
-                    value={text}
-                    onChangeText={setText}
-                    keyboardType="decimal-pad"
-                    placeholder={config.placeholder}
-                    placeholderTextColor={Colors.textMuted}
-                    style={styles.numberInput}
-                    accessibilityLabel={config.title}
-                  />
-                  <Text style={styles.unit}>{config.unit}</Text>
-                </View>
-              )}
-
-              {config.input === 'text' && (
-                <TextInput
-                  value={text}
-                  onChangeText={setText}
-                  multiline
-                  placeholder={config.placeholder}
-                  placeholderTextColor={Colors.textMuted}
-                  style={styles.textArea}
-                  accessibilityLabel={config.title}
-                />
-              )}
-
+      {config.input === 'choice' && (
+        <View style={styles.choices}>
+          {config.options?.map((option) => {
+            const active = choice === option.id;
+            return (
               <AnimatedPressable
-                onPress={() => {
-                  onSave(kind, currentValue());
-                  onClose();
-                }}
+                key={option.id}
+                onPress={() => setChoice(active ? null : option.id)}
                 style={[
-                  styles.save,
-                  { backgroundColor: config.accent.main },
-                  accentShadow(config.accent.main),
+                  styles.choice,
+                  active && {
+                    borderColor: config.accent.main,
+                    backgroundColor: config.accent.tint,
+                  },
                 ]}>
-                <Text style={styles.saveLabel}>Save</Text>
-              </AnimatedPressable>
-
-              <TouchableOpacity
-                onPress={() => {
-                  if (hasValue) {
-                    onSave(kind, config.input === 'multi' ? [] : null);
-                  }
-                  onClose();
-                }}
-                style={styles.secondary}
-                accessibilityRole="button"
-                activeOpacity={0.6}>
-                <Text style={styles.secondaryLabel}>
-                  {hasValue ? "Clear today's entry" : 'Cancel'}
+                {!!option.emoji && (
+                  <Text style={styles.choiceEmoji}>{option.emoji}</Text>
+                )}
+                <Text
+                  style={[
+                    styles.choiceLabel,
+                    active && { color: config.accent.dark },
+                  ]}>
+                  {option.label}
                 </Text>
-              </TouchableOpacity>
-            </MotiView>
-          </Pressable>
-        </Pressable>
-      </KeyboardAvoidingView>
-    </Modal>
+              </AnimatedPressable>
+            );
+          })}
+        </View>
+      )}
+
+      {config.input === 'multi' && (
+        <ScrollView style={styles.chipScroll} showsVerticalScrollIndicator={false}>
+          <View style={styles.chips}>
+            {config.options?.map((option) => {
+              const active = selection.includes(option.id);
+              return (
+                <TouchableOpacity
+                  key={option.id}
+                  onPress={() => toggleChip(option.id)}
+                  activeOpacity={0.7}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: active }}
+                  style={[
+                    styles.chip,
+                    active && {
+                      borderColor: config.accent.main,
+                      backgroundColor: config.accent.tint,
+                    },
+                  ]}>
+                  <Text
+                    style={[
+                      styles.chipLabel,
+                      active && { color: config.accent.dark },
+                    ]}>
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </ScrollView>
+      )}
+
+      {config.input === 'number' && (
+        <View style={styles.numberField}>
+          <TextInput
+            value={text}
+            onChangeText={setText}
+            keyboardType="decimal-pad"
+            placeholder={config.placeholder}
+            placeholderTextColor={Colors.textMuted}
+            style={styles.numberInput}
+            accessibilityLabel={config.title}
+          />
+          <Text style={styles.unit}>{config.unit}</Text>
+        </View>
+      )}
+
+      {config.input === 'text' && (
+        <TextInput
+          value={text}
+          onChangeText={setText}
+          multiline
+          placeholder={config.placeholder}
+          placeholderTextColor={Colors.textMuted}
+          style={styles.textArea}
+          accessibilityLabel={config.title}
+        />
+      )}
+
+      <AnimatedPressable
+        onPress={() => {
+          onSave(kind, currentValue());
+          onClose();
+        }}
+        style={[
+          sheetStyles.save,
+          { backgroundColor: config.accent.main },
+          accentShadow(config.accent.main),
+        ]}>
+        <Text style={sheetStyles.saveLabel}>Save</Text>
+      </AnimatedPressable>
+
+      <TouchableOpacity
+        onPress={() => {
+          if (hasValue) {
+            onSave(kind, config.input === 'multi' ? [] : null);
+          }
+          onClose();
+        }}
+        style={sheetStyles.cancel}
+        accessibilityRole="button"
+        activeOpacity={0.6}>
+        <Text style={sheetStyles.cancelText}>
+          {hasValue ? "Clear today's entry" : 'Cancel'}
+        </Text>
+      </TouchableOpacity>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1 },
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: Colors.overlay,
-  },
-  sheet: {
-    backgroundColor: Colors.surface,
-    borderTopLeftRadius: Radius.xxl,
-    borderTopRightRadius: Radius.xxl,
-    paddingHorizontal: Spacing.screen,
-    paddingTop: Spacing.md,
-    ...Shadow.floating,
-  },
-  grabber: {
-    alignSelf: 'center',
-    width: 44,
-    height: 5,
-    borderRadius: Radius.round,
-    backgroundColor: Colors.borderStrong,
-    marginBottom: Spacing.xl,
-  },
   heading: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -556,18 +492,5 @@ const styles = StyleSheet.create({
     ...Typography.body,
     color: Colors.textPrimary,
     textAlignVertical: 'top',
-  },
-  save: {
-    borderRadius: Radius.xl,
-    alignItems: 'center',
-    paddingVertical: Spacing.lg,
-    marginTop: Spacing.xl,
-  },
-  saveLabel: { ...Typography.button, color: Colors.textInverse },
-  secondary: { alignItems: 'center', paddingVertical: Spacing.lg },
-  secondaryLabel: {
-    ...Typography.button,
-    fontSize: 15,
-    color: Colors.textSecondary,
   },
 });

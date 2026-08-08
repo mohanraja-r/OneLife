@@ -3,8 +3,10 @@ import { MotiView } from 'moti';
 import { ReactNode } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Accent, Accents, Motion } from '../../constants/theme';
+
 import PrimaryButton from '../../components/PrimaryButton';
+import { Accent, Accents, Motion } from '../../constants/theme';
+
 import OnboardingProgress from './OnboardingProgress';
 import { onboardingStyles as s } from './onboardingStyles';
 

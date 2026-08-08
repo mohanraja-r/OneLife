@@ -145,7 +145,9 @@ export async function getFrequentMeals(): Promise<Meal[]> {
     .map((g) => g.meal);
 }
 
-export function calculateMealTotals(meal: Meal) {
+/** Sums the macros across a meal's items. Takes just `items` so callers holding
+ *  a draft, not a saved Meal, can use it too. */
+export function calculateMealTotals(meal: Pick<Meal, 'items'>) {
   return meal.items.reduce(
     (totals, item) => ({
       calories: totals.calories + item.calories,
