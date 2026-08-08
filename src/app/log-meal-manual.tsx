@@ -1,9 +1,21 @@
 import { router } from 'expo-router';
+import { ArrowLeft } from 'lucide-react-native';
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Colors, Spacing, Radius, Typography } from '../constants/theme';
+import PrimaryButton from '../components/PrimaryButton';
+import { Colors, Radius, Spacing, Typography } from '../constants/theme';
 import { errorMessage } from '../services/errors';
 import { identifyMeal } from '../services/meals';
 
@@ -11,6 +23,7 @@ export default function LogMealManualScreen() {
   const [text, setText] = useState('');
   const [identifying, setIdentifying] = useState(false);
 
+  /** Sends the typed description to the AI and routes to the confirm screen. */
   const handleContinue = async () => {
     if (!text.trim()) return;
     setIdentifying(true);
@@ -39,73 +52,100 @@ export default function LogMealManualScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.cancel}>Cancel</Text>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Go back">
+          <ArrowLeft size={24} color={Colors.textPrimary} strokeWidth={2.2} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Describe your meal</Text>
-        <View style={{ width: 50 }} />
+        <Text style={styles.headerTitle}>Log a Meal</Text>
+        <View style={styles.headerSpacer} />
       </View>
 
-      <View style={styles.content}>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. 2 idlis with sambar and coconut chutney"
-          placeholderTextColor={Colors.textMuted}
-          multiline
-          value={text}
-          onChangeText={setText}
-          autoFocus
-        />
+      <KeyboardAvoidingView
+        style={styles.fill}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={styles.content}>
+          <Text style={styles.title}>Describe your meal</Text>
+          <Text style={styles.subtitle}>
+            List what was on the plate and roughly how much — we&apos;ll estimate the rest.
+          </Text>
 
-        {identifying ? (
-          <View style={styles.identifyingRow}>
-            <ActivityIndicator color={Colors.accent} />
-            <Text style={styles.identifyingText}>Identifying...</Text>
-          </View>
-        ) : (
-          <TouchableOpacity
-            style={[styles.continueButton, !text.trim() && styles.continueButtonDisabled]}
-            onPress={() => void handleContinue()}
-            disabled={!text.trim()}
-          >
-            <Text style={styles.continueButtonText}>Continue</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+          <TextInput
+            style={styles.input}
+            placeholder="e.g. 2 idlis with sambar and coconut chutney"
+            placeholderTextColor={Colors.textMuted}
+            multiline
+            value={text}
+            onChangeText={setText}
+            autoFocus
+          />
+
+          <View style={styles.spacer} />
+
+          {identifying ? (
+            <View style={styles.identifyingRow}>
+              <ActivityIndicator color={Colors.primary} />
+              <Text style={styles.identifyingText}>Identifying…</Text>
+            </View>
+          ) : (
+            <PrimaryButton
+              label="Continue"
+              disabled={!text.trim()}
+              onPress={() => void handleContinue()}
+            />
+          )}
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  fill: { flex: 1 },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: Spacing.md,
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.screen,
     height: 52,
   },
-  headerTitle: { ...Typography.heading, color: Colors.textPrimary },
-  cancel: { fontSize: 15, color: Colors.accent },
-  content: { padding: Spacing.md, paddingTop: Spacing.lg },
+  headerTitle: { ...Typography.cardTitle, color: Colors.textPrimary },
+  headerSpacer: { flex: 1 },
+  content: {
+    flex: 1,
+    paddingHorizontal: Spacing.screen,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.xl,
+  },
+  title: { ...Typography.screenTitle, color: Colors.textPrimary },
+  subtitle: {
+    ...Typography.secondary,
+    color: Colors.textSecondary,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.xl,
+  },
   input: {
-    backgroundColor: Colors.surfaceMuted,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    ...Typography.body,
     fontSize: 15,
     color: Colors.textPrimary,
-    minHeight: 100,
+    minHeight: 120,
     textAlignVertical: 'top',
-    marginBottom: Spacing.lg,
   },
-  continueButton: {
-    backgroundColor: Colors.textPrimary,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
+  spacer: { flex: 1 },
+  identifyingRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: Spacing.lg,
   },
-  continueButtonDisabled: { opacity: 0.4 },
-  continueButtonText: { color: 'white', fontSize: 15, fontWeight: '600' },
-  identifyingRow: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'center', alignItems: 'center' },
-  identifyingText: { color: Colors.textSecondary, fontSize: 14 },
+  identifyingText: { ...Typography.secondary, color: Colors.textSecondary },
 });
