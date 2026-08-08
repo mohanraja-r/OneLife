@@ -1,8 +1,10 @@
 import { router } from 'expo-router';
 import { HeartPulse } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import PrimaryButton from '../../components/PrimaryButton';
 import {
   Accents,
   Colors,
@@ -11,7 +13,8 @@ import {
   Spacing,
   Typography,
 } from '../../constants/theme';
-import PrimaryButton from '../../components/PrimaryButton';
+
+import LoginPrompt from './LoginPrompt';
 
 const accent = Accents.violet;
 
@@ -63,12 +66,7 @@ export default function WelcomeScreen() {
           accent={accent}
           onPress={() => router.push('/onboarding/gender')}
         />
-        <View style={styles.loginRow}>
-          <Text style={styles.loginPrompt}>Already have an account? </Text>
-          <TouchableOpacity onPress={() => router.push('/signup')} hitSlop={8}>
-            <Text style={styles.loginLink}>Log in</Text>
-          </TouchableOpacity>
-        </View>
+        <LoginPrompt accent={accent} style={styles.loginRow} />
       </MotiView>
     </SafeAreaView>
   );
@@ -121,19 +119,5 @@ const styles = StyleSheet.create({
   footer: {
     paddingBottom: Spacing.xxl,
   },
-  loginRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: Spacing.lg,
-  },
-  loginPrompt: {
-    ...Typography.caption,
-    color: Colors.textSecondary,
-  },
-  loginLink: {
-    ...Typography.caption,
-    fontWeight: '700',
-    color: accent.main,
-  },
+  loginRow: { marginTop: Spacing.lg },
 });

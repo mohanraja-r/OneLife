@@ -1,3 +1,5 @@
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState, useEffect } from 'react';
 import {
   View,
@@ -11,10 +13,10 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { addTask, updateTask, deleteTask, getTaskById, TaskCategory, RepeatOption } from '../services/planner';
+
 import { Colors, Spacing, Radius, Typography } from '../constants/theme';
+import { errorMessage } from '../services/errors';
+import { addTask, updateTask, deleteTask, getTaskById, TaskCategory, RepeatOption } from '../services/planner';
 
 const CATEGORIES: { key: TaskCategory; label: string; icon: string }[] = [
   { key: 'work', label: 'Work', icon: '💼' },
@@ -111,8 +113,8 @@ export default function AddTaskScreen() {
         await addTask(input);
       }
       router.back();
-    } catch (err: any) {
-      Alert.alert('Error saving task', err.message ?? 'Something went wrong');
+    } catch (err) {
+      Alert.alert('Error saving task', errorMessage(err, 'Something went wrong'));
     } finally {
       setSaving(false);
     }
@@ -125,9 +127,11 @@ export default function AddTaskScreen() {
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: async () => {
-          await deleteTask(params.taskId!);
-          router.back();
+        onPress: () => {
+          void (async () => {
+            await deleteTask(params.taskId!);
+            router.back();
+          })();
         },
       },
     ]);
@@ -140,7 +144,7 @@ export default function AddTaskScreen() {
           <Text style={styles.headerAction}>Cancel</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{isEditing ? 'Edit Task' : 'New Task'}</Text>
-        <TouchableOpacity onPress={handleSave} disabled={saving}>
+        <TouchableOpacity onPress={() => void handleSave()} disabled={saving}>
           <Text style={[styles.headerAction, styles.headerActionBold]}>{saving ? '...' : 'Add'}</Text>
         </TouchableOpacity>
       </View>

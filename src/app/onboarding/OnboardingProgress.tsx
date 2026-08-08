@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
 import {
   Accent,
   Accents,
@@ -9,6 +10,7 @@ import {
   Spacing,
   Typography,
 } from '../../constants/theme';
+
 import { TOTAL_STEPS } from './state';
 
 interface Props {

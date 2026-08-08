@@ -2,9 +2,11 @@ import { router } from 'expo-router';
 import { Gift, TicketPercent } from 'lucide-react-native';
 import { useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+
 import { Accents, Colors } from '../../constants/theme';
-import QuestionScreen from './QuestionScreen';
+
 import { onboardingStyles as s } from './onboardingStyles';
+import QuestionScreen from './QuestionScreen';
 import { onboardingState } from './state';
 
 const accent = Accents.violet;

@@ -1,6 +1,4 @@
-import DateTimePicker, {
-  DateTimePickerAndroid,
-} from '@react-native-community/datetimepicker';
+import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import type { LucideIcon } from 'lucide-react-native';
 import {
   Baby,
@@ -15,15 +13,12 @@ import {
 import { MotiView } from 'moti';
 import { useState } from 'react';
 import {
-  Modal,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   Accent,
@@ -50,6 +45,7 @@ import type {
   PregnancySummary,
 } from '../../services/women';
 import AnimatedPressable from '../AnimatedPressable';
+import { DateTimeSpinnerSheet } from '../ui';
 
 import { LogKind, PREGNANCY_LOGS } from './LogSheet';
 import { Disclaimer, LogRow, SectionHeader, cardStyles } from './shared';
@@ -80,7 +76,6 @@ interface DueDateProps {
  * app. `children` is a render prop so the trigger can be a button or a row.
  */
 function DueDatePicker({ value, onChange, children }: DueDateProps) {
-  const insets = useSafeAreaInsets();
   const [sheetOpen, setSheetOpen] = useState(false);
   // Default to a due date a full term out, which is what someone setting this
   // up on the day they found out would want.
@@ -110,52 +105,16 @@ function DueDatePicker({ value, onChange, children }: DueDateProps) {
       {children(open)}
 
       {Platform.OS === 'ios' && (
-        <Modal
+        <DateTimeSpinnerSheet
           visible={sheetOpen}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setSheetOpen(false)}>
-          <Pressable
-            style={styles.overlay}
-            onPress={() => setSheetOpen(false)}
-            accessibilityRole="button"
-            accessibilityLabel="Dismiss">
-            {/* Swallows taps on the sheet so they do not close it. */}
-            <Pressable onPress={() => {}}>
-              <MotiView
-                from={{ opacity: 0, translateY: 32 }}
-                animate={{ opacity: 1, translateY: 0 }}
-                transition={{ type: 'timing', duration: Motion.base }}
-                style={[
-                  styles.sheet,
-                  { paddingBottom: insets.bottom + Spacing.lg },
-                ]}>
-                <View style={styles.grabber} />
-                <Text style={styles.sheetTitle}>Estimated due date</Text>
-
-                <DateTimePicker
-                  value={draft}
-                  mode="date"
-                  display="spinner"
-                  themeVariant="light"
-                  onChange={(_, date) => {
-                    if (date) setDraft(date);
-                  }}
-                />
-
-                <TouchableOpacity
-                  onPress={() => {
-                    onChange(toDateString(draft));
-                    setSheetOpen(false);
-                  }}
-                  style={styles.done}
-                  accessibilityRole="button">
-                  <Text style={styles.doneText}>Done</Text>
-                </TouchableOpacity>
-              </MotiView>
-            </Pressable>
-          </Pressable>
-        </Modal>
+          onClose={() => setSheetOpen(false)}
+          title="Estimated due date"
+          value={draft}
+          mode="date"
+          accent={Accents.pink}
+          onChange={setDraft}
+          onDone={() => onChange(toDateString(draft))}
+        />
       )}
     </>
   );
@@ -661,38 +620,4 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xl,
   },
   setupButtonText: { ...Typography.button, color: Colors.textInverse },
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: Colors.overlay,
-  },
-  sheet: {
-    backgroundColor: Colors.surface,
-    borderTopLeftRadius: Radius.xxl,
-    borderTopRightRadius: Radius.xxl,
-    paddingHorizontal: Spacing.screen,
-    paddingTop: Spacing.md,
-    ...Shadow.floating,
-  },
-  grabber: {
-    alignSelf: 'center',
-    width: 44,
-    height: 5,
-    borderRadius: Radius.round,
-    backgroundColor: Colors.borderStrong,
-    marginBottom: Spacing.lg,
-  },
-  sheetTitle: {
-    ...Typography.cardTitle,
-    color: Colors.textPrimary,
-    textAlign: 'center',
-  },
-  done: {
-    alignItems: 'center',
-    backgroundColor: Accents.pink.tint,
-    borderRadius: Radius.lg,
-    paddingVertical: Spacing.md,
-    marginTop: Spacing.sm,
-  },
-  doneText: { ...Typography.button, fontSize: 16, color: Accents.pink.dark },
 });

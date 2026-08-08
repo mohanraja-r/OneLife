@@ -27,7 +27,9 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import PrimaryButton from '../components/PrimaryButton';
+import { ChipOption, ChipRow } from '../components/ui';
 import {
   Accents,
   Colors,
@@ -38,6 +40,7 @@ import {
   Spacing,
   Typography,
 } from '../constants/theme';
+import { errorMessage } from '../services/errors';
 import { FoodRelation, MedicineInput, addMedicine } from '../services/medicine';
 import {
   ScannedMedicine,
@@ -47,7 +50,7 @@ import {
 /** Height of the captured-photo preview, also the travel of the scan line. */
 const PREVIEW_HEIGHT = 240;
 
-const FOOD_RELATIONS: { value: FoodRelation; label: string }[] = [
+const FOOD_RELATIONS: ChipOption<FoodRelation>[] = [
   { value: 'before', label: 'Before food' },
   { value: 'after', label: 'After food' },
   { value: 'any', label: 'Any time' },
@@ -119,7 +122,7 @@ export default function ScanPrescriptionScreen() {
     } catch (err) {
       Alert.alert(
         'Error scanning prescription',
-        err instanceof Error ? err.message : 'Something went wrong.'
+        errorMessage(err, 'Something went wrong.')
       );
     } finally {
       setScanning(false);
@@ -174,7 +177,7 @@ export default function ScanPrescriptionScreen() {
     } catch (err) {
       Alert.alert(
         'Error adding medicines',
-        err instanceof Error ? err.message : 'Something went wrong.'
+        errorMessage(err, 'Something went wrong.')
       );
     } finally {
       setSaving(false);
@@ -239,7 +242,7 @@ export default function ScanPrescriptionScreen() {
             <Text style={styles.captureTitle}>Photograph the prescription</Text>
             <Text style={styles.captureSubtitle}>
               We read the medicine names, doses and duration off the page so you
-              don't have to type them.
+              don&apos;t have to type them.
             </Text>
           </MotiView>
         )}
@@ -257,11 +260,11 @@ export default function ScanPrescriptionScreen() {
               label={photoUri ? 'Take another photo' : 'Take photo'}
               icon={Camera}
               hideArrow
-              onPress={() => pickAndScan(true)}
+              onPress={() => void pickAndScan(true)}
             />
             <TouchableOpacity
               style={styles.secondaryButton}
-              onPress={() => pickAndScan(false)}
+              onPress={() => void pickAndScan(false)}
               activeOpacity={0.7}
               accessibilityRole="button">
               <Images size={20} color={Colors.primary} strokeWidth={2} />
@@ -393,31 +396,14 @@ export default function ScanPrescriptionScreen() {
                       />
 
                       <Text style={styles.fieldLabel}>Relation to food</Text>
-                      <View style={styles.chipRow}>
-                        {FOOD_RELATIONS.map((relation) => {
-                          const active = med.foodRelation === relation.value;
-                          return (
-                            <TouchableOpacity
-                              key={relation.value}
-                              style={[styles.chip, active && styles.chipActive]}
-                              onPress={() =>
-                                editMedicine(index, {
-                                  foodRelation: relation.value,
-                                })
-                              }
-                              accessibilityRole="button"
-                              accessibilityState={{ selected: active }}>
-                              <Text
-                                style={[
-                                  styles.chipText,
-                                  active && styles.chipTextActive,
-                                ]}>
-                                {relation.label}
-                              </Text>
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </View>
+                      <ChipRow
+                        options={FOOD_RELATIONS}
+                        value={med.foodRelation}
+                        onChange={(foodRelation) =>
+                          editMedicine(index, { foodRelation })
+                        }
+                        wrap
+                      />
                     </View>
                   )}
                 </MotiView>
@@ -441,7 +427,7 @@ export default function ScanPrescriptionScreen() {
             }
             hideArrow
             disabled={saving}
-            onPress={handleAddAll}
+            onPress={() => void handleAddAll()}
           />
           <Text style={styles.disclaimer}>
             Always verify against the physical prescription before your first
@@ -688,31 +674,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.lg,
     marginBottom: Spacing.lg,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-  },
-  chip: {
-    borderRadius: Radius.pill,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
-  },
-  chipActive: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryTint,
-  },
-  chipText: {
-    ...Typography.caption,
-    color: Colors.textSecondary,
-  },
-  chipTextActive: {
-    color: Colors.primaryDark,
-    fontWeight: '700',
   },
   footer: {
     backgroundColor: Colors.surface,

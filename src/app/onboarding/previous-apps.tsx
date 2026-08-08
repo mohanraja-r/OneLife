@@ -13,10 +13,12 @@ import {
 import { MotiView } from 'moti';
 import { useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
+
 import { Accent, Accents, Motion } from '../../constants/theme';
+
+import { onboardingStyles as s } from './onboardingStyles';
 import OptionCard from './OptionCard';
 import QuestionScreen, { StaggeredOption } from './QuestionScreen';
-import { onboardingStyles as s } from './onboardingStyles';
 import { onboardingState } from './state';
 
 const accent = Accents.violet;

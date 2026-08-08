@@ -10,6 +10,7 @@ import {
   Text,
   View,
 } from 'react-native';
+
 import { Accent, Colors, Radius, Typography } from '../constants/theme';
 
 // Geometry of the scale. One tick per `step`, five points apart, with the

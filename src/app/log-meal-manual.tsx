@@ -1,9 +1,11 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { identifyMeal } from '../services/meals';
+
 import { Colors, Spacing, Radius, Typography } from '../constants/theme';
+import { errorMessage } from '../services/errors';
+import { identifyMeal } from '../services/meals';
 
 export default function LogMealManualScreen() {
   const [text, setText] = useState('');
@@ -28,8 +30,8 @@ export default function LogMealManualScreen() {
           source: 'manual',
         },
       });
-    } catch (err: any) {
-      Alert.alert('Error identifying meal', err.message ?? 'Something went wrong');
+    } catch (err) {
+      Alert.alert('Error identifying meal', errorMessage(err, 'Something went wrong'));
       setIdentifying(false);
     }
   };
@@ -63,7 +65,7 @@ export default function LogMealManualScreen() {
         ) : (
           <TouchableOpacity
             style={[styles.continueButton, !text.trim() && styles.continueButtonDisabled]}
-            onPress={handleContinue}
+            onPress={() => void handleContinue()}
             disabled={!text.trim()}
           >
             <Text style={styles.continueButtonText}>Continue</Text>

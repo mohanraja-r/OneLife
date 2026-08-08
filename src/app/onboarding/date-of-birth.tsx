@@ -4,9 +4,11 @@ import { Cake, CalendarDays } from 'lucide-react-native';
 import { MotiView } from 'moti';
 import { useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
+
 import { Accents, Colors, Motion, Radius } from '../../constants/theme';
-import QuestionScreen from './QuestionScreen';
+
 import { onboardingStyles as s } from './onboardingStyles';
+import QuestionScreen from './QuestionScreen';
 import { onboardingState } from './state';
 
 const accent = Accents.violet;

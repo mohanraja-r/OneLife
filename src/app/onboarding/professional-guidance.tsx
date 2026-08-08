@@ -10,7 +10,9 @@ import {
 } from 'lucide-react-native';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
+
 import { Accent, Accents } from '../../constants/theme';
+
 import { onboardingStyles as s } from './onboardingStyles';
 import OptionCard from './OptionCard';
 import QuestionScreen, { StaggeredOption } from './QuestionScreen';

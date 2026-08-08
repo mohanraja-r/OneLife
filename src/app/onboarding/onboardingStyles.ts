@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native';
+
 import {
   Colors,
   Radius,
@@ -287,6 +288,84 @@ export const onboardingStyles = StyleSheet.create({
   },
   readoutValue: { ...Typography.displayNumber, color: Colors.textPrimary },
   readoutUnit: { ...Typography.unit, color: Colors.textSecondary },
+
+  // Compact readout, for the two side-by-side measurement cards.
+  readoutCompact: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+    marginBottom: Spacing.sm,
+  },
+  readoutCompactValue: {
+    ...Typography.largeNumber,
+    fontSize: 30,
+    lineHeight: 36,
+    color: Colors.textPrimary,
+  },
+
+  // Side-by-side measurement cards (height / weight), each holding a readout,
+  // a ruler and its own unit toggle.
+  measureRow: {
+    flexDirection: 'row',
+    alignSelf: 'stretch',
+    gap: Spacing.md,
+  },
+  measureCard: {
+    flex: 1,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.card,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.md,
+    alignItems: 'center',
+    ...Shadow.card,
+  },
+  measureHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginBottom: Spacing.sm,
+  },
+  measureIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: Radius.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  measureLabel: {
+    ...Typography.caption,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+
+  // Unit toggle stretched to a card's width, rather than centered on the page.
+  unitToggleInline: {
+    flexDirection: 'row',
+    alignSelf: 'stretch',
+    backgroundColor: Colors.surfaceSunken,
+    borderRadius: Radius.pill,
+    padding: 4,
+    marginTop: Spacing.md,
+  },
+  unitOptionInline: {
+    flex: 1,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.pill,
+    alignItems: 'center',
+  },
+
+  // "Already have an account? Log in" — welcome and create-account both end
+  // on this line. Accent-colored inline so each screen keeps its own tint.
+  loginRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loginPrompt: { ...Typography.caption, color: Colors.textSecondary },
+  loginLink: { ...Typography.caption, fontWeight: '700' },
 
   // Date picker (date of birth)
   pickerWrapper: {

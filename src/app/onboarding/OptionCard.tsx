@@ -1,7 +1,9 @@
 import type { LucideIcon } from 'lucide-react-native';
 import { Check } from 'lucide-react-native';
 import { Text, TouchableOpacity, View } from 'react-native';
+
 import { Accent, Accents, Colors } from '../../constants/theme';
+
 import { onboardingStyles as s } from './onboardingStyles';
 
 interface OptionCardProps {

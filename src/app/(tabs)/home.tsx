@@ -1,3 +1,7 @@
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { Bell, Menu } from 'lucide-react-native';
+import { MotiView } from 'moti';
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -6,12 +10,10 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Bell, Menu } from 'lucide-react-native';
-import { supabase } from '../../services/supabase';
+
+import AnimatedPressable from '../../components/AnimatedPressable';
+import FloatingNav from '../../components/FloatingNav';
 import {
   Colors,
   Gradients,
@@ -20,15 +22,16 @@ import {
   Typography,
   Shadow,
 } from '../../constants/theme';
-import FloatingNav from '../../components/FloatingNav';
-import AnimatedPressable from '../../components/AnimatedPressable';
-import { MotiView } from 'moti';
+import { supabase } from '../../services/supabase';
+
+
+// TODO: replace with the real score once it is computed from logged data.
+const PLACEHOLDER_HEALTH_SCORE = 82;
 
 export default function HomeScreen() {
   const router = useRouter();
   const [userName, setUserName] = useState('RMR');
-  const [healthScore, setHealthScore] = useState(82);
-  const [loading, setLoading] = useState(true);
+  const healthScore = PLACEHOLDER_HEALTH_SCORE;
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -38,14 +41,11 @@ export default function HomeScreen() {
           const name = sessionData.session.user.email.split('@')[0];
           setUserName(name.charAt(0).toUpperCase() + name.slice(1));
         }
-        // TODO: Fetch actual health score from database
       } catch (err) {
         console.error('Error fetching user data:', err);
-      } finally {
-        setLoading(false);
       }
     };
-    fetchUserData();
+    void fetchUserData();
   }, []);
 
   const metrics = [
@@ -141,7 +141,7 @@ export default function HomeScreen() {
               <Text style={styles.healthScoreLabel}>Health Score</Text>
               <Text style={styles.healthScoreTitle}>⭐ Excellent</Text>
               <Text style={styles.healthScoreSubtitle}>
-                You're doing great! Keep tracking to maintain your streak.
+                You&apos;re doing great! Keep tracking to maintain your streak.
               </Text>
             </View>
           </LinearGradient>
@@ -169,7 +169,7 @@ export default function HomeScreen() {
         {/* Today's Plan */}
         <View style={styles.todaysPlanContainer}>
           <View style={styles.todaysPlanHeader}>
-            <Text style={styles.todaysPlanTitle}>Today's Plan</Text>
+            <Text style={styles.todaysPlanTitle}>Today&apos;s Plan</Text>
             <AnimatedPressable onPress={() => router.push('/(tabs)/planner')}>
               <Text style={styles.viewAllLink}>View all</Text>
             </AnimatedPressable>
