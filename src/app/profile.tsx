@@ -20,7 +20,7 @@ import {
   Venus,
 } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -43,14 +43,8 @@ import {
   Spacing,
   Typography,
 } from '../constants/theme';
-import { useWomensHealthEnabled } from '../services/profile';
+import { useProfileSummary } from '../services/profile';
 import { supabase } from '../services/supabase';
-
-interface ProfileHeaderData {
-  name: string;
-  email: string;
-  avatarUrl: string | null;
-}
 
 interface MenuRow {
   key: string;
@@ -71,7 +65,12 @@ interface MenuRow {
  * bottom bar was fixed to the same four tabs for everyone.
  */
 const MENU_ROWS: MenuRow[] = [
-  { key: 'personal', label: 'Personal Information', icon: User },
+  {
+    key: 'personal',
+    label: 'Personal Information',
+    icon: User,
+    route: '/personal-information',
+  },
   {
     key: 'women',
     label: "Women's Health",
@@ -102,37 +101,16 @@ const MENU_ROWS: MenuRow[] = [
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const womensHealth = useWomensHealthEnabled();
-  const [profile, setProfile] = useState<ProfileHeaderData | null>(null);
+  // The same cached read the nav and the header use, so an edit made on the
+  // Personal Information screen lands here the moment it is saved.
+  const profile = useProfileSummary();
   const [loggingOut, setLoggingOut] = useState(false);
 
+  const womensHealth = profile?.gender === 'woman';
   const rows = useMemo(
     () => MENU_ROWS.filter((row) => !row.womenOnly || womensHealth),
     [womensHealth]
   );
-
-  useEffect(() => {
-    loadProfile();
-  }, []);
-
-  /** Loads the signed-in user's name, email and avatar for the gradient header. */
-  const loadProfile = async () => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const user = sessionData.session?.user;
-    if (!user) return;
-
-    const { data } = await supabase
-      .from('profiles')
-      .select('name, avatar_url')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    setProfile({
-      name: data?.name ?? user.email?.split('@')[0] ?? 'Your profile',
-      email: user.email ?? '',
-      avatarUrl: data?.avatar_url ?? null,
-    });
-  };
 
   /** Opens a menu row's screen, or says so when that screen does not exist yet. */
   const openRow = (row: MenuRow) => {

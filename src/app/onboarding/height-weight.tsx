@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import PrimaryButton from '../../components/PrimaryButton';
 import RulerPicker from '../../components/RulerPicker';
+import { HEIGHT_MEASURE, WEIGHT_MEASURE } from '../../constants/measures';
 import { Accent, Accents, Motion, Spacing } from '../../constants/theme';
 
 import OnboardingProgress from './OnboardingProgress';
@@ -22,69 +23,6 @@ import { HeightUnit, WeightUnit, onboardingState } from './state';
 const screenAccent = Accents.violet;
 const heightAccent = Accents.green;
 const weightAccent = Accents.amber;
-
-const CM_PER_INCH = 2.54;
-const KG_PER_LB = 0.453592;
-
-/** Formats a total-inches height as feet and inches, e.g. 67 → 5'7". */
-function formatFeetInches(totalInches: number) {
-  const feet = Math.floor(totalInches / 12);
-  return `${feet}'${Math.round(totalInches - feet * 12)}"`;
-}
-
-/** Rounds a value to the nearest half unit, for the 0.5 kg scale. */
-function roundToHalf(value: number) {
-  return Math.round(value * 2) / 2;
-}
-
-/**
- * Scale definitions per unit. Height in `ft_in` mode is driven in total inches
- * so the ruler still walks in even steps; everything is converted on continue.
- */
-const heightScales = {
-  cm: {
-    min: 120,
-    max: 220,
-    step: 1,
-    majorEvery: 10,
-    format: (v: number) => String(v),
-    unit: 'cm',
-  },
-  ft_in: {
-    min: 48,
-    max: 96,
-    step: 1,
-    majorEvery: 6,
-    format: formatFeetInches,
-    unit: '',
-  },
-} as const;
-
-const weightScales = {
-  kg: {
-    min: 30,
-    max: 200,
-    step: 0.5,
-    majorEvery: 10,
-    format: (v: number) => v.toFixed(1),
-    labelFormat: (v: number) => String(v),
-    unit: 'kg',
-  },
-  lb: {
-    min: 66,
-    max: 440,
-    step: 1,
-    majorEvery: 10,
-    format: (v: number) => String(v),
-    labelFormat: (v: number) => String(v),
-    unit: 'lb',
-  },
-} as const;
-
-/** Clamps a value into a scale's range. */
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
-}
 
 /** Segmented unit switch, tinted with the section's accent. */
 function UnitToggle<T extends string>({
@@ -134,58 +72,56 @@ export default function HeightWeightScreen() {
     onboardingState.heightUnit ?? 'cm'
   );
   // Held in the active unit's own domain: centimetres, or total inches.
-  const [height, setHeight] = useState(() => {
-    const cm = onboardingState.heightValue ?? 170;
-    return (onboardingState.heightUnit ?? 'cm') === 'cm'
-      ? cm
-      : Math.round(cm / CM_PER_INCH);
-  });
+  const [height, setHeight] = useState(() =>
+    HEIGHT_MEASURE.toDisplay(
+      onboardingState.heightValue ?? HEIGHT_MEASURE.fallbackMetric,
+      onboardingState.heightUnit ?? 'cm'
+    )
+  );
 
   const [weightUnit, setWeightUnit] = useState<WeightUnit>(
     onboardingState.weightUnit ?? 'kg'
   );
-  const [weight, setWeight] = useState(() => {
-    const kg = onboardingState.weightValue ?? 68;
-    return (onboardingState.weightUnit ?? 'kg') === 'kg'
-      ? roundToHalf(kg)
-      : Math.round(kg / KG_PER_LB);
-  });
+  const [weight, setWeight] = useState(() =>
+    WEIGHT_MEASURE.toDisplay(
+      onboardingState.weightValue ?? WEIGHT_MEASURE.fallbackMetric,
+      onboardingState.weightUnit ?? 'kg'
+    )
+  );
 
-  const heightScale = heightScales[heightUnit];
-  const weightScale = weightScales[weightUnit];
+  const heightScale = HEIGHT_MEASURE.scales[heightUnit];
+  const weightScale = WEIGHT_MEASURE.scales[weightUnit];
 
   /** Switches height units, carrying the current measurement across. */
   const handleHeightUnitChange = (next: HeightUnit) => {
     if (next === heightUnit) return;
-    const converted =
-      next === 'cm'
-        ? Math.round(height * CM_PER_INCH)
-        : Math.round(height / CM_PER_INCH);
-    const scale = heightScales[next];
-    setHeight(clamp(converted, scale.min, scale.max));
+    setHeight(
+      HEIGHT_MEASURE.toDisplay(
+        HEIGHT_MEASURE.toMetric(height, heightUnit),
+        next
+      )
+    );
     setHeightUnit(next);
   };
 
   /** Switches weight units, carrying the current measurement across. */
   const handleWeightUnitChange = (next: WeightUnit) => {
     if (next === weightUnit) return;
-    const converted =
-      next === 'kg'
-        ? roundToHalf(weight * KG_PER_LB)
-        : Math.round(weight / KG_PER_LB);
-    const scale = weightScales[next];
-    setWeight(clamp(converted, scale.min, scale.max));
+    setWeight(
+      WEIGHT_MEASURE.toDisplay(
+        WEIGHT_MEASURE.toMetric(weight, weightUnit),
+        next
+      )
+    );
     setWeightUnit(next);
   };
 
   const handleContinue = () => {
     onboardingState.heightUnit = heightUnit;
-    onboardingState.heightValue =
-      heightUnit === 'cm' ? height : Math.round(height * CM_PER_INCH);
+    onboardingState.heightValue = HEIGHT_MEASURE.toMetric(height, heightUnit);
 
     onboardingState.weightUnit = weightUnit;
-    onboardingState.weightValue =
-      weightUnit === 'kg' ? weight : Math.round(weight * KG_PER_LB);
+    onboardingState.weightValue = WEIGHT_MEASURE.toMetric(weight, weightUnit);
 
     router.push('/onboarding/workout-frequency');
   };
@@ -252,7 +188,7 @@ export default function HeightWeightScreen() {
               value={height}
               accent={heightAccent}
               onChange={setHeight}
-              formatLabel={heightScale.format}
+              formatLabel={heightScale.labelFormat}
               formatValue={heightScale.format}
               accessibilityLabel="Height"
             />

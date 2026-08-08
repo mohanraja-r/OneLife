@@ -18,6 +18,7 @@ export default function RootLayout() {
       {/* <Stack.Screen name="add-task" options={{ presentation: 'modal' }} /> */}
       <Stack.Screen name="medicines" />
       <Stack.Screen name="profile" />
+      <Stack.Screen name="personal-information" />
       <Stack.Screen name="family" />
       <Stack.Screen name="reports" />
       <Stack.Screen name="settings" />
