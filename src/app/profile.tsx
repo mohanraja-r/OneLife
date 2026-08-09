@@ -79,7 +79,12 @@ const MENU_ROWS: MenuRow[] = [
     womenOnly: true,
   },
   { key: 'goals', label: 'My Goals', icon: Target },
-  { key: 'medical', label: 'Medical Information', icon: Stethoscope },
+  {
+    key: 'medical',
+    label: 'Medical Information',
+    icon: Stethoscope,
+    route: '/medical-information',
+  },
   { key: 'family', label: 'Family', icon: Users, route: '/family' },
   { key: 'reminders', label: 'Reminders', icon: Bell },
   { key: 'connected', label: 'Connected Apps', icon: LayoutGrid },
