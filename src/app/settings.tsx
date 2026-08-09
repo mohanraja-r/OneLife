@@ -1,13 +1,11 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import AppHeader from '../components/AppHeader';
 import { Colors, Spacing } from '../constants/theme';
 
 export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <AppHeader title="Settings" showBack />
       <View style={styles.content}>
         <Text style={styles.placeholder}>App settings — coming soon.</Text>
       </View>

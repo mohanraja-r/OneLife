@@ -88,7 +88,12 @@ function endDateAfter(days: number): string {
 
 export default function AddMedicineScreen() {
   const insets = useSafeAreaInsets();
-  const { medicineId } = useLocalSearchParams<{ medicineId?: string }>();
+  // `memberId` arrives when the form is opened from a managed family member's
+  // profile — the medicine is then filed under them rather than the caregiver.
+  const { medicineId, memberId } = useLocalSearchParams<{
+    medicineId?: string;
+    memberId?: string;
+  }>();
   const isEditing = !!medicineId;
 
   const [name, setName] = useState('');
@@ -165,7 +170,7 @@ export default function AddMedicineScreen() {
       };
 
       if (isEditing) await updateMedicine(medicineId, input);
-      else await addMedicine(input);
+      else await addMedicine(input, memberId ?? null);
 
       // TODO(notifications): reminders are not wired up yet. Once implemented,
       // schedule one local notification per entry in `times` here (and cancel

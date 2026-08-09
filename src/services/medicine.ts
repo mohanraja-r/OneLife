@@ -27,6 +27,12 @@ export type DoseStatus = 'pending' | 'taken' | 'missed';
 export interface Medicine {
   id: string;
   ownerId: string;
+  /**
+   * Set when this medicine belongs to a managed family member. A managed member
+   * has no account of their own, so the caregiver owns the row and this points
+   * at the `family_links` entry that says whose tablet it actually is.
+   */
+  memberId: string | null;
   name: string;
   dosage: string;
   frequency: string;
@@ -79,13 +85,28 @@ export interface AdherenceSummary {
   medicineCount: number;
   /** Doses marked taken in the last 7 days. */
   takenThisWeek: number;
+  /** Doses explicitly marked missed in the last 7 days. */
+  missedThisWeek: number;
   /** Doses taken on each of the last 7 days, oldest first — the stat sparkline. */
   weeklyTrend: number[];
+}
+
+/**
+ * Whose medicines a read is about. Managed members' rows sit in the caregiver's
+ * own `owner_id`, so the owner alone cannot separate them — every read states
+ * both halves and the two never get mixed up.
+ */
+export interface MedicineScope {
+  /** Account holding the rows — the caregiver, for a managed member. */
+  ownerId: string;
+  /** `family_links.id` for a managed member; null for your own medicines. */
+  memberId: string | null;
 }
 
 interface MedicineRow {
   id: string;
   owner_id: string;
+  member_id: string | null;
   name: string;
   dosage: string;
   frequency: string;
@@ -189,6 +210,7 @@ function toMedicine(row: MedicineRow): Medicine {
   return {
     id: row.id,
     ownerId: row.owner_id,
+    memberId: row.member_id ?? null,
     name: row.name,
     dosage: row.dosage,
     frequency: row.frequency,
@@ -226,18 +248,37 @@ function toRow(input: Partial<MedicineInput>) {
 // Medicines
 // ---------------------------------------------------------------------------
 
-/** Fetches every medicine belonging to the signed-in user, newest name first. */
-export async function getAllMedicines(): Promise<Medicine[]> {
-  const userId = await requireUserId();
-
-  const { data, error } = await supabase
+/** Fetches every medicine in one scope, alphabetically. */
+async function medicinesForScope(scope: MedicineScope): Promise<Medicine[]> {
+  const owned = supabase
     .from('medicines')
     .select('*')
-    .eq('owner_id', userId)
+    .eq('owner_id', scope.ownerId)
     .order('name', { ascending: true });
+
+  const { data, error } = await (scope.memberId
+    ? owned.eq('member_id', scope.memberId)
+    : owned.is('member_id', null));
 
   if (error) throw error;
   return (data as MedicineRow[]).map(toMedicine);
+}
+
+/**
+ * Fetches every medicine belonging to the signed-in user, name first.
+ *
+ * Managed family members' medicines share this `owner_id`, so they are excluded
+ * here — they belong on that member's screen, not in your own list.
+ */
+export async function getAllMedicines(): Promise<Medicine[]> {
+  return medicinesForScope({ ownerId: await requireUserId(), memberId: null });
+}
+
+/** Fetches the medicines belonging to one family member. */
+export async function getMedicinesForMember(
+  scope: MedicineScope
+): Promise<Medicine[]> {
+  return medicinesForScope(scope);
 }
 
 /** Fetches a single medicine by id, or null when it no longer exists. */
@@ -254,13 +295,24 @@ export async function getMedicineById(
   return data ? toMedicine(data as MedicineRow) : null;
 }
 
-/** Creates a medicine for the signed-in user and returns the saved row. */
-export async function addMedicine(input: MedicineInput): Promise<Medicine> {
+/**
+ * Creates a medicine and returns the saved row. Pass `memberId` to file it
+ * under a managed family member instead of the signed-in user.
+ */
+export async function addMedicine(
+  input: MedicineInput,
+  memberId: string | null = null
+): Promise<Medicine> {
   const userId = await requireUserId();
 
   const { data, error } = await supabase
     .from('medicines')
-    .insert({ active: true, ...toRow(input), owner_id: userId })
+    .insert({
+      active: true,
+      ...toRow(input),
+      owner_id: userId,
+      member_id: memberId,
+    })
     .select()
     .single();
 
@@ -304,34 +356,44 @@ export async function deleteMedicine(medicineId: string): Promise<void> {
 // Doses
 // ---------------------------------------------------------------------------
 
-/** Builds today's dose schedule by expanding each active medicine's slots. */
-export async function getTodaysDoses(): Promise<ScheduledDose[]> {
-  const userId = await requireUserId();
-
+/** Builds today's dose schedule for one scope by expanding each active slot. */
+async function todaysDosesForScope(
+  scope: MedicineScope
+): Promise<ScheduledDose[]> {
   const today = new Date();
   const dayStart = new Date(today);
   dayStart.setHours(0, 0, 0, 0);
   const dayEnd = new Date(dayStart);
   dayEnd.setDate(dayEnd.getDate() + 1);
 
-  const { data: rows, error } = await supabase
+  const owned = supabase
     .from('medicines')
     .select('*')
-    .eq('owner_id', userId)
+    .eq('owner_id', scope.ownerId)
     .eq('active', true)
     .or(
       `duration_end_date.is.null,duration_end_date.gte.${toDateString(today)}`
     );
+
+  const { data: rows, error } = await (scope.memberId
+    ? owned.eq('member_id', scope.memberId)
+    : owned.is('member_id', null));
 
   if (error) throw error;
 
   const medicines = (rows as MedicineRow[]).map(toMedicine);
   if (medicines.length === 0) return [];
 
+  // Filtered by medicine rather than owner: a managed member's doses are logged
+  // against the caregiver's `owner_id`, so the medicine is the only thing that
+  // separates their schedule from the caregiver's own.
   const { data: logs, error: logError } = await supabase
     .from('dose_log')
     .select('id, medicine_id, scheduled_for, status')
-    .eq('owner_id', userId)
+    .in(
+      'medicine_id',
+      medicines.map((medicine) => medicine.id)
+    )
     .gte('scheduled_for', dayStart.toISOString())
     .lt('scheduled_for', dayEnd.toISOString());
 
@@ -368,6 +430,21 @@ export async function getTodaysDoses(): Promise<ScheduledDose[]> {
   return doses.sort((a, b) => a.time.localeCompare(b.time));
 }
 
+/** Builds today's dose schedule for the signed-in user. */
+export async function getTodaysDoses(): Promise<ScheduledDose[]> {
+  return todaysDosesForScope({
+    ownerId: await requireUserId(),
+    memberId: null,
+  });
+}
+
+/** Builds today's dose schedule for one family member. */
+export async function getTodaysDosesForMember(
+  scope: MedicineScope
+): Promise<ScheduledDose[]> {
+  return todaysDosesForScope(scope);
+}
+
 /** Records a dose as taken, missed or back to pending. */
 export async function setDoseStatus(
   dose: ScheduledDose,
@@ -400,41 +477,73 @@ export function nextPendingDose(doses: ScheduledDose[]): ScheduledDose | null {
   return doses.find((dose) => dose.status === 'pending') ?? null;
 }
 
-/** Summarises the last seven days of adherence for the stat row. */
-export async function getAdherenceSummary(): Promise<AdherenceSummary> {
-  const userId = await requireUserId();
+/** The all-zero summary, for a scope with no active medicines to score. */
+function emptyAdherence(): AdherenceSummary {
+  return {
+    onTrackPercent: 0,
+    medicineCount: 0,
+    takenThisWeek: 0,
+    missedThisWeek: 0,
+    weeklyTrend: new Array<number>(7).fill(0),
+  };
+}
 
+/** Summarises the last seven days of adherence for one scope. */
+async function adherenceForScope(
+  scope: MedicineScope
+): Promise<AdherenceSummary> {
   // Today plus the six days before it — seven buckets in total.
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
   const windowStart = new Date(todayStart);
   windowStart.setDate(windowStart.getDate() - 6);
 
-  const [medicinesResult, logsResult] = await Promise.all([
-    supabase
-      .from('medicines')
-      .select('times')
-      .eq('owner_id', userId)
-      .eq('active', true),
-    supabase
-      .from('dose_log')
-      .select('scheduled_for')
-      .eq('owner_id', userId)
-      .eq('status', 'taken')
-      .gte('scheduled_for', windowStart.toISOString()),
-  ]);
+  const owned = supabase
+    .from('medicines')
+    .select('id, times')
+    .eq('owner_id', scope.ownerId)
+    .eq('active', true);
 
-  if (medicinesResult.error) throw medicinesResult.error;
-  if (logsResult.error) throw logsResult.error;
+  const { data: medicineRows, error } = await (scope.memberId
+    ? owned.eq('member_id', scope.memberId)
+    : owned.is('member_id', null));
 
-  const medicines = medicinesResult.data as { times: string[] | null }[];
+  if (error) throw error;
+
+  const medicines = medicineRows as { id: string; times: string[] | null }[];
+  if (medicines.length === 0) return emptyAdherence();
+
+  // Scoped by medicine, not owner: a managed member's doses carry the
+  // caregiver's owner_id, so filtering on that would blend the two together.
+  const { data: logRows, error: logError } = await supabase
+    .from('dose_log')
+    .select('scheduled_for, status')
+    .in(
+      'medicine_id',
+      medicines.map((medicine) => medicine.id)
+    )
+    .gte('scheduled_for', windowStart.toISOString());
+
+  if (logError) throw logError;
+
   const dailyDoses = medicines.reduce(
     (total, medicine) => total + (medicine.times?.length ?? 0),
     0
   );
 
+  const logs = logRows as { scheduled_for: string; status: string }[];
   const weeklyTrend = new Array<number>(7).fill(0);
-  for (const log of logsResult.data as { scheduled_for: string }[]) {
+  let takenThisWeek = 0;
+  let missedThisWeek = 0;
+
+  for (const log of logs) {
+    if (log.status === 'missed') {
+      missedThisWeek += 1;
+      continue;
+    }
+    if (log.status !== 'taken') continue;
+
+    takenThisWeek += 1;
     const day = new Date(log.scheduled_for);
     day.setHours(0, 0, 0, 0);
     const bucket =
@@ -442,7 +551,6 @@ export async function getAdherenceSummary(): Promise<AdherenceSummary> {
     if (bucket >= 0 && bucket < 7) weeklyTrend[bucket] += 1;
   }
 
-  const takenThisWeek = logsResult.data.length;
   const expected = dailyDoses * 7;
 
   return {
@@ -451,6 +559,19 @@ export async function getAdherenceSummary(): Promise<AdherenceSummary> {
       : 0,
     medicineCount: medicines.length,
     takenThisWeek,
+    missedThisWeek,
     weeklyTrend,
   };
+}
+
+/** Summarises the signed-in user's last seven days for the stat row. */
+export async function getAdherenceSummary(): Promise<AdherenceSummary> {
+  return adherenceForScope({ ownerId: await requireUserId(), memberId: null });
+}
+
+/** Summarises one family member's last seven days of adherence. */
+export async function getMemberAdherence(
+  scope: MedicineScope
+): Promise<AdherenceSummary> {
+  return adherenceForScope(scope);
 }
