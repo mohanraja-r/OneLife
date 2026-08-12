@@ -151,6 +151,8 @@ export const Colors = {
 export const Gradients = {
   primary: [Colors.gradientPrimaryStart, Colors.gradientPrimaryEnd] as const,
   avatar: ['#8B7CF6', '#C4A5F5'] as const,
+  /** Soft lavender→pink wash behind the Family greeting card. */
+  familyHero: [Accents.violet.tint, Accents.pink.tint] as const,
   /** 135° diagonal, matching the hero card in the reference. */
   diagonal: { start: { x: 0, y: 0 }, end: { x: 1, y: 1 } },
   /** Left-to-right, for buttons and progress fills. */

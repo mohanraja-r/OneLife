@@ -2,13 +2,7 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Href, usePathname, useRouter } from 'expo-router';
 import type { LucideIcon } from 'lucide-react-native';
-import {
-  CalendarCheck,
-  House,
-  Pill,
-  ScanQrCode,
-  User,
-} from 'lucide-react-native';
+import { CalendarCheck, House, Pill, ScanQrCode } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -48,21 +42,13 @@ const planner: NavItem = {
   route: '/(tabs)/planner',
   match: '/planner',
 };
-// Profile is the account hub every secondary destination now hangs off —
-// settings, family, reports, women's health and logout — so it earns a
-// permanent slot rather than hiding behind a header menu.
-const profile: NavItem = {
-  label: 'Profile',
-  icon: User,
-  route: '/profile',
-  match: '/profile',
-};
-
-// The same four destinations for everyone, whatever their profile says.
-// Women's Health is a row on the Profile screen rather than a tab: gating a
-// slot on gender made the bar shift under the user, and four fixed tabs split
-// evenly either side of the scanner.
-const navItems: NavItem[] = [home, medicine, planner, profile];
+// The same destinations for everyone, whatever their profile says. Women's
+// Health is a row in the profile drawer rather than a tab: gating a slot on
+// gender made the bar shift under the user.
+//
+// Profile is not here either — the account hub is the drawer behind the
+// dashboard's hamburger now, so the bar carries only the top-level screens.
+const navItems: NavItem[] = [home, medicine, planner];
 
 /** How many destinations sit to the left of the centre scanner disc. */
 const SCAN_SLOT = 2;
@@ -97,8 +83,6 @@ export default function FloatingNav() {
       <TouchableOpacity
         key={item.label}
         style={styles.navItem}
-        // Profile is a stack route, not a tab, so re-pushing it while it is
-        // already open would pile duplicates onto the back stack.
         onPress={() => !isActive && router.push(item.route)}
         accessibilityRole="button"
         accessibilityState={{ selected: isActive }}

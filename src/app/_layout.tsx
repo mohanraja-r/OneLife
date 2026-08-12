@@ -17,8 +17,15 @@ export default function RootLayout() {
       <Stack.Screen name="confirm-meal" options={{ presentation: 'modal' }} />
       {/* <Stack.Screen name="add-task" options={{ presentation: 'modal' }} /> */}
       <Stack.Screen name="medicines" />
-      <Stack.Screen name="profile" />
+      <Stack.Screen name="personal-information" />
+      <Stack.Screen name="medical-information" />
+      <Stack.Screen name="add-allergy" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="medical-entry" options={{ presentation: 'modal' }} />
       <Stack.Screen name="family" />
+      <Stack.Screen name="family-members" />
+      <Stack.Screen name="family-member" />
+      <Stack.Screen name="add-family-member" />
+      <Stack.Screen name="join-family" />
       <Stack.Screen name="reports" />
       <Stack.Screen name="settings" />
     </Stack>

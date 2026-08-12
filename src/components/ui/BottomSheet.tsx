@@ -31,6 +31,15 @@ interface Props {
   bottomGap?: number;
   /** Gap under the grabber — the picker sheets sit a little tighter. */
   grabberGap?: number;
+  /**
+   * Fires once the sheet has finished dismissing. iOS only — Android's modal
+   * has no equivalent callback, and no presentation rule that needs one.
+   *
+   * Use this to launch anything the OS presents itself (an image picker, a
+   * permission prompt, an Alert): on iOS those silently never appear if they
+   * are triggered while this modal is still on its way out.
+   */
+  onDismiss?: () => void;
   children: ReactNode;
 }
 
@@ -45,6 +54,7 @@ export default function BottomSheet({
   avoidKeyboard = false,
   bottomGap = Spacing.xl,
   grabberGap = Spacing.xl,
+  onDismiss,
   children,
 }: Props) {
   const insets = useSafeAreaInsets();
@@ -75,6 +85,7 @@ export default function BottomSheet({
       transparent
       animationType="fade"
       statusBarTranslucent
+      onDismiss={onDismiss}
       onRequestClose={onClose}>
       {avoidKeyboard ? (
         <KeyboardAvoidingView
