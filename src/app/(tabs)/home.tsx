@@ -1,19 +1,21 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Bell } from 'lucide-react-native';
+import { HeartPulse, Menu } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   SafeAreaView,
+  TouchableOpacity,
 } from 'react-native';
 
 import AnimatedPressable from '../../components/AnimatedPressable';
 import Avatar from '../../components/Avatar';
 import FloatingNav from '../../components/FloatingNav';
+import ProfileDrawer from '../../components/ProfileDrawer';
 import {
   Colors,
   Gradients,
@@ -22,7 +24,7 @@ import {
   Typography,
   Shadow,
 } from '../../constants/theme';
-import { firstNameOf, useProfileSummary } from '../../services/profile';
+import { useProfileSummary } from '../../services/profile';
 
 
 // TODO: replace with the real score once it is computed from logged data.
@@ -34,7 +36,7 @@ export default function HomeScreen() {
   // Personal Information screen.
   const profile = useProfileSummary();
   const healthScore = PLACEHOLDER_HEALTH_SCORE;
-  const greetingName = profile ? firstNameOf(profile.name) : '';
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const metrics = [
     { label: 'Steps', value: '7842', unit: 'Steps' },
@@ -82,22 +84,25 @@ export default function HomeScreen() {
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: 'timing', duration: 300 }}
           style={styles.header}>
-          <View style={styles.greeting}>
-            <Avatar uri={profile?.avatarUrl ?? null} name={profile?.name} />
-            <View>
-              <Text style={styles.greetingSubtext}>Good morning,</Text>
-              <Text style={styles.greetingName} numberOfLines={1}>
-                {greetingName}! 👋
-              </Text>
-            </View>
+          {/* The hamburger is the only way into the account menu now that
+              Profile has left the bottom bar. */}
+          <TouchableOpacity
+            style={styles.headerIconButton}
+            onPress={() => setProfileOpen(true)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Open profile menu">
+            <Menu size={20} color={Colors.textSecondary} />
+          </TouchableOpacity>
+
+          {/* The hamburger and the avatar are the same width, so the wordmark
+              lands dead centre without absolute positioning. */}
+          <View style={styles.brand}>
+            <HeartPulse size={26} color={Colors.primary} strokeWidth={2.2} />
+            <Text style={styles.wordmark}>OneLife</Text>
           </View>
-          {/* Profile lives in the bottom bar now, so the header keeps only
-              notifications. */}
-          <View style={styles.headerActions}>
-            <View style={styles.headerIconButton}>
-              <Bell size={18} color={Colors.textSecondary} />
-            </View>
-          </View>
+
+          <Avatar uri={profile?.avatarUrl ?? null} name={profile?.name} />
         </MotiView>
 
         {/* Health Score Card */}
@@ -194,6 +199,11 @@ export default function HomeScreen() {
 
       {/* Floating Nav */}
       <FloatingNav />
+
+      <ProfileDrawer
+        visible={profileOpen}
+        onClose={() => setProfileOpen(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -214,23 +224,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Spacing.xxl,
   },
-  greeting: {
+  brand: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.lg,
-  },
-  greetingSubtext: {
-    ...Typography.secondary,
-    color: Colors.textSecondary,
-  },
-  greetingName: {
-    ...Typography.cardTitle,
-    color: Colors.textPrimary,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'center',
     gap: Spacing.sm,
+  },
+  wordmark: {
+    ...Typography.heading,
+    fontSize: 24,
+    lineHeight: 30,
+    color: Colors.textPrimary,
+    letterSpacing: -0.5,
   },
   headerIconButton: {
     width: 40,
