@@ -95,6 +95,30 @@ export async function getTasksForDate(date: string): Promise<PlannerTask[]> {
   return data as PlannerTask[];
 }
 
+// How many tasks fall on each date in a range, keyed by YYYY-MM-DD. Feeds the
+// dots under the calendar's day cells, so only the `date` column is selected.
+export async function getTaskCountsForRange(
+  startDate: string,
+  endDate: string
+): Promise<Record<string, number>> {
+  const userId = await getUserId();
+
+  const { data, error } = await supabase
+    .from('planner_tasks')
+    .select('date')
+    .eq('user_id', userId)
+    .gte('date', startDate)
+    .lte('date', endDate);
+
+  if (error) throw error;
+
+  const counts: Record<string, number> = {};
+  ((data ?? []) as { date: string }[]).forEach((row) => {
+    counts[row.date] = (counts[row.date] ?? 0) + 1;
+  });
+  return counts;
+}
+
 export async function getTaskById(id: string): Promise<PlannerTask | null> {
   const { data, error } = await supabase
     .from('planner_tasks')
