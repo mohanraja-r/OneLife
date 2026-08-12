@@ -23,6 +23,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AnimatedPressable from '../../components/AnimatedPressable';
+import CalendarSheet from '../../components/CalendarSheet';
 import FloatingNav from '../../components/FloatingNav';
 import { EmptyState, ErrorNotice, LoadingState } from '../../components/ui';
 import {
@@ -36,6 +37,7 @@ import {
   Spacing,
   Typography,
 } from '../../constants/theme';
+import { toDateString } from '../../services/dates';
 import { errorMessage } from '../../services/errors';
 import {
   PlannerTask,
@@ -70,13 +72,6 @@ const CONTEXT_VISUALS: Record<ContextKind, RowVisual> = {
 };
 
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-/** Formats a Date as a local YYYY-MM-DD key, matching how tasks are stored. */
-function toDateString(d: Date) {
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}-${month}-${day}`;
-}
 
 /** Returns the Monday-to-Sunday week containing the given date. */
 function getWeek(date: Date) {
@@ -119,6 +114,7 @@ export default function PlannerScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   /** Loads the tasks and the meal/medicine markers for one day together. */
   const loadDay = useCallback(async (date: Date, isRefresh = false) => {
@@ -174,9 +170,22 @@ export default function PlannerScreen() {
     }
   };
 
+  /** Shows the day picked in the calendar, and closes the sheet behind it. */
+  const pickDate = (date: Date) => {
+    setSelectedDate(date);
+    setCalendarOpen(false);
+  };
+
   const week = useMemo(() => getWeek(selectedDate), [selectedDate]);
   const todayKey = toDateString(new Date());
   const selectedKey = toDateString(selectedDate);
+  const isToday = selectedKey === todayKey;
+  // Any day but today gets named, so the lists below are never ambiguous.
+  const dayLabel = selectedDate.toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  });
 
   // Untimed ("all day") tasks lead the list — an empty sort key sorts first.
   const timeline = useMemo<TimelineEntry[]>(
@@ -233,8 +242,8 @@ export default function PlannerScreen() {
         <View style={styles.header}>
           <Text style={styles.screenTitle}>Planner</Text>
           <AnimatedPressable
-            onPress={() => setSelectedDate(new Date())}
-            style={styles.todayButton}>
+            onPress={() => setCalendarOpen(true)}
+            style={styles.calendarButton}>
             <CalendarDays size={18} color={Colors.primary} strokeWidth={2} />
           </AnimatedPressable>
         </View>
@@ -291,7 +300,9 @@ export default function PlannerScreen() {
           </LinearGradient>
         </MotiView>
 
-        <Text style={styles.sectionTitle}>Today’s Summary</Text>
+        <Text style={styles.sectionTitle}>
+          {isToday ? 'Today’s Summary' : 'Day Summary'}
+        </Text>
 
         <View style={styles.summaryGrid}>
           {summary.map((tile, index) => (
@@ -313,7 +324,9 @@ export default function PlannerScreen() {
           ))}
         </View>
 
-        <Text style={styles.sectionTitle}>Upcoming</Text>
+        <Text style={styles.sectionTitle}>
+          {isToday ? 'Upcoming' : dayLabel}
+        </Text>
 
         <ErrorNotice
           message={error}
@@ -325,8 +338,12 @@ export default function PlannerScreen() {
         ) : timeline.length === 0 ? (
           <EmptyState
             icon={CalendarDays}
-            title="Nothing scheduled"
-            subtitle="Add a task and it will show up here alongside the meals and doses you log that day."
+            title={isToday ? 'Nothing scheduled' : 'Nothing planned yet'}
+            subtitle={
+              isToday
+                ? 'Add a task and it will show up here alongside the meals and doses you log that day.'
+                : `Add a task to ${dayLabel} and it will show up here.`
+            }
           />
         ) : (
           timeline.map((entry, index) => {
@@ -450,6 +467,13 @@ export default function PlannerScreen() {
         <View style={{ height: Spacing.navClearance }} />
       </ScrollView>
 
+      <CalendarSheet
+        visible={calendarOpen}
+        selectedDate={selectedDate}
+        onSelect={pickDate}
+        onClose={() => setCalendarOpen(false)}
+      />
+
       <FloatingNav />
     </SafeAreaView>
   );
@@ -472,7 +496,7 @@ const styles = StyleSheet.create({
     ...Typography.screenTitle,
     color: Colors.textPrimary,
   },
-  todayButton: {
+  calendarButton: {
     width: 40,
     height: 40,
     borderRadius: Radius.round,
