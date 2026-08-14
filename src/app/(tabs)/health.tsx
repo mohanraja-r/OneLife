@@ -24,8 +24,8 @@ import FloatingNav from '../../components/FloatingNav';
 import HealthValueSheet, {
   HealthField,
 } from '../../components/HealthValueSheet';
-import ProgressRing from '../../components/ProgressRing';
 import { ErrorNotice, LoadingState } from '../../components/ui';
+import WalkingFigure from '../../components/WalkingFigure';
 import WaterDroplet from '../../components/WaterDroplet';
 import {
   Accents,
@@ -54,13 +54,19 @@ import {
   splitWater,
   summariseHealth,
 } from '../../services/health';
+import {
+  StepReading,
+  blockerMessage,
+  readTodaySteps,
+  requestStepsPermission,
+} from '../../services/pedometer';
 
 /**
  * Gauge sizes. Both cards have to share one viewport with the date pill and
- * the goals row, so the rings are sized to that budget rather than to how
+ * the goals row, so these are sized to that budget rather than to how
  * commanding they could be on their own.
  */
-const STEP_RING = 124;
+const WALKER_SIZE = 124;
 /** The droplet renders 1.32× its width, so it is the taller of the two. */
 const DROPLET_SIZE = 124;
 
@@ -87,14 +93,16 @@ function dateLabel(date: Date, isToday: boolean): string {
 
 /**
  * Health — one day's step count and water intake, each scored against a goal
- * the user sets: the steps ring on top, the water droplet below it.
+ * the user sets: the walking figure on top, the water droplet below it.
  *
  * The date pill governs the whole screen rather than either section, so both
  * metrics always describe the same day. Every read and write is keyed on that
  * date instead of assuming today.
  *
- * Steps are entered by hand: there is no pedometer or device sync yet, so the
- * number is whatever the user last typed in.
+ * Steps come from the device pedometer and are mirrored into `health_entries`
+ * so they survive into the history and onto Home. The device only reports
+ * today, so earlier days show whatever was recorded at the time — there is no
+ * manual entry to correct them with.
  */
 export default function HealthScreen() {
   const [selectedDate, setSelectedDate] = useState(() => startOfToday());
@@ -104,11 +112,31 @@ export default function HealthScreen() {
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<HealthField | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  /** The device's answer for today; null while browsing an earlier day. */
+  const [reading, setReading] = useState<StepReading | null>(null);
 
   const dateKey = toDateString(selectedDate);
   const isToday = dateKey === toDateString(startOfToday());
 
-  /** Loads the selected day's entry alongside the user's goals. */
+  /**
+   * Mirrors a device step count into `health_entries`, so the figure survives
+   * into the history and onto Home. A failed write is swallowed: the count on
+   * screen is still correct, and forcing an error banner over a background
+   * sync would be noise.
+   */
+  const persistSteps = useCallback(
+    async (steps: number, current: HealthEntry) => {
+      if (steps === current.steps) return;
+      try {
+        setEntry(await setSteps(steps, dateKey));
+      } catch {
+        setEntry({ ...current, steps });
+      }
+    },
+    [dateKey]
+  );
+
+  /** Loads the selected day's entry, the goals, and today's device steps. */
   const load = useCallback(async () => {
     try {
       setError(null);
@@ -118,12 +146,32 @@ export default function HealthScreen() {
       ]);
       setEntry(dayEntry);
       setGoals(targets);
+
+      // The pedometer only reports today, so an earlier day shows whatever was
+      // recorded at the time and no permission affordance.
+      if (!isToday) {
+        setReading(null);
+        return;
+      }
+
+      const deviceReading = await readTodaySteps();
+      setReading(deviceReading);
+      if (deviceReading.steps !== null) {
+        await persistSteps(deviceReading.steps, dayEntry);
+      }
     } catch (err) {
       setError(errorMessage(err, 'Could not load your health data.'));
     } finally {
       setLoading(false);
     }
-  }, [dateKey]);
+  }, [dateKey, isToday, persistSteps]);
+
+  /** Prompts for step access, then adopts whatever the device then reports. */
+  const askForSteps = async () => {
+    const next = await requestStepsPermission();
+    setReading(next);
+    if (next.steps !== null) await persistSteps(next.steps, entry);
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -133,6 +181,15 @@ export default function HealthScreen() {
 
   const summary = useMemo(() => summariseHealth(entry, goals), [entry, goals]);
   const logged = splitWater(entry.waterMl);
+
+  const stepNotice = reading ? blockerMessage(reading.blocker) : null;
+  // Only worth offering the prompt when the platform can actually serve it and
+  // the user has not already refused for good.
+  const canAskForSteps =
+    reading !== null &&
+    reading.available &&
+    reading.blocker !== null &&
+    reading.canAskAgain;
 
   /** Reports a failed write and reloads, so the screen never shows a lie. */
   const reportFailure = (err: unknown, fallback: string) => {
@@ -170,10 +227,6 @@ export default function HealthScreen() {
         await addWater(value);
         return;
       }
-      if (field === 'steps') {
-        setEntry(await setSteps(value, dateKey));
-        return;
-      }
       setGoals(
         await setHealthGoals({
           stepGoal: field === 'stepGoal' ? value : goals.stepGoal,
@@ -188,8 +241,6 @@ export default function HealthScreen() {
   /** The value the sheet should open on for the field being edited. */
   const initialSheetValue = (): number => {
     switch (editing) {
-      case 'steps':
-        return entry.steps;
       case 'stepGoal':
         return goals.stepGoal;
       case 'waterGoal':
@@ -252,31 +303,25 @@ export default function HealthScreen() {
                 </TouchableOpacity>
               </View>
 
-              <TouchableOpacity
-                style={styles.ringWrap}
-                onPress={() => setEditing('steps')}
-                activeOpacity={0.85}
-                accessibilityRole="button"
+              <View
+                style={styles.walkerWrap}
+                accessible
                 accessibilityLabel={`${formatSteps(entry.steps)} of ${formatSteps(
                   goals.stepGoal
-                )} steps. Tap to edit.`}>
-                <ProgressRing
-                  size={STEP_RING}
-                  thickness={11}
+                )} steps, ${summary.stepPercent} percent of your goal.`}>
+                <WalkingFigure
+                  size={WALKER_SIZE}
                   progress={summary.stepProgress}
-                  color={Accents.green.main}>
-                  <Text style={styles.ringValue}>
-                    {formatSteps(entry.steps)}
-                  </Text>
-                  <Text style={styles.ringUnit}>
-                    of {formatSteps(goals.stepGoal)} steps
-                  </Text>
-                  <Text
-                    style={[styles.ringPercent, { color: Accents.green.main }]}>
-                    {summary.stepPercent}%
-                  </Text>
-                </ProgressRing>
-              </TouchableOpacity>
+                />
+                <Text style={styles.stepValue}>{formatSteps(entry.steps)}</Text>
+                <Text style={styles.stepUnit}>
+                  of {formatSteps(goals.stepGoal)} steps
+                </Text>
+                <Text
+                  style={[styles.stepPercent, { color: Accents.green.main }]}>
+                  {summary.stepPercent}%
+                </Text>
+              </View>
 
               <Text style={styles.cardFooter}>
                 {summary.stepsRemaining > 0
@@ -284,12 +329,19 @@ export default function HealthScreen() {
                   : 'Step goal reached — nice work'}
               </Text>
 
-              <TouchableOpacity
-                style={styles.action}
-                onPress={() => setEditing('steps')}
-                accessibilityRole="button">
-                <Text style={styles.actionLabel}>Enter step count</Text>
-              </TouchableOpacity>
+              {/* Only today can be read from the device, so the permission
+                  affordance never appears while browsing history. */}
+              {stepNotice && (
+                <Text style={styles.stepNotice}>{stepNotice}</Text>
+              )}
+              {canAskForSteps && (
+                <TouchableOpacity
+                  style={styles.action}
+                  onPress={() => void askForSteps()}
+                  accessibilityRole="button">
+                  <Text style={styles.actionLabel}>Allow step access</Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* Water */}
@@ -476,22 +528,30 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontWeight: '700',
   },
-  ringWrap: { alignSelf: 'center', marginVertical: Spacing.xs },
-  ringValue: {
+  walkerWrap: { alignItems: 'center', marginVertical: Spacing.xs },
+  stepValue: {
     ...Typography.largeNumber,
-    fontSize: 25,
-    lineHeight: 30,
+    fontSize: 28,
+    lineHeight: 34,
     color: Colors.textPrimary,
+    marginTop: Spacing.sm,
   },
-  ringUnit: {
+  stepUnit: {
     ...Typography.label,
     fontSize: 11,
     color: Colors.textSecondary,
   },
-  ringPercent: {
+  stepPercent: {
     ...Typography.label,
     fontWeight: '700',
     marginTop: 2,
+  },
+  stepNotice: {
+    ...Typography.label,
+    fontSize: 11,
+    color: Colors.textMuted,
+    textAlign: 'center',
+    marginTop: Spacing.sm,
   },
   dropletWrap: { alignItems: 'center' },
   amountRow: {

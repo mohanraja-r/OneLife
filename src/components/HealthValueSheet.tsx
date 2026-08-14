@@ -5,8 +5,13 @@ import { Colors } from '../constants/theme';
 
 import BottomSheet, { sheetStyles } from './ui/BottomSheet';
 
-/** What the sheet is editing, which decides its copy and bounds. */
-export type HealthField = 'steps' | 'stepGoal' | 'waterGoal' | 'addWater';
+/**
+ * What the sheet is editing, which decides its copy and bounds.
+ *
+ * Steps are not here: they come from the device pedometer now, so the only
+ * numbers a user types are the two goals and a one-off water amount.
+ */
+export type HealthField = 'stepGoal' | 'waterGoal' | 'addWater';
 
 interface FieldConfig {
   title: string;
@@ -20,13 +25,6 @@ interface FieldConfig {
 
 /** Copy and bounds for each editable number. */
 export const HEALTH_FIELDS: Record<HealthField, FieldConfig> = {
-  steps: {
-    title: "Today's steps",
-    subtitle: 'Enter the total your phone or watch is showing.',
-    unit: 'steps',
-    min: 0,
-    max: 200000,
-  },
   stepGoal: {
     title: 'Daily step goal',
     subtitle: '10,000 is the usual target, but pick what suits you.',

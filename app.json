@@ -33,7 +33,23 @@
           "imageWidth": 76
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-pedometer",
+        {
+          "iosHealthKitPermission": "OneLife needs access to your step data to track your daily activity.",
+          "androidHealthConnectRationaleTitle": "Step tracking",
+          "androidHealthConnectRationaleDescription": "OneLife needs access to your step data to track your daily activity."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
