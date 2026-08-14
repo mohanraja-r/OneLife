@@ -1,4 +1,10 @@
-import { startOfToday, toDateString } from './dates';
+import {
+  addDays,
+  parseDateString,
+  shiftDateString,
+  startOfToday,
+  toDateString,
+} from './dates';
 import { supabase } from './supabase';
 
 /**
@@ -301,6 +307,210 @@ export function summariseHealth(
 /** Formats a step count with thousands separators, e.g. `7,842`. */
 export function formatSteps(steps: number): string {
   return steps.toLocaleString();
+}
+
+// ---------------------------------------------------------------------------
+// Derived activity figures
+// ---------------------------------------------------------------------------
+
+/**
+ * Stride length as a fraction of height. 0.415 is the standard walking figure;
+ * it varies with pace and leg length, so everything built on it is an estimate.
+ */
+const STRIDE_RATIO = 0.415;
+/** Stand-ins when the profile has no measurements yet. */
+const FALLBACK_HEIGHT_CM = 170;
+const FALLBACK_WEIGHT_KG = 70;
+/** Kilocalories burned per step per kilogram of body weight, walking. */
+const KCAL_PER_STEP_PER_KG = 0.0005;
+/** Typical walking cadence, used to turn a step count into active minutes. */
+const STEPS_PER_ACTIVE_MINUTE = 100;
+/** Hour the hydration pacing assumes someone stops drinking for the night. */
+const WIND_DOWN_HOUR = 22;
+
+/** Estimates distance walked in kilometres from step count and height. */
+export function estimateDistanceKm(steps: number, heightCm: number | null): number {
+  const strideM = ((heightCm ?? FALLBACK_HEIGHT_CM) * STRIDE_RATIO) / 100;
+  return (steps * strideM) / 1000;
+}
+
+/** Estimates kilocalories burned walking, from step count and body weight. */
+export function estimateCalories(steps: number, weightKg: number | null): number {
+  return Math.round(
+    steps * (weightKg ?? FALLBACK_WEIGHT_KG) * KCAL_PER_STEP_PER_KG
+  );
+}
+
+/** Estimates minutes spent walking, assuming a steady everyday cadence. */
+export function estimateActiveMinutes(steps: number): number {
+  return Math.round(steps / STEPS_PER_ACTIVE_MINUTE);
+}
+
+/** Formats a minute count as `1h 24m`, or `45m` under the hour. */
+export function formatActiveTime(minutes: number): string {
+  if (minutes < 60) return `${minutes}m`;
+  return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+}
+
+/** One column of the weekly steps chart. */
+export interface WeekBar {
+  /** `YYYY-MM-DD`. */
+  date: string;
+  /** Single-letter weekday label, e.g. `M`. */
+  label: string;
+  steps: number;
+  /** Height as a fraction of the chart's ceiling, 0–1. */
+  height: number;
+  /** True for the day being viewed — the bar picked out in full colour. */
+  current: boolean;
+}
+
+/** The weekly chart's shape: seven bars and the axis they are drawn against. */
+export interface WeekChart {
+  bars: WeekBar[];
+  /** Value at the top of the axis, rounded up to a readable number. */
+  ceiling: number;
+  /** The busiest day of the week, for the callout above its bar. */
+  peak: WeekBar | null;
+}
+
+/**
+ * Builds the seven-day steps chart ending on `endDate`.
+ *
+ * Days with no logged entry are drawn as empty bars rather than skipped, so the
+ * week always reads as seven columns and a gap is visible as a gap.
+ */
+export function buildWeekChart(
+  entries: HealthEntry[],
+  endDate: string,
+  stepGoal: number
+): WeekChart {
+  const byDate = new Map(entries.map((entry) => [entry.date, entry]));
+  const end = parseDateString(endDate);
+
+  const bars: WeekBar[] = Array.from({ length: 7 }, (_, i) => {
+    const day = addDays(end, i - 6);
+    const key = toDateString(day);
+    return {
+      date: key,
+      // `narrow` gives the single letter the chart labels each column with.
+      label: day.toLocaleDateString(undefined, { weekday: 'narrow' }),
+      steps: byDate.get(key)?.steps ?? 0,
+      height: 0,
+      current: key === endDate,
+    };
+  });
+
+  // The axis tops out at the goal or the best day, whichever is higher, so a
+  // week that beat the goal is not clipped flat.
+  const best = Math.max(...bars.map((bar) => bar.steps), 0);
+  const ceiling = Math.max(stepGoal, best, 1);
+  bars.forEach((bar) => {
+    bar.height = Math.min(bar.steps / ceiling, 1);
+  });
+
+  const peak = bars.reduce<WeekBar | null>(
+    (top, bar) => (bar.steps > 0 && (!top || bar.steps > top.steps) ? bar : top),
+    null
+  );
+
+  return { bars, ceiling, peak };
+}
+
+/**
+ * Counts consecutive days up to `endDate` where at least one goal was met.
+ *
+ * "Either goal" rather than both: a streak that only survives a perfect day is
+ * one most people break in the first week, which makes it useless as
+ * encouragement.
+ */
+export function computeStreak(
+  entries: HealthEntry[],
+  goals: HealthGoals,
+  endDate: string
+): number {
+  const byDate = new Map(entries.map((entry) => [entry.date, entry]));
+
+  let streak = 0;
+  for (let i = 0; ; i += 1) {
+    const key = shiftDateString(endDate, -i);
+    const entry = byDate.get(key);
+    if (!entry) break;
+    const met =
+      entry.steps >= goals.stepGoal || entry.waterMl >= goals.waterGoalMl;
+    if (!met) break;
+    streak += 1;
+  }
+  return streak;
+}
+
+/**
+ * Percentage change in steps over the last seven days against the seven before
+ * them, or null when there is not enough history to compare.
+ */
+export function weekOverWeekSteps(
+  entries: HealthEntry[],
+  endDate: string
+): number | null {
+  const total = (from: number, to: number) =>
+    entries
+      .filter((entry) => {
+        const start = shiftDateString(endDate, from);
+        const end = shiftDateString(endDate, to);
+        return entry.date >= start && entry.date <= end;
+      })
+      .reduce((sum, entry) => sum + entry.steps, 0);
+
+  const previous = total(-13, -7);
+  // Without a prior week there is no baseline, and dividing by zero would
+  // report an infinite improvement on the first good day.
+  if (previous === 0) return null;
+  return Math.round(((total(-6, 0) - previous) / previous) * 100);
+}
+
+/** How many of the day's two goals have been met. */
+export function goalsMet(summary: HealthSummary): number {
+  return (
+    (summary.entry.steps >= summary.goals.stepGoal ? 1 : 0) +
+    (summary.entry.waterMl >= summary.goals.waterGoalMl ? 1 : 0)
+  );
+}
+
+/**
+ * A hydration nudge for the rest of the day, or null once the goal is met.
+ *
+ * Paces the remainder against the hours left before winding down, so the
+ * suggestion is a share of what is outstanding rather than the whole thing.
+ */
+export function hydrationInsight(
+  summary: HealthSummary,
+  now: Date = new Date()
+): string | null {
+  const remaining = summary.waterRemainingMl;
+  if (remaining <= 0) return null;
+
+  const hoursLeft = Math.max(0, WIND_DOWN_HOUR - now.getHours());
+  if (hoursLeft <= 1) {
+    return `${formatWater(remaining)} left to reach your goal today.`;
+  }
+
+  // Split what is left over the remaining hours, then suggest the next couple
+  // of hours' worth — rounded to a glass-sized number.
+  const perHour = remaining / hoursLeft;
+  const suggestion = Math.max(
+    GLASS_ML,
+    Math.round((perHour * 2) / 50) * 50
+  );
+  const by = new Date(now);
+  by.setHours(now.getHours() + 2, 0, 0, 0);
+  const byLabel = by.toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+
+  return `Try drinking another ${formatWater(
+    Math.min(suggestion, remaining)
+  )} before ${byLabel} to stay on pace with your goal.`;
 }
 
 /**

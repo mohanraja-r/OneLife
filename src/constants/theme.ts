@@ -166,6 +166,8 @@ export const Gradients = {
   avatar: ['#8B7CF6', '#C4A5F5'] as const,
   /** Violet → pink, for the water screen's "Add Water" action. */
   waterAction: ['#9061F9', '#F2469B'] as const,
+  /** Violet → pink sweep for the steps ring and the insight banner. */
+  activity: [Accents.violet.main, Accents.pink.main] as const,
   /** Top-to-bottom stops of the droplet's water fill. */
   waterFill: [
     Colors.waterFillTop,
