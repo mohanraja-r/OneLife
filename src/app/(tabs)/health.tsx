@@ -1,8 +1,10 @@
-import { useFocusEffect, useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from 'expo-router';
 import {
-  ChevronRight,
+  CalendarDays,
   Droplets,
   Footprints,
+  Plus,
   Target,
 } from 'lucide-react-native';
 import { MotiView } from 'moti';
@@ -17,21 +19,25 @@ import {
   View,
 } from 'react-native';
 
+import CalendarSheet from '../../components/CalendarSheet';
 import FloatingNav from '../../components/FloatingNav';
 import HealthValueSheet, {
   HealthField,
 } from '../../components/HealthValueSheet';
 import ProgressRing from '../../components/ProgressRing';
 import { ErrorNotice, LoadingState } from '../../components/ui';
+import WaterDroplet from '../../components/WaterDroplet';
 import {
   Accents,
   Colors,
+  Gradients,
   Motion,
   Radius,
   Shadow,
   Spacing,
   Typography,
 } from '../../constants/theme';
+import { startOfToday, toDateString } from '../../services/dates';
 import { errorMessage } from '../../services/errors';
 import {
   DEFAULT_STEP_GOAL,
@@ -40,16 +46,22 @@ import {
   HealthGoals,
   formatSteps,
   formatWater,
-  getTodayHealth,
+  getHealthEntry,
+  getHealthGoals,
   setHealthGoals,
   setSteps,
+  setWaterMl,
+  splitWater,
   summariseHealth,
 } from '../../services/health';
 
-/** Diameter of the hero steps ring. */
-const STEP_RING = 190;
-/** Diameter of the water card's smaller ring. */
-const WATER_RING = 84;
+/** Diameter of the steps ring. */
+const STEP_RING = 172;
+/** Rendered width of the water droplet gauge. */
+const DROPLET_SIZE = 172;
+
+/** The amounts the quick-add row offers, in millilitres. */
+const QUICK_ADDS = [250, 500, 750, 1000];
 
 /** The entry shown before the first load resolves. */
 const EMPTY_ENTRY: HealthEntry = { date: '', steps: 0, waterMl: 0 };
@@ -58,34 +70,56 @@ const EMPTY_GOALS: HealthGoals = {
   waterGoalMl: DEFAULT_WATER_GOAL_ML,
 };
 
+/** Renders the date pill's label, e.g. `Today, May 14` or `Tue, May 13`. */
+function dateLabel(date: Date, isToday: boolean): string {
+  const dayAndMonth = date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+  });
+  if (isToday) return `Today, ${dayAndMonth}`;
+  const weekday = date.toLocaleDateString(undefined, { weekday: 'short' });
+  return `${weekday}, ${dayAndMonth}`;
+}
+
 /**
- * Health — today's step count and water intake, each scored against a goal the
- * user sets, with the step ring as the screen's headline visual.
+ * Health — one day's step count and water intake, each scored against a goal
+ * the user sets: the steps ring on top, the water droplet below it.
+ *
+ * The date pill governs the whole screen rather than either section, so both
+ * metrics always describe the same day. Every read and write is keyed on that
+ * date instead of assuming today.
  *
  * Steps are entered by hand: there is no pedometer or device sync yet, so the
  * number is whatever the user last typed in.
  */
 export default function HealthScreen() {
-  const router = useRouter();
+  const [selectedDate, setSelectedDate] = useState(() => startOfToday());
   const [entry, setEntry] = useState<HealthEntry>(EMPTY_ENTRY);
   const [goals, setGoals] = useState<HealthGoals>(EMPTY_GOALS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<HealthField | null>(null);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
-  /** Loads today's entry and the user's goals together. */
+  const dateKey = toDateString(selectedDate);
+  const isToday = dateKey === toDateString(startOfToday());
+
+  /** Loads the selected day's entry alongside the user's goals. */
   const load = useCallback(async () => {
     try {
       setError(null);
-      const { entry: today, goals: targets } = await getTodayHealth();
-      setEntry(today);
+      const [dayEntry, targets] = await Promise.all([
+        getHealthEntry(dateKey),
+        getHealthGoals(),
+      ]);
+      setEntry(dayEntry);
       setGoals(targets);
     } catch (err) {
       setError(errorMessage(err, 'Could not load your health data.'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [dateKey]);
 
   useFocusEffect(
     useCallback(() => {
@@ -93,10 +127,8 @@ export default function HealthScreen() {
     }, [load])
   );
 
-  const summary = useMemo(
-    () => summariseHealth(entry, goals),
-    [entry, goals]
-  );
+  const summary = useMemo(() => summariseHealth(entry, goals), [entry, goals]);
+  const logged = splitWater(entry.waterMl);
 
   /** Reports a failed write and reloads, so the screen never shows a lie. */
   const reportFailure = (err: unknown, fallback: string) => {
@@ -104,11 +136,38 @@ export default function HealthScreen() {
     void load();
   };
 
+  /**
+   * Adds to the running water total and saves it.
+   *
+   * The new figure is painted before the write resolves so a tap feels
+   * instant; a failure puts the stored value back rather than leaving the
+   * droplet showing water that was never recorded.
+   */
+  const addWater = async (deltaMl: number) => {
+    const previous = entry;
+    const next = Math.max(0, entry.waterMl + deltaMl);
+    setEntry({ ...entry, waterMl: next });
+
+    try {
+      setEntry(await setWaterMl(next, dateKey));
+    } catch (err) {
+      setEntry(previous);
+      Alert.alert(
+        'Could not save',
+        errorMessage(err, 'Could not save your water intake.')
+      );
+    }
+  };
+
   /** Saves whichever number the sheet was editing. */
   const saveField = async (field: HealthField, value: number) => {
     try {
+      if (field === 'addWater') {
+        await addWater(value);
+        return;
+      }
       if (field === 'steps') {
-        setEntry(await setSteps(value));
+        setEntry(await setSteps(value, dateKey));
         return;
       }
       setGoals(
@@ -131,6 +190,8 @@ export default function HealthScreen() {
         return goals.stepGoal;
       case 'waterGoal':
         return goals.waterGoalMl;
+      // "Add water" is an amount to add, not the running total, so it opens
+      // blank rather than pre-filled.
       default:
         return 0;
     }
@@ -142,7 +203,20 @@ export default function HealthScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
         <Text style={styles.title}>Health</Text>
-        <Text style={styles.subtitle}>Today at a glance</Text>
+
+        <View style={styles.dateRow}>
+          <TouchableOpacity
+            style={styles.datePill}
+            onPress={() => setCalendarOpen(true)}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={`${dateLabel(selectedDate, isToday)}. Change date.`}>
+            <Text style={styles.dateLabel}>
+              {dateLabel(selectedDate, isToday)}
+            </Text>
+            <CalendarDays size={15} color={Colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
 
         <ErrorNotice message={error} onRetry={() => void load()} />
 
@@ -153,7 +227,7 @@ export default function HealthScreen() {
             from={{ opacity: 0, translateY: 12 }}
             animate={{ opacity: 1, translateY: 0 }}
             transition={{ type: 'timing', duration: Motion.base }}>
-            {/* Steps — the hero ring */}
+            {/* Steps */}
             <View style={styles.card}>
               <View style={styles.cardHeader}>
                 <View style={styles.cardHeading}>
@@ -184,7 +258,7 @@ export default function HealthScreen() {
                 )} steps. Tap to edit.`}>
                 <ProgressRing
                   size={STEP_RING}
-                  thickness={16}
+                  thickness={15}
                   progress={summary.stepProgress}
                   color={Accents.green.main}>
                   <Text style={styles.ringValue}>
@@ -210,11 +284,11 @@ export default function HealthScreen() {
                 style={styles.action}
                 onPress={() => setEditing('steps')}
                 accessibilityRole="button">
-                <Text style={styles.actionLabel}>Enter today&apos;s steps</Text>
+                <Text style={styles.actionLabel}>Enter step count</Text>
               </TouchableOpacity>
             </View>
 
-            {/* Water — ring plus the drag track */}
+            {/* Water */}
             <View style={styles.card}>
               <View style={styles.cardHeader}>
                 <View style={styles.cardHeading}>
@@ -235,50 +309,58 @@ export default function HealthScreen() {
                 </TouchableOpacity>
               </View>
 
-              {/* Logging lives on the dedicated water screen, so this is a
-                  read-only summary that opens it. */}
-              <TouchableOpacity
-                style={styles.waterRow}
-                onPress={() => router.push('/water')}
-                activeOpacity={0.8}
-                accessibilityRole="button"
-                accessibilityLabel={`${formatWater(entry.waterMl)} of ${formatWater(
-                  goals.waterGoalMl
-                )} water. Open water tracking.`}>
-                <ProgressRing
-                  size={WATER_RING}
-                  thickness={10}
-                  progress={summary.waterProgress}
-                  color={Colors.hydration}>
-                  <Text
-                    style={[
-                      styles.waterPercent,
-                      { color: Colors.hydration },
-                    ]}>
-                    {summary.waterPercent}%
-                  </Text>
-                </ProgressRing>
-
-                <View style={styles.waterReadout}>
-                  <Text style={styles.waterValue}>
-                    {formatWater(entry.waterMl)}
-                  </Text>
-                  <Text style={styles.waterGoal}>
+              <View style={styles.dropletWrap}>
+                <WaterDroplet
+                  size={DROPLET_SIZE}
+                  progress={summary.waterProgress}>
+                  <View style={styles.amountRow}>
+                    <Text style={styles.amountValue}>{logged.value}</Text>
+                    <Text style={styles.amountUnit}>{logged.unit}</Text>
+                  </View>
+                  <Text style={styles.amountGoal}>
                     of {formatWater(goals.waterGoalMl)}
                   </Text>
-                  <Text style={styles.waterGlasses}>
-                    {summary.glasses} of {summary.goalGlasses} glasses
+                  <Text style={styles.amountPercent}>
+                    {summary.waterPercent}%
                   </Text>
-                </View>
-
-                <ChevronRight size={20} color={Colors.textMuted} />
-              </TouchableOpacity>
+                </WaterDroplet>
+              </View>
 
               <Text style={styles.cardFooter}>
                 {summary.waterRemainingMl > 0
-                  ? `${formatWater(summary.waterRemainingMl)} left to drink`
+                  ? `${formatWater(summary.waterRemainingMl)} left${isToday ? ' today' : ''}`
                   : 'Water goal reached — well hydrated'}
               </Text>
+
+              <TouchableOpacity
+                style={styles.addButtonWrap}
+                onPress={() => setEditing('addWater')}
+                activeOpacity={0.9}
+                accessibilityRole="button"
+                accessibilityLabel="Add a custom amount of water">
+                <LinearGradient
+                  colors={Gradients.waterAction}
+                  start={Gradients.horizontal.start}
+                  end={Gradients.horizontal.end}
+                  style={styles.addButton}>
+                  <Plus size={19} color={Colors.textInverse} strokeWidth={2.6} />
+                  <Text style={styles.addLabel}>Add Water</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+
+              <View style={styles.quickRow}>
+                {QUICK_ADDS.map((amount) => (
+                  <TouchableOpacity
+                    key={amount}
+                    style={styles.quickChip}
+                    onPress={() => void addWater(amount)}
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Add ${formatWater(amount)}`}>
+                    <Text style={styles.quickLabel}>{formatWater(amount)}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
 
             {/* Goals summary */}
@@ -309,6 +391,16 @@ export default function HealthScreen() {
         <View style={{ height: Spacing.navClearance }} />
       </ScrollView>
 
+      <CalendarSheet
+        visible={calendarOpen}
+        selectedDate={selectedDate}
+        onSelect={(date) => {
+          setSelectedDate(date);
+          setCalendarOpen(false);
+        }}
+        onClose={() => setCalendarOpen(false)}
+      />
+
       <HealthValueSheet
         field={editing}
         initialValue={initialSheetValue()}
@@ -328,11 +420,24 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.xxl,
   },
   title: { ...Typography.screenTitle, color: Colors.textPrimary },
-  subtitle: {
-    ...Typography.secondary,
-    color: Colors.textSecondary,
-    marginTop: Spacing.xs,
+  dateRow: {
+    alignItems: 'center',
+    marginTop: Spacing.md,
     marginBottom: Spacing.xl,
+  },
+  datePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.primaryTint,
+    borderRadius: Radius.round,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+  },
+  dateLabel: {
+    ...Typography.caption,
+    fontWeight: '600',
+    color: Colors.textPrimary,
   },
   card: {
     backgroundColor: Colors.surface,
@@ -368,7 +473,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   ringWrap: { alignSelf: 'center', marginVertical: Spacing.sm },
-  ringValue: { ...Typography.largeNumber, color: Colors.textPrimary },
+  ringValue: { ...Typography.largeNumber, fontSize: 34, color: Colors.textPrimary },
   ringUnit: {
     ...Typography.label,
     color: Colors.textSecondary,
@@ -377,6 +482,33 @@ const styles = StyleSheet.create({
   ringPercent: {
     ...Typography.caption,
     fontWeight: '700',
+    marginTop: Spacing.xs,
+  },
+  dropletWrap: { alignItems: 'center' },
+  amountRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: Spacing.xs,
+  },
+  amountValue: {
+    ...Typography.largeNumber,
+    fontSize: 36,
+    color: Colors.textPrimary,
+  },
+  amountUnit: {
+    ...Typography.unit,
+    fontSize: 15,
+    color: Colors.textPrimary,
+    paddingBottom: Spacing.sm,
+  },
+  amountGoal: {
+    ...Typography.caption,
+    color: Colors.textSecondary,
+  },
+  amountPercent: {
+    ...Typography.cardTitle,
+    fontWeight: '700',
+    color: Colors.hydration,
     marginTop: Spacing.xs,
   },
   cardFooter: {
@@ -398,20 +530,38 @@ const styles = StyleSheet.create({
     ...Typography.optionLabel,
     color: Colors.textPrimary,
   },
-  waterRow: {
+  addButtonWrap: { marginTop: Spacing.lg },
+  addButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xl,
-    marginBottom: Spacing.sm,
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    borderRadius: Radius.round,
+    paddingVertical: Spacing.lg,
+    ...Shadow.glow,
   },
-  waterPercent: { ...Typography.metricValue },
-  waterReadout: { flex: 1 },
-  waterValue: { ...Typography.displayNumber, fontSize: 32, lineHeight: 38, color: Colors.textPrimary },
-  waterGoal: { ...Typography.secondary, color: Colors.textSecondary },
-  waterGlasses: {
+  addLabel: {
+    ...Typography.button,
+    color: Colors.textInverse,
+  },
+  quickRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+  },
+  quickChip: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: Colors.surfaceMuted,
+    borderRadius: Radius.round,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingVertical: Spacing.md,
+  },
+  quickLabel: {
     ...Typography.label,
-    color: Colors.textMuted,
-    marginTop: Spacing.xs,
+    fontWeight: '600',
+    color: Colors.textPrimary,
   },
   goalsCard: {
     flexDirection: 'row',
