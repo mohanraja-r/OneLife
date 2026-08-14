@@ -18,6 +18,7 @@ export default function TabLayout() {
         tabBarStyle: { display: 'none' },
       }}>
       <Tabs.Screen name="home" />
+      <Tabs.Screen name="health" />
       <Tabs.Screen name="medicine" />
       <Tabs.Screen name="planner" />
       <Tabs.Screen name="women" />

@@ -134,6 +134,19 @@ export const Colors = {
   navFloatingBg: 'rgba(255,255,255,0.92)',
   navFloatingBorder: 'rgba(237,237,244,0.9)',
 
+  // Water droplet gauge. The empty body is a pale lavender rather than white so
+  // the silhouette still reads against the near-white canvas at 0%.
+  waterEmpty: '#EDEAFB',
+  /** Fill gradient, anchored to the droplet's full height — so a given depth is
+   *  always the same colour whatever the level. */
+  waterFillTop: '#A78BFA',
+  waterFillMid: '#6E8FF3',
+  waterFillBottom: '#4BA3EF',
+  waterStrokeTop: '#9B7DF7',
+  waterStrokeBottom: '#5AA7F2',
+  /** Dial ticks ringing the droplet. */
+  waterTick: '#DCD9EE',
+
   // On-gradient (text/track over the violet health card)
   onPrimary: '#FFFFFF',
   onPrimaryMuted: 'rgba(255,255,255,0.82)',
@@ -151,6 +164,14 @@ export const Colors = {
 export const Gradients = {
   primary: [Colors.gradientPrimaryStart, Colors.gradientPrimaryEnd] as const,
   avatar: ['#8B7CF6', '#C4A5F5'] as const,
+  /** Violet → pink, for the water screen's "Add Water" action. */
+  waterAction: ['#9061F9', '#F2469B'] as const,
+  /** Top-to-bottom stops of the droplet's water fill. */
+  waterFill: [
+    Colors.waterFillTop,
+    Colors.waterFillMid,
+    Colors.waterFillBottom,
+  ] as const,
   /** Soft lavender→pink wash behind the Family greeting card. */
   familyHero: [Accents.violet.tint, Accents.pink.tint] as const,
   /** 135° diagonal, matching the hero card in the reference. */
