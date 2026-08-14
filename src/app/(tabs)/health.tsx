@@ -55,10 +55,14 @@ import {
   summariseHealth,
 } from '../../services/health';
 
-/** Diameter of the steps ring. */
-const STEP_RING = 172;
-/** Rendered width of the water droplet gauge. */
-const DROPLET_SIZE = 172;
+/**
+ * Gauge sizes. Both cards have to share one viewport with the date pill and
+ * the goals row, so the rings are sized to that budget rather than to how
+ * commanding they could be on their own.
+ */
+const STEP_RING = 124;
+/** The droplet renders 1.32× its width, so it is the taller of the two. */
+const DROPLET_SIZE = 124;
 
 /** The amounts the quick-add row offers, in millilitres. */
 const QUICK_ADDS = [250, 500, 750, 1000];
@@ -258,7 +262,7 @@ export default function HealthScreen() {
                 )} steps. Tap to edit.`}>
                 <ProgressRing
                   size={STEP_RING}
-                  thickness={15}
+                  thickness={11}
                   progress={summary.stepProgress}
                   color={Accents.green.main}>
                   <Text style={styles.ringValue}>
@@ -422,8 +426,8 @@ const styles = StyleSheet.create({
   title: { ...Typography.screenTitle, color: Colors.textPrimary },
   dateRow: {
     alignItems: 'center',
-    marginTop: Spacing.md,
-    marginBottom: Spacing.xl,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.lg,
   },
   datePill: {
     flexDirection: 'row',
@@ -444,15 +448,15 @@ const styles = StyleSheet.create({
     borderRadius: Radius.card,
     borderWidth: 1,
     borderColor: Colors.border,
-    padding: Spacing.xl,
-    marginBottom: Spacing.lg,
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
     ...Shadow.card,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.sm,
   },
   cardHeading: {
     flexDirection: 'row',
@@ -460,8 +464,8 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   iconTile: {
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
     borderRadius: Radius.tile,
     alignItems: 'center',
     justifyContent: 'center',
@@ -472,17 +476,22 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontWeight: '700',
   },
-  ringWrap: { alignSelf: 'center', marginVertical: Spacing.sm },
-  ringValue: { ...Typography.largeNumber, fontSize: 34, color: Colors.textPrimary },
+  ringWrap: { alignSelf: 'center', marginVertical: Spacing.xs },
+  ringValue: {
+    ...Typography.largeNumber,
+    fontSize: 25,
+    lineHeight: 30,
+    color: Colors.textPrimary,
+  },
   ringUnit: {
     ...Typography.label,
+    fontSize: 11,
     color: Colors.textSecondary,
-    marginTop: Spacing.xs,
   },
   ringPercent: {
-    ...Typography.caption,
+    ...Typography.label,
     fontWeight: '700',
-    marginTop: Spacing.xs,
+    marginTop: 2,
   },
   dropletWrap: { alignItems: 'center' },
   amountRow: {
@@ -492,62 +501,65 @@ const styles = StyleSheet.create({
   },
   amountValue: {
     ...Typography.largeNumber,
-    fontSize: 36,
+    fontSize: 27,
+    lineHeight: 32,
     color: Colors.textPrimary,
   },
   amountUnit: {
     ...Typography.unit,
-    fontSize: 15,
+    fontSize: 13,
     color: Colors.textPrimary,
-    paddingBottom: Spacing.sm,
+    paddingBottom: 4,
   },
   amountGoal: {
-    ...Typography.caption,
+    ...Typography.label,
+    fontSize: 11,
     color: Colors.textSecondary,
   },
   amountPercent: {
-    ...Typography.cardTitle,
+    ...Typography.caption,
     fontWeight: '700',
     color: Colors.hydration,
-    marginTop: Spacing.xs,
+    marginTop: 2,
   },
   cardFooter: {
-    ...Typography.caption,
+    ...Typography.label,
     color: Colors.textSecondary,
     textAlign: 'center',
-    marginTop: Spacing.md,
+    marginTop: Spacing.sm,
   },
   action: {
-    marginTop: Spacing.lg,
-    borderRadius: Radius.xl,
+    marginTop: Spacing.md,
+    borderRadius: Radius.round,
     borderWidth: 1,
     borderColor: Colors.border,
     backgroundColor: Colors.surfaceMuted,
     alignItems: 'center',
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.sm,
   },
   actionLabel: {
-    ...Typography.optionLabel,
+    ...Typography.caption,
+    fontWeight: '600',
     color: Colors.textPrimary,
   },
-  addButtonWrap: { marginTop: Spacing.lg },
+  addButtonWrap: { marginTop: Spacing.md },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.sm,
     borderRadius: Radius.round,
-    paddingVertical: Spacing.lg,
+    paddingVertical: Spacing.md,
     ...Shadow.glow,
   },
   addLabel: {
-    ...Typography.button,
+    ...Typography.optionLabel,
     color: Colors.textInverse,
   },
   quickRow: {
     flexDirection: 'row',
     gap: Spacing.sm,
-    marginTop: Spacing.md,
+    marginTop: Spacing.sm,
   },
   quickChip: {
     flex: 1,
@@ -556,7 +568,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.round,
     borderWidth: 1,
     borderColor: Colors.border,
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.sm,
   },
   quickLabel: {
     ...Typography.label,
