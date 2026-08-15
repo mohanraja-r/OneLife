@@ -12,10 +12,10 @@ import {
   Flame,
   Footprints,
   Heart,
+  HeartPulse,
   type LucideIcon,
   Moon,
   Pill,
-  Plus,
   Smile,
   Sparkles,
   TrendingUp,
@@ -42,8 +42,9 @@ import FloatingNav from '../../components/FloatingNav';
 import GradientRing from '../../components/GradientRing';
 import ProfileDrawer from '../../components/ProfileDrawer';
 import Sparkline from '../../components/Sparkline';
-import { EmptyState, ErrorNotice, LoadingState } from '../../components/ui';
+import { ErrorNotice, LoadingState } from '../../components/ui';
 import VitalsSheet from '../../components/VitalsSheet';
+import WaterDroplet from '../../components/WaterDroplet';
 import {
   Accent,
   Accents,
@@ -64,8 +65,8 @@ import {
 } from '../../services/dashboard';
 import { startOfToday, toDateString } from '../../services/dates';
 import { errorMessage } from '../../services/errors';
-import { formatSteps, formatWater } from '../../services/health';
-import { firstNameOf, useProfileSummary } from '../../services/profile';
+import { formatSteps, splitWater } from '../../services/health';
+import { useProfileSummary } from '../../services/profile';
 import {
   VitalField,
   VitalPatch,
@@ -75,6 +76,15 @@ import {
 
 /** Diameter of the calorie ring. */
 const RING_SIZE = 118;
+/** Rendered width of the water droplet gauge. */
+const DROPLET_SIZE = 104;
+/** Diameter of the steps ring. Sized to sit level with the droplet beside it. */
+const STEP_RING_SIZE = 112;
+/**
+ * Height both gauges centre within. The droplet renders 1.32× its width, which
+ * makes it the taller of the two, so it sets the band.
+ */
+const GAUGE_HEIGHT = Math.round(DROPLET_SIZE * 1.32);
 /** Size of a Health Overview sparkline. */
 const SPARK_WIDTH = 72;
 const SPARK_HEIGHT = 24;
@@ -117,29 +127,6 @@ function dateLabel(date: Date, isToday: boolean): string {
   if (isToday) return `Today, ${dayAndMonth}`;
   const weekday = date.toLocaleDateString(undefined, { weekday: 'short' });
   return `${weekday}, ${dayAndMonth}`;
-}
-
-/** Picks the greeting for the time of day. */
-function greetingFor(now: Date): string {
-  const hour = now.getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
-}
-
-/**
- * The line under the greeting, chosen from how the day is actually going.
- *
- * The reference shows a fixed "You're doing amazing!". Earning it means the
- * praise still means something on a day that deserves it.
- */
-function headlineFor(data: DashboardData | null): string {
-  if (!data) return ' ';
-  if (data.health.allGoalsMet) return "You're doing amazing!";
-  if (data.streak >= 3) return `${data.streak} days strong!`;
-  if (data.health.stepProgress >= 0.5) return "You're over halfway there!";
-  if (data.isToday) return "Let's make today count!";
-  return 'Here is how that day went.';
 }
 
 /** Where a Today's Plan card sends you when tapped. */
@@ -216,6 +203,8 @@ export default function HomeScreen() {
   const pendingDoses = data
     ? data.doses.filter((dose) => dose.status === 'pending').length
     : 0;
+  // Split so the droplet can set the numeral and its unit at different sizes.
+  const logged = splitWater(data?.health.entry.waterMl ?? 0);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -228,14 +217,9 @@ export default function HomeScreen() {
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: 'timing', duration: Motion.fast }}
           style={styles.header}>
-          <View style={styles.headerText}>
-            <Text style={styles.greeting} numberOfLines={1}>
-              {greetingFor(new Date())}
-              {profile ? `, ${firstNameOf(profile.name)}` : ''}! 👋
-            </Text>
-            <Text style={styles.headline} numberOfLines={1}>
-              {headlineFor(data)}
-            </Text>
+          <View style={styles.brand}>
+            <HeartPulse size={26} color={Colors.primary} strokeWidth={2.2} />
+            <Text style={styles.wordmark}>OneLife</Text>
           </View>
 
           {/* The dot marks doses still due, so the bell reports something real
@@ -311,76 +295,56 @@ export default function HomeScreen() {
                   <Utensils size={17} color={Colors.primary} />
                   <Text style={styles.cardTitle}>Nutrition</Text>
                 </View>
-                <TouchableOpacity
-                  style={styles.headerAction}
-                  onPress={() => router.push('/log-meal')}
-                  accessibilityRole="button"
-                  accessibilityLabel="Log a meal">
-                  <Text style={styles.headerActionLabel}>Log meal</Text>
-                  <ChevronRight size={14} color={Colors.primary} />
-                </TouchableOpacity>
               </View>
 
-              {data.nutrition.empty ? (
-                <EmptyState
-                  icon={Utensils}
-                  title="Nothing logged yet"
-                  subtitle={`Your budget for the day is ${data.nutrition.targets.calories.toLocaleString()} kcal.`}>
-                  <TouchableOpacity
-                    style={styles.emptyAction}
-                    onPress={() => router.push('/log-meal')}
-                    accessibilityRole="button">
-                    <Plus size={14} color={Colors.onPrimary} strokeWidth={2.6} />
-                    <Text style={styles.emptyActionLabel}>Log a meal</Text>
-                  </TouchableOpacity>
-                </EmptyState>
-              ) : (
-                <View style={styles.splitRow}>
-                  <GradientRing
-                    size={RING_SIZE}
-                    thickness={11}
-                    progress={data.nutrition.calorieProgress}
-                    colors={Gradients.activity}>
-                    <Text style={styles.ringValue}>
-                      {data.nutrition.caloriesLeft.toLocaleString()}
-                    </Text>
-                    <Text style={styles.ringUnit}>kcal left</Text>
-                    <Text style={styles.ringCaption}>
-                      of {data.nutrition.targets.calories.toLocaleString()}
-                    </Text>
-                  </GradientRing>
+              {/* Always the real figures. A day with nothing logged is a full
+                  budget and empty bars, which is the honest picture — no
+                  separate empty state needed. */}
+              <View style={styles.splitRow}>
+                <GradientRing
+                  size={RING_SIZE}
+                  thickness={11}
+                  progress={data.nutrition.calorieProgress}
+                  colors={Gradients.activity}>
+                  <Text style={styles.ringValue}>
+                    {data.nutrition.caloriesLeft.toLocaleString()}
+                  </Text>
+                  <Text style={styles.ringUnit}>kcal left</Text>
+                  <Text style={styles.ringCaption}>
+                    of {data.nutrition.targets.calories.toLocaleString()}
+                  </Text>
+                </GradientRing>
 
-                  <View style={styles.macros}>
-                    {data.nutrition.macros.map((macro, index) => (
-                      <View key={macro.key} style={styles.macro}>
-                        <View style={styles.macroHeader}>
-                          <View
-                            style={[
-                              styles.macroDot,
-                              { backgroundColor: MACRO_COLORS[index] },
-                            ]}
-                          />
-                          <Text style={styles.macroLabel}>{macro.label}</Text>
-                          <Text style={styles.macroValue}>
-                            {macro.eaten} / {macro.target}g
-                          </Text>
-                        </View>
-                        <View style={styles.macroTrack}>
-                          <View
-                            style={[
-                              styles.macroFill,
-                              {
-                                width: `${macro.progress * 100}%`,
-                                backgroundColor: MACRO_COLORS[index],
-                              },
-                            ]}
-                          />
-                        </View>
+                <View style={styles.macros}>
+                  {data.nutrition.macros.map((macro, index) => (
+                    <View key={macro.key} style={styles.macro}>
+                      <View style={styles.macroHeader}>
+                        <View
+                          style={[
+                            styles.macroDot,
+                            { backgroundColor: MACRO_COLORS[index] },
+                          ]}
+                        />
+                        <Text style={styles.macroLabel}>{macro.label}</Text>
+                        <Text style={styles.macroValue}>
+                          {macro.eaten} / {macro.target}g
+                        </Text>
                       </View>
-                    ))}
-                  </View>
+                      <View style={styles.macroTrack}>
+                        <View
+                          style={[
+                            styles.macroFill,
+                            {
+                              width: `${macro.progress * 100}%`,
+                              backgroundColor: MACRO_COLORS[index],
+                            },
+                          ]}
+                        />
+                      </View>
+                    </View>
+                  ))}
                 </View>
-              )}
+              </View>
             </View>
 
             {/* -------------------------------------- Steps and water */}
@@ -400,43 +364,39 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               </View>
 
-              {/* Counts only. Logging lives on the Health tab, which is what
-                  the Details link is for. */}
+              {/* Read-only: the counts and the droplet gauge. Logging lives on
+                  the Health tab, which is what the Details link is for. */}
               <View style={styles.metricRow}>
                 <View style={styles.metric}>
-                  <View
-                    style={[
-                      styles.metricIcon,
-                      { backgroundColor: Accents.violet.tint },
-                    ]}>
-                    <Footprints size={16} color={Accents.violet.main} />
+                  <View style={styles.gaugeSlot}>
+                    <GradientRing
+                      size={STEP_RING_SIZE}
+                      thickness={10}
+                      progress={data.health.stepProgress}
+                      colors={Gradients.activity}>
+                      <Footprints size={16} color={Accents.violet.main} />
+                      <Text style={styles.metricValue}>
+                        {formatSteps(data.health.entry.steps)}
+                      </Text>
+                    </GradientRing>
                   </View>
-                  <Text style={styles.metricValue}>
-                    {formatSteps(data.health.entry.steps)}
-                  </Text>
-                  <Text style={styles.metricLabel}>Steps</Text>
-                  <Text style={styles.metricGoal}>
-                    of {formatSteps(data.health.goals.stepGoal)}
-                  </Text>
+                  <Text style={styles.metricHeading}>Steps</Text>
                 </View>
 
                 <View style={styles.metricDivider} />
 
                 <View style={styles.metric}>
-                  <View
-                    style={[
-                      styles.metricIcon,
-                      { backgroundColor: Accents.blue.tint },
-                    ]}>
-                    <Droplets size={16} color={Colors.hydration} />
+                  <View style={styles.gaugeSlot}>
+                    <WaterDroplet
+                      size={DROPLET_SIZE}
+                      progress={data.health.waterProgress}>
+                      <View style={styles.dropletAmount}>
+                        <Text style={styles.dropletValue}>{logged.value}</Text>
+                        <Text style={styles.dropletUnit}>{logged.unit}</Text>
+                      </View>
+                    </WaterDroplet>
                   </View>
-                  <Text style={styles.metricValue}>
-                    {formatWater(data.health.entry.waterMl)}
-                  </Text>
-                  <Text style={styles.metricLabel}>Water</Text>
-                  <Text style={styles.metricGoal}>
-                    of {formatWater(data.health.goals.waterGoalMl)}
-                  </Text>
+                  <Text style={styles.metricHeading}>Water Intake</Text>
                 </View>
               </View>
             </View>
@@ -693,13 +653,18 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     marginBottom: Spacing.lg,
   },
-  headerText: { flex: 1 },
-  greeting: { ...Typography.secondary, color: Colors.textSecondary },
-  headline: {
-    ...Typography.screenTitle,
-    fontSize: 23,
-    lineHeight: 29,
+  brand: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  wordmark: {
+    ...Typography.heading,
+    fontSize: 24,
+    lineHeight: 30,
     color: Colors.textPrimary,
+    letterSpacing: -0.5,
   },
   bell: {
     width: 40,
@@ -815,28 +780,46 @@ const styles = StyleSheet.create({
 
   splitRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
 
-  metricRow: { flexDirection: 'row', alignItems: 'center' },
+  // Tops aligned, not centres: the droplet is taller than the ring, and
+  // centring the columns would push the two headings off the same line.
+  metricRow: { flexDirection: 'row', alignItems: 'flex-start' },
   metric: { flex: 1, alignItems: 'center', gap: 2 },
-  metricIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: Radius.round,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.xs,
-  },
+  /** Shared band both gauges centre inside, so neither sits high or low. */
+  gaugeSlot: { height: GAUGE_HEIGHT, justifyContent: 'center' },
   metricValue: {
     ...Typography.largeNumber,
-    fontSize: 26,
-    lineHeight: 31,
+    fontSize: 25,
+    lineHeight: 30,
     color: Colors.textPrimary,
+    marginTop: 2,
   },
-  metricLabel: {
+
+  /**
+   * Shared by both halves, so the two columns read as one row. Sits under its
+   * gauge, and because both gauges occupy the same fixed band the two labels
+   * land on the same line.
+   */
+  metricHeading: {
     ...Typography.label,
     fontSize: 11,
-    color: Colors.textSecondary,
+    fontWeight: '700',
+    color: Accents.violet.main,
+    marginTop: Spacing.xs,
   },
-  metricGoal: { ...Typography.label, fontSize: 10, color: Colors.textMuted },
+  dropletAmount: { flexDirection: 'row', alignItems: 'flex-end', gap: 2 },
+  dropletValue: {
+    ...Typography.largeNumber,
+    fontSize: 25,
+    lineHeight: 30,
+    color: Colors.textPrimary,
+  },
+  dropletUnit: {
+    ...Typography.unit,
+    fontSize: 13,
+    color: Colors.textPrimary,
+    paddingBottom: 4,
+  },
+
   metricDivider: {
     width: StyleSheet.hairlineWidth,
     alignSelf: 'stretch',
@@ -875,21 +858,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   macroFill: { height: 5, borderRadius: Radius.round },
-
-  emptyAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.round,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-  },
-  emptyActionLabel: {
-    ...Typography.caption,
-    fontWeight: '700',
-    color: Colors.onPrimary,
-  },
 
   sectionHeader: {
     flexDirection: 'row',
