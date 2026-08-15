@@ -13,7 +13,6 @@ import {
 
 import FloatingNav from '../../components/FloatingNav';
 import { ErrorNotice, LoadingState } from '../../components/ui';
-import AddCheckupSheet from '../../components/women/AddCheckupSheet';
 import CyclePanel from '../../components/women/CyclePanel';
 import LogSheet, {
   LOG_CONFIG,
@@ -23,6 +22,7 @@ import LogSheet, {
 import PregnancyPanel, {
   PregnancySetup,
 } from '../../components/women/PregnancyPanel';
+import { totalItemsFor } from '../../constants/hospitalBag';
 import {
   Accents,
   Colors,
@@ -33,15 +33,20 @@ import {
 } from '../../constants/theme';
 import { startOfToday, toDateString } from '../../services/dates';
 import { errorMessage } from '../../services/errors';
+import {
+  KickSession,
+  getKickSessions,
+  getMemories,
+  scheduleTests,
+  summariseKicks,
+} from '../../services/pregnancy';
 import { useProfileSummary } from '../../services/profile';
 import {
-  Checkup,
   CycleEntry,
   CycleEntryInput,
   FlowLevel,
   OvulationTest,
   PregnancyRecord,
-  addCheckup,
   getCycleEntries,
   getPregnancy,
   logCycleEntry,
@@ -74,11 +79,12 @@ export default function WomenScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeLog, setActiveLog] = useState<LogKind | null>(null);
-  const [checkupOpen, setCheckupOpen] = useState(false);
+  const [kickSessions, setKickSessions] = useState<KickSession[]>([]);
+  const [memoryCount, setMemoryCount] = useState(0);
 
   const todayKey = toDateString(startOfToday());
 
-  /** Loads the cycle history and the pregnancy record together. */
+  /** Loads the cycle history, the pregnancy record and its feature counts. */
   const load = useCallback(async () => {
     try {
       setError(null);
@@ -88,6 +94,17 @@ export default function WomenScreen() {
       ]);
       setEntries(cycleEntries);
       setPregnancy(pregnancyRecord);
+
+      // Only worth querying once there is a pregnancy to summarise. Both feed
+      // tile subtitles, so a failure here should not take the whole tab down.
+      if (pregnancyRecord) {
+        const [sessions, memories] = await Promise.all([
+          getKickSessions(7).catch(() => [] as KickSession[]),
+          getMemories().catch(() => []),
+        ]);
+        setKickSessions(sessions);
+        setMemoryCount(memories.length);
+      }
     } catch (err) {
       setError(
         errorMessage(err, 'Could not load your health data.')
@@ -114,6 +131,46 @@ export default function WomenScreen() {
   const todayEntry = entries.find((entry) => entry.date === todayKey) ?? null;
   const todayLog =
     pregnancy?.logs.find((log) => log.date === todayKey) ?? null;
+
+  /** The live value under each feature tile on the hub. */
+  const tileValues = useMemo((): Partial<Record<string, string>> => {
+    if (!pregnancy || !pregnancySummary) return {};
+
+    const weights = pregnancy.logs.filter(
+      (log) => typeof log.weightKg === 'number'
+    );
+    const latest = weights[weights.length - 1]?.weightKg;
+    const gain =
+      pregnancy.prePregnancyWeightKg !== null && latest !== undefined
+        ? Number((latest - pregnancy.prePregnancyWeightKg).toFixed(1))
+        : null;
+
+    const kicks = summariseKicks(kickSessions, todayKey);
+    const nextTest = scheduleTests(pregnancy).find(
+      (test) => test.status !== 'done'
+    );
+    const packed = pregnancy.bag.packed.length;
+    const totalItems = totalItemsFor('mom') + totalItemsFor('baby');
+
+    return {
+      weight: gain === null ? 'Add your weight' : `${gain > 0 ? '+' : ''}${gain} kg`,
+      kicks:
+        kicks.totalKicks > 0
+          ? `${kicks.totalKicks} today`
+          : 'Not counted today',
+      tests: nextTest
+        ? nextTest.daysAway <= 0
+          ? 'Due now'
+          : `In ${nextTest.daysAway} days`
+        : 'All done',
+      bag: `${packed} of ${totalItems} packed`,
+      memories:
+        memoryCount === 0
+          ? 'Add your first'
+          : `${memoryCount} saved`,
+      diet: `Trimester ${pregnancySummary.trimester} plan`,
+    };
+  }, [pregnancy, pregnancySummary, kickSessions, memoryCount, todayKey]);
 
   /** What the open log sheet should start from, for today's date. */
   const initialLogValue = useMemo((): LogValue => {
@@ -204,16 +261,6 @@ export default function WomenScreen() {
     }
   };
 
-  /** Adds an antenatal appointment to the pregnancy record. */
-  const saveCheckup = async (checkup: Omit<Checkup, 'id'>) => {
-    try {
-      await addCheckup(checkup);
-      await load();
-    } catch (err) {
-      reportFailure(err, 'Could not save that checkup.');
-    }
-  };
-
   /** Placeholder for the detail screens that are not built yet. */
   const comingSoon = () => {
     Alert.alert('Coming soon', 'The full history view is on its way.');
@@ -279,10 +326,8 @@ export default function WomenScreen() {
                 record={pregnancy}
                 summary={pregnancySummary}
                 today={todayLog}
+                tileValues={tileValues}
                 onPickLog={setActiveLog}
-                onChangeDueDate={(date) => void saveDueDate(date)}
-                onAddCheckup={() => setCheckupOpen(true)}
-                onSeeAll={comingSoon}
               />
             ) : (
               <PregnancySetup
@@ -300,12 +345,6 @@ export default function WomenScreen() {
         initialValue={initialLogValue}
         onClose={() => setActiveLog(null)}
         onSave={(kind, value) => void saveLog(kind, value)}
-      />
-
-      <AddCheckupSheet
-        visible={checkupOpen}
-        onClose={() => setCheckupOpen(false)}
-        onSave={(checkup) => void saveCheckup(checkup)}
       />
 
       <FloatingNav />
