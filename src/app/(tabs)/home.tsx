@@ -1,8 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { HeartPulse, Menu } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,15 @@ import {
   Typography,
   Shadow,
 } from '../../constants/theme';
+import {
+  DEFAULT_STEP_GOAL,
+  DEFAULT_WATER_GOAL_ML,
+  HealthEntry,
+  HealthGoals,
+  formatSteps,
+  getTodayHealth,
+  summariseHealth,
+} from '../../services/health';
 import { useProfileSummary } from '../../services/profile';
 
 
@@ -38,8 +47,41 @@ export default function HomeScreen() {
   const healthScore = PLACEHOLDER_HEALTH_SCORE;
   const [profileOpen, setProfileOpen] = useState(false);
 
+  // Steps and water come from the Health tab's `health_entries`; Sleep, BPM and
+  // Calories below are still placeholders with nothing logging them yet.
+  const [entry, setEntry] = useState<HealthEntry>({
+    date: '',
+    steps: 0,
+    waterMl: 0,
+  });
+  const [goals, setGoals] = useState<HealthGoals>({
+    stepGoal: DEFAULT_STEP_GOAL,
+    waterGoalMl: DEFAULT_WATER_GOAL_ML,
+  });
+
+  // Refetched on focus so returning from the Health tab shows what was just
+  // logged rather than the figure this screen mounted with.
+  useFocusEffect(
+    useCallback(() => {
+      const loadHealth = async () => {
+        try {
+          const { entry: today, goals: targets } = await getTodayHealth();
+          setEntry(today);
+          setGoals(targets);
+        } catch (err) {
+          // Home is a dashboard, not the place to log health — a failure here
+          // leaves the tiles at zero rather than blocking the whole screen.
+          console.error('Error fetching health data:', err);
+        }
+      };
+      void loadHealth();
+    }, [])
+  );
+
+  const health = summariseHealth(entry, goals);
+
   const metrics = [
-    { label: 'Steps', value: '7842', unit: 'Steps' },
+    { label: 'Steps', value: formatSteps(entry.steps), unit: 'Steps' },
     { label: 'Sleep', value: '7h', unit: 'Hours' },
     { label: 'BPM', value: '72', unit: 'Heart Rate' },
     { label: 'Calories', value: '392', unit: 'Kcal' },
@@ -66,9 +108,9 @@ export default function HomeScreen() {
       id: '3',
       icon: '💧',
       title: 'Drink Water',
-      subtitle: '6 of 8 glasses',
-      time: '75%',
-      completed: false,
+      subtitle: `${health.glasses} of ${health.goalGlasses} glasses`,
+      time: `${health.waterPercent}%`,
+      completed: health.waterRemainingMl === 0,
     },
   ];
 

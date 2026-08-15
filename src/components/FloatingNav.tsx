@@ -2,7 +2,13 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Href, usePathname, useRouter } from 'expo-router';
 import type { LucideIcon } from 'lucide-react-native';
-import { CalendarCheck, House, Pill, ScanQrCode } from 'lucide-react-native';
+import {
+  CalendarCheck,
+  HeartPulse,
+  House,
+  Pill,
+  ScanQrCode,
+} from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,6 +36,12 @@ const home: NavItem = {
   route: '/(tabs)/home',
   match: '/home',
 };
+const health: NavItem = {
+  label: 'Health',
+  icon: HeartPulse,
+  route: '/(tabs)/health',
+  match: '/health',
+};
 const medicine: NavItem = {
   label: 'Medicine',
   icon: Pill,
@@ -48,7 +60,10 @@ const planner: NavItem = {
 //
 // Profile is not here either — the account hub is the drawer behind the
 // dashboard's hamburger now, so the bar carries only the top-level screens.
-const navItems: NavItem[] = [home, medicine, planner];
+//
+// Four destinations split evenly either side of the scanner, so both halves
+// carry the same number of tabs and every label has room to render in full.
+const navItems: NavItem[] = [home, health, medicine, planner];
 
 /** How many destinations sit to the left of the centre scanner disc. */
 const SCAN_SLOT = 2;
