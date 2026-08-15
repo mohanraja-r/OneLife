@@ -1,4 +1,4 @@
-import { toDateString, startOfToday } from './dates';
+import { parseDateString, toDateString, startOfToday } from './dates';
 import {
   HealthSummary,
   computeStreak,
@@ -23,6 +23,8 @@ import {
   nextPendingDose,
 } from './medicine';
 import { PlannerTask, TaskCategory, getTasksForDate } from './planner';
+import { scheduleTests } from './pregnancy';
+import { getProfileSummary } from './profile';
 import {
   VitalRow,
   VitalsEntry,
@@ -30,6 +32,12 @@ import {
   getVitals,
   getVitalsHistory,
 } from './vitals';
+import {
+  PregnancySummary,
+  getPregnancy,
+  isPregnancyStale,
+  summarisePregnancy,
+} from './women';
 
 /**
  * The Home dashboard's single read.
@@ -108,6 +116,18 @@ export interface DashboardData {
   vitals: VitalsEntry;
   vitalRows: VitalRow[];
   insights: Insight[];
+  /** Set only when a pregnancy is being tracked and is still current — null
+   *  for everyone else, and once the record is well past its due date. */
+  pregnancy: PregnancyStrip | null;
+}
+
+/** What the pregnancy strip at the top of Home shows. */
+export interface PregnancyStrip {
+  summary: PregnancySummary;
+  /** The next test or scan still outstanding, for the second stat. */
+  nextTest: { title: string; daysAway: number; overdue: boolean } | null;
+  /** Weight gained so far, when a baseline and a reading both exist. */
+  gainKg: number | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -253,6 +273,65 @@ export function buildInsights(
 // ---------------------------------------------------------------------------
 
 /** Loads every figure Home shows for one day, in a single round of requests. */
+/**
+ * The pregnancy summary for the strip at the top of Home, or null.
+ *
+ * Three things have to be true before it shows: the profile says woman, a
+ * record exists, and the due date has not long since passed. That last check
+ * matters because nothing ends a pregnancy automatically — without it, a record
+ * left in place would keep telling someone who gave birth months ago that they
+ * are 40 weeks pregnant.
+ *
+ * The gender gate runs first so that for most users this costs one cached read
+ * and no query at all.
+ */
+async function pregnancyFor(date: string): Promise<PregnancyStrip | null> {
+  try {
+    const profile = await getProfileSummary();
+    if (profile?.gender !== 'woman') return null;
+
+    const record = await getPregnancy();
+    if (!record) return null;
+
+    const asOf = parseDateString(date);
+    if (isPregnancyStale(record, asOf)) return null;
+
+    // Summarised as of the selected day, not today — Home can page backwards,
+    // and the week shown has to match the rest of the screen.
+    const summary = summarisePregnancy(record, asOf);
+
+    // Already sorted with anything overdue first, so the head of the list is
+    // the thing she most needs to know about.
+    const next = scheduleTests(record, asOf).find(
+      (test) => test.status !== 'done'
+    );
+
+    const weights = record.logs.filter(
+      (log) => typeof log.weightKg === 'number'
+    );
+    const latest = weights[weights.length - 1]?.weightKg;
+    const gainKg =
+      record.prePregnancyWeightKg !== null && latest !== undefined
+        ? Number((latest - record.prePregnancyWeightKg).toFixed(1))
+        : null;
+
+    return {
+      summary,
+      nextTest: next
+        ? {
+            title: next.title,
+            daysAway: next.daysAway,
+            overdue: next.status === 'overdue',
+          }
+        : null,
+      gainKg,
+    };
+  } catch {
+    // The strip is additive. A failure here should never take Home down with it.
+    return null;
+  }
+}
+
 export async function getDashboard(
   date: string = toDateString(startOfToday())
 ): Promise<DashboardData> {
@@ -288,6 +367,7 @@ export async function getDashboard(
   const stepTrend = weekOverWeekSteps(history, date);
 
   return {
+    pregnancy: await pregnancyFor(date),
     date,
     isToday,
     health,
