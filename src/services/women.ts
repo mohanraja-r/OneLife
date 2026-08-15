@@ -155,12 +155,45 @@ export interface PregnancyLog {
   notes?: string;
 }
 
+/** Ticked hospital-bag items, plus anything the user added themselves. */
+export interface BagState {
+  /** Catalogue ids that are packed. */
+  packed: string[];
+  /** User-added items, which live only here and not in the catalogue. */
+  custom: { id: string; name: string; categoryId: string }[];
+}
+
+/** What is recorded against one completed test, keyed by its template key. */
+export interface TestState {
+  /** `YYYY-MM-DD` it was done. */
+  doneDate: string;
+  note?: string;
+}
+
+/** Which regional diet chart the user reads. */
+export type DietRegion = 'north' | 'south';
+
+/** Who arrived. `twins` is a count rather than a sex, but it is the answer
+ *  people give to this question, so it sits in the same list. */
+export type BabyOutcome = 'girl' | 'boy' | 'twins';
+
 /** The stored `pregnancy_data` row. */
 export interface PregnancyRecord {
   /** `YYYY-MM-DD`. */
   dueDate: string;
   checkups: Checkup[];
   logs: PregnancyLog[];
+  /** Weight before the pregnancy began — the baseline every gain is measured
+   *  from. Null until she sets it. */
+  prePregnancyWeightKg: number | null;
+  bag: BagState;
+  /** Completed tests, keyed by `TestTemplate.key`. */
+  tests: Record<string, TestState>;
+  /** Null until she picks one; the diet screen falls back to north. */
+  dietRegion: DietRegion | null;
+  /** `YYYY-MM-DD` the baby arrived. Null while the pregnancy is ongoing. */
+  deliveredOn: string | null;
+  babyOutcome: BabyOutcome | null;
 }
 
 /** How big the baby is this week, for the size card. */
@@ -704,7 +737,9 @@ export async function getPregnancy(): Promise<PregnancyRecord | null> {
 
   const { data, error } = await supabase
     .from('pregnancy_data')
-    .select('due_date, checkups, logs')
+    .select(
+      'due_date, checkups, logs, pre_pregnancy_weight_kg, bag, tests, diet_region, delivered_on, baby_outcome'
+    )
     .eq('user_id', userId)
     .maybeSingle();
 
@@ -712,13 +747,126 @@ export async function getPregnancy(): Promise<PregnancyRecord | null> {
   if (!data) return null;
 
   const row = data;
+  const bag = (row.bag ?? {}) as Partial<BagState>;
+
   return {
     dueDate: row.due_date,
     checkups: [...(row.checkups ?? [])].sort((a, b) =>
       a.date.localeCompare(b.date)
     ),
     logs: [...(row.logs ?? [])].sort((a, b) => a.date.localeCompare(b.date)),
+    // Postgres `numeric` arrives as a string, so it has to be coerced.
+    prePregnancyWeightKg:
+      row.pre_pregnancy_weight_kg === null ||
+      row.pre_pregnancy_weight_kg === undefined
+        ? null
+        : Number(row.pre_pregnancy_weight_kg),
+    bag: { packed: bag.packed ?? [], custom: bag.custom ?? [] },
+    tests: (row.tests ?? {}) as Record<string, TestState>,
+    dietRegion: row.diet_region ?? null,
+    deliveredOn: row.delivered_on ?? null,
+    babyOutcome: row.baby_outcome ?? null,
   };
+}
+
+/** Closes the pregnancy out, recording when the baby arrived and who it was. */
+export async function setDelivery(
+  deliveredOn: string,
+  outcome: BabyOutcome
+): Promise<void> {
+  const userId = await requireUserId();
+
+  const { error } = await supabase
+    .from('pregnancy_data')
+    .update({ delivered_on: deliveredOn, baby_outcome: outcome })
+    .eq('user_id', userId);
+
+  if (error) throw error;
+}
+
+/** Reopens a pregnancy marked delivered by mistake. */
+export async function clearDelivery(): Promise<void> {
+  const userId = await requireUserId();
+
+  const { error } = await supabase
+    .from('pregnancy_data')
+    .update({ delivered_on: null, baby_outcome: null })
+    .eq('user_id', userId);
+
+  if (error) throw error;
+}
+
+/** Records the weight the pregnancy started from — the gain baseline. */
+export async function setPrePregnancyWeight(weightKg: number): Promise<void> {
+  const userId = await requireUserId();
+
+  const { error } = await supabase
+    .from('pregnancy_data')
+    .update({ pre_pregnancy_weight_kg: weightKg })
+    .eq('user_id', userId);
+
+  if (error) throw error;
+}
+
+/** Remembers which regional diet chart she reads. */
+export async function setDietRegion(region: DietRegion): Promise<void> {
+  const userId = await requireUserId();
+
+  const { error } = await supabase
+    .from('pregnancy_data')
+    .update({ diet_region: region })
+    .eq('user_id', userId);
+
+  if (error) throw error;
+}
+
+/** Packs or unpacks one hospital-bag item, returning the new packed set. */
+export async function toggleBagItem(itemId: string): Promise<string[]> {
+  const userId = await requireUserId();
+  const record = await getPregnancy();
+  if (!record) throw new Error('Set a due date before packing your bag.');
+
+  const packed = record.bag.packed.includes(itemId)
+    ? record.bag.packed.filter((id) => id !== itemId)
+    : [...record.bag.packed, itemId];
+
+  const { error } = await supabase
+    .from('pregnancy_data')
+    .update({ bag: { ...record.bag, packed } })
+    .eq('user_id', userId);
+
+  if (error) throw error;
+  return packed;
+}
+
+/**
+ * Marks a scheduled test done, or clears it when `doneDate` is null.
+ *
+ * Stored keyed by the template key rather than as a list, so re-marking the
+ * same test overwrites rather than accumulating duplicates.
+ */
+export async function setTestDone(
+  key: string,
+  doneDate: string | null,
+  note?: string
+): Promise<void> {
+  const userId = await requireUserId();
+  const record = await getPregnancy();
+  if (!record) throw new Error('Set a due date before recording tests.');
+
+  const tests = { ...record.tests };
+  if (doneDate === null) {
+    delete tests[key];
+  } else {
+    tests[key] = { doneDate, ...(note ? { note } : {}) };
+  }
+
+  const { error } = await supabase
+    .from('pregnancy_data')
+    .update({ tests })
+    .eq('user_id', userId);
+
+  if (error) throw error;
 }
 
 /** Creates or moves the pregnancy's due date, keeping checkups and logs. */
@@ -823,11 +971,41 @@ export function babySizeForWeek(week: number): BabySize {
   return match;
 }
 
-/** Turns a due date and the logged entries into everything the tab shows. */
+/**
+ * How long past the due date a record keeps showing on the dashboard.
+ *
+ * Nothing ends a pregnancy automatically, so a record left in place would
+ * otherwise read "week 40, due any day" indefinitely. Two weeks covers a normal
+ * overdue stretch; past that the strip hides itself and asks whether the baby
+ * has arrived rather than going on asserting something almost certainly wrong.
+ */
+export const OVERDUE_GRACE_DAYS = 14;
+
+/**
+ * True once a record no longer describes an ongoing pregnancy — either because
+ * she has marked the baby as delivered, or because the due date is far enough
+ * past that carrying on counting would be asserting something almost certainly
+ * wrong.
+ */
+export function isPregnancyStale(record: PregnancyRecord, asOf?: Date): boolean {
+  if (record.deliveredOn !== null) return true;
+
+  const day = asOf ?? startOfToday();
+  return daysBetween(parseDateString(record.dueDate), day) > OVERDUE_GRACE_DAYS;
+}
+
+/**
+ * Turns a due date and the logged entries into everything the tab shows.
+ *
+ * `asOf` defaults to today. Home passes its selected date so that paging back
+ * through the dashboard shows the week she was at then, not the week she is at
+ * now.
+ */
 export function summarisePregnancy(
-  record: PregnancyRecord
+  record: PregnancyRecord,
+  asOf?: Date
 ): PregnancySummary {
-  const today = startOfToday();
+  const today = asOf ?? startOfToday();
   const due = parseDateString(record.dueDate);
   const start = addDays(due, -GESTATION_DAYS);
 
