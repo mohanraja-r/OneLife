@@ -36,6 +36,7 @@ import {
   View,
 } from 'react-native';
 
+import AnimatedPressable from '../../components/AnimatedPressable';
 import Avatar from '../../components/Avatar';
 import CalendarSheet from '../../components/CalendarSheet';
 import FloatingNav from '../../components/FloatingNav';
@@ -268,6 +269,90 @@ export default function HomeScreen() {
             from={{ opacity: 0, translateY: 12 }}
             animate={{ opacity: 1, translateY: 0 }}
             transition={{ type: 'timing', duration: Motion.base }}>
+            {/* ---------------------------------------------- Pregnancy */}
+            {/* Above everything else: for someone who is pregnant this is the
+                most important thing on the screen. */}
+            {data.pregnancy && (
+              <AnimatedPressable
+                onPress={() => router.push('/(tabs)/women')}
+                style={styles.pregnancyCard}>
+                <View style={styles.pregnancyHead}>
+                  <View style={styles.pregnancyBaby}>
+                    <Text style={styles.pregnancyEmoji}>
+                      {data.pregnancy.summary.babySize.emoji}
+                    </Text>
+                  </View>
+
+                  <View style={styles.pregnancyText}>
+                    <Text style={styles.pregnancyWeek}>
+                      {data.pregnancy.summary.week}w{' '}
+                      {data.pregnancy.summary.day}d
+                    </Text>
+                    <Text style={styles.pregnancyMeta}>
+                      {data.pregnancy.summary.trimesterLabel} ·{' '}
+                      {data.pregnancy.summary.weeksToGo === 0
+                        ? 'due any day now'
+                        : `${data.pregnancy.summary.weeksToGo} weeks to go`}
+                    </Text>
+                  </View>
+
+                  <ChevronRight size={18} color={Accents.pink.main} />
+                </View>
+
+                <View style={styles.pregnancyTrack}>
+                  <View
+                    style={[
+                      styles.pregnancyFill,
+                      { width: `${data.pregnancy.summary.progress * 100}%` },
+                    ]}
+                  />
+                </View>
+
+                {/* Three figures worth knowing without opening the tab: how big
+                    the baby is, what is due next, and the gain so far. */}
+                <View style={styles.pregnancyStats}>
+                  <View style={styles.pregnancyStat}>
+                    <Text style={styles.pregnancyStatLabel}>Baby size</Text>
+                    <Text style={styles.pregnancyStatValue} numberOfLines={1}>
+                      {data.pregnancy.summary.babySize.name}
+                    </Text>
+                  </View>
+
+                  <View style={styles.pregnancyStatDivider} />
+
+                  <View style={styles.pregnancyStat}>
+                    <Text style={styles.pregnancyStatLabel}>Next up</Text>
+                    <Text
+                      style={[
+                        styles.pregnancyStatValue,
+                        data.pregnancy.nextTest?.overdue &&
+                          styles.pregnancyStatOverdue,
+                      ]}
+                      numberOfLines={1}>
+                      {data.pregnancy.nextTest
+                        ? data.pregnancy.nextTest.overdue
+                          ? 'Overdue test'
+                          : data.pregnancy.nextTest.daysAway <= 0
+                            ? 'Due now'
+                            : `${data.pregnancy.nextTest.daysAway}d away`
+                        : 'All done'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.pregnancyStatDivider} />
+
+                  <View style={styles.pregnancyStat}>
+                    <Text style={styles.pregnancyStatLabel}>Weight gain</Text>
+                    <Text style={styles.pregnancyStatValue} numberOfLines={1}>
+                      {data.pregnancy.gainKg === null
+                        ? '—'
+                        : `${data.pregnancy.gainKg > 0 ? '+' : ''}${data.pregnancy.gainKg} kg`}
+                    </Text>
+                  </View>
+                </View>
+              </AnimatedPressable>
+            )}
+
             {/* ------------------------------------------------- Streak */}
             {data.streak > 0 && (
               <View style={styles.streakCard}>
@@ -709,6 +794,75 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
 
+  pregnancyCard: {
+    backgroundColor: Accents.pink.tint,
+    borderRadius: Radius.card,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+  },
+  pregnancyHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  pregnancyBaby: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.round,
+    backgroundColor: Colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pregnancyEmoji: { fontSize: 20, lineHeight: 26 },
+  pregnancyText: { flex: 1 },
+  pregnancyWeek: {
+    ...Typography.optionLabel,
+    fontSize: 16,
+    color: Accents.pink.dark,
+  },
+  pregnancyMeta: {
+    ...Typography.label,
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 1,
+  },
+  pregnancyTrack: {
+    height: 4,
+    borderRadius: Radius.round,
+    backgroundColor: Colors.surface,
+    marginTop: Spacing.md,
+    overflow: 'hidden',
+  },
+  pregnancyFill: {
+    height: '100%',
+    borderRadius: Radius.round,
+    backgroundColor: Accents.pink.main,
+  },
+  pregnancyStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: Spacing.md,
+  },
+  pregnancyStat: { flex: 1 },
+  pregnancyStatLabel: {
+    ...Typography.label,
+    fontSize: 10,
+    color: Colors.textSecondary,
+  },
+  pregnancyStatValue: {
+    ...Typography.label,
+    fontSize: 12,
+    fontWeight: '700',
+    color: Accents.pink.dark,
+    marginTop: 1,
+  },
+  pregnancyStatOverdue: { color: Accents.amber.dark },
+  pregnancyStatDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: Colors.surface,
+    marginHorizontal: Spacing.md,
+  },
   streakCard: {
     flexDirection: 'row',
     alignItems: 'center',

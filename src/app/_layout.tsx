@@ -28,6 +28,7 @@ export default function RootLayout() {
       <Stack.Screen name="join-family" />
       <Stack.Screen name="reports" />
       <Stack.Screen name="settings" />
+      <Stack.Screen name="pregnancy" />
     </Stack>
   );
 }

@@ -42,6 +42,13 @@ export interface ProfileSummary {
   gender: Gender;
   /** Signed URL ready for `<Image source>`, not the stored object path. */
   avatarUrl: string | null;
+  /** `veg` | `non_veg` | `eggetarian`. The precise field, and the one that
+   *  distinguishes eggetarian — but not yet written at onboarding, so callers
+   *  fall back to `eatingStyle` when it is null. */
+  dietaryPreference: string | null;
+  /** How they described their eating at onboarding. Broader and fuzzier than
+   *  `dietaryPreference`, but it is the one signup actually fills in. */
+  eatingStyle: string | null;
 }
 
 /** Everything the Personal Information screen shows, editable or not. */
@@ -76,10 +83,12 @@ interface ProfileRow {
   height_unit: string | null;
   weight_kg: number | null;
   weight_unit: string | null;
+  eating_style: string | null;
+  dietary_preference: string | null;
 }
 
 const PROFILE_COLUMNS =
-  'name, gender, avatar_url, date_of_birth, height_cm, height_unit, weight_kg, weight_unit';
+  'name, gender, avatar_url, date_of_birth, height_cm, height_unit, weight_kg, weight_unit, eating_style, dietary_preference';
 
 const GENDERS: readonly string[] = ['woman', 'man', 'non_binary', 'unspecified'];
 
@@ -274,6 +283,8 @@ export async function getPersonalDetails(): Promise<PersonalDetails | null> {
     heightUnit: data?.height_unit === 'ft_in' ? 'ft_in' : 'cm',
     weightKg: data?.weight_kg ?? null,
     weightUnit: data?.weight_unit === 'lb' ? 'lb' : 'kg',
+    eatingStyle: data?.eating_style ?? null,
+    dietaryPreference: data?.dietary_preference ?? null,
   };
 }
 
@@ -338,10 +349,15 @@ export async function getProfileSummary(
 
     const { data } = await supabase
       .from('profiles')
-      .select('name, gender, avatar_url')
+      .select('name, gender, avatar_url, eating_style, dietary_preference')
       .eq('id', user.id)
       .maybeSingle()
-      .overrideTypes<Pick<ProfileRow, 'name' | 'gender' | 'avatar_url'>>();
+      .overrideTypes<
+        Pick<
+          ProfileRow,
+          'name' | 'gender' | 'avatar_url' | 'eating_style' | 'dietary_preference'
+        >
+      >();
 
     const fallbackName = user.email?.split('@')[0] ?? 'there';
     return publish({
@@ -350,6 +366,8 @@ export async function getProfileSummary(
       email: user.email ?? '',
       gender: toGender(data?.gender ?? null),
       avatarUrl: await resolveAvatarUrl(data?.avatar_url ?? null),
+      eatingStyle: data?.eating_style ?? null,
+      dietaryPreference: data?.dietary_preference ?? null,
     });
   })();
 
