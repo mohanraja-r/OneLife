@@ -1,8 +1,6 @@
 import { toDateString, startOfToday } from './dates';
 import {
   HealthSummary,
-  WeekChart,
-  buildWeekChart,
   computeStreak,
   formatWater,
   getHealthEntry,
@@ -97,7 +95,6 @@ export interface DashboardData {
   date: string;
   isToday: boolean;
   health: HealthSummary;
-  chart: WeekChart;
   /** Consecutive days up to `date` where a goal was met. */
   streak: number;
   /** Percent change in steps against the previous week, or null with no baseline. */
@@ -294,7 +291,6 @@ export async function getDashboard(
     date,
     isToday,
     health,
-    chart: buildWeekChart(history, date, goals.stepGoal),
     streak,
     stepTrend,
     nutrition,

@@ -44,8 +44,6 @@ import ProfileDrawer from '../../components/ProfileDrawer';
 import Sparkline from '../../components/Sparkline';
 import { EmptyState, ErrorNotice, LoadingState } from '../../components/ui';
 import VitalsSheet from '../../components/VitalsSheet';
-import WaterDroplet from '../../components/WaterDroplet';
-import WeekBars from '../../components/WeekBars';
 import {
   Accent,
   Accents,
@@ -66,12 +64,7 @@ import {
 } from '../../services/dashboard';
 import { startOfToday, toDateString } from '../../services/dates';
 import { errorMessage } from '../../services/errors';
-import {
-  formatSteps,
-  formatWater,
-  setWaterMl,
-  summariseHealth,
-} from '../../services/health';
+import { formatSteps, formatWater } from '../../services/health';
 import { firstNameOf, useProfileSummary } from '../../services/profile';
 import {
   VitalField,
@@ -80,12 +73,8 @@ import {
   setVital,
 } from '../../services/vitals';
 
-/** Diameter of the calorie and step rings. */
+/** Diameter of the calorie ring. */
 const RING_SIZE = 118;
-/** Rendered width of the water droplet gauge. */
-const DROPLET_SIZE = 104;
-/** The amounts the water quick-add row offers, in millilitres. */
-const QUICK_ADDS = [250, 500, 750, 1000];
 /** Size of a Health Overview sparkline. */
 const SPARK_WIDTH = 72;
 const SPARK_HEIGHT = 24;
@@ -169,9 +158,11 @@ function planRoute(kind: PlanKind) {
  * governs the whole screen rather than any one card, so no two widgets can end
  * up describing different days.
  *
- * The reference is a wide layout that pairs Steps with Water and Nutrition with
- * a second water readout. On a phone those pairs are stacked and the duplicate
- * water block is dropped — the same information, once, at a legible size.
+ * The reference is a wide layout with separate Steps and Water cards, each
+ * carrying a gauge, a chart and a quick-add row. Home shows the two counts
+ * together in one Activity card instead: a dashboard answers "where am I",
+ * and the Health tab it links to is where those numbers get logged and
+ * broken down.
  */
 export default function HomeScreen() {
   const router = useRouter();
@@ -208,38 +199,6 @@ export default function HomeScreen() {
       void load();
     }, [load])
   );
-
-  /**
-   * Adds to the running water total and saves it, then reloads so the droplet,
-   * the hydration plan card and the insights all move together. A failure puts
-   * the stored figures back.
-   */
-  const addWater = async (deltaMl: number) => {
-    if (!data) return;
-    const previous = data;
-    const next = Math.max(0, data.health.entry.waterMl + deltaMl);
-
-    // Painted before the write resolves so a tap feels instant; the reload
-    // afterwards is what moves the plan card and the insights with it.
-    setData({
-      ...data,
-      health: summariseHealth(
-        { ...data.health.entry, waterMl: next },
-        data.health.goals
-      ),
-    });
-
-    try {
-      await setWaterMl(next, dateKey);
-      await load();
-    } catch (err) {
-      setData(previous);
-      Alert.alert(
-        'Could not save',
-        errorMessage(err, 'Could not save your water intake.')
-      );
-    }
-  };
 
   /** Saves one logged vital and refreshes the card's readings and sparklines. */
   const saveVital = async (patch: VitalPatch) => {
@@ -424,125 +383,62 @@ export default function HomeScreen() {
               )}
             </View>
 
-            {/* -------------------------------------------------- Steps */}
+            {/* -------------------------------------- Steps and water */}
             <View style={styles.card}>
               <View style={styles.cardHeader}>
                 <View style={styles.cardHeading}>
                   <Footprints size={17} color={Colors.primary} />
-                  <Text style={styles.cardTitle}>Steps</Text>
+                  <Text style={styles.cardTitle}>Activity</Text>
                 </View>
                 <TouchableOpacity
                   style={styles.headerAction}
                   onPress={() => router.push('/(tabs)/health')}
                   accessibilityRole="button"
-                  accessibilityLabel="Open the Health tab">
+                  accessibilityLabel="Open the Health tab to log steps and water">
                   <Text style={styles.headerActionLabel}>Details</Text>
                   <ChevronRight size={14} color={Colors.primary} />
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.splitRow}>
-                <GradientRing
-                  size={RING_SIZE}
-                  thickness={11}
-                  progress={data.health.stepProgress}
-                  colors={Gradients.activity}>
-                  <Text style={styles.ringValue}>
+              {/* Counts only. Logging lives on the Health tab, which is what
+                  the Details link is for. */}
+              <View style={styles.metricRow}>
+                <View style={styles.metric}>
+                  <View
+                    style={[
+                      styles.metricIcon,
+                      { backgroundColor: Accents.violet.tint },
+                    ]}>
+                    <Footprints size={16} color={Accents.violet.main} />
+                  </View>
+                  <Text style={styles.metricValue}>
                     {formatSteps(data.health.entry.steps)}
                   </Text>
-                  <Text style={styles.ringUnit}>Steps</Text>
-                  <Text style={styles.ringPercent}>
-                    {data.health.stepPercent}% of goal
+                  <Text style={styles.metricLabel}>Steps</Text>
+                  <Text style={styles.metricGoal}>
+                    of {formatSteps(data.health.goals.stepGoal)}
                   </Text>
-                </GradientRing>
-
-                <View style={styles.splitText}>
-                  <WeekBars chart={data.chart} />
                 </View>
-              </View>
 
-              <View style={styles.cardFooter}>
-                <Text style={styles.footerStrong}>
-                  {data.health.stepsRemaining > 0
-                    ? `${formatSteps(data.health.stepsRemaining)} steps left`
-                    : 'Goal reached'}
-                </Text>
-                <Text style={styles.footerMuted}>
-                  Goal: {formatSteps(data.health.goals.stepGoal)} steps
-                </Text>
-              </View>
-            </View>
+                <View style={styles.metricDivider} />
 
-            {/* -------------------------------------------------- Water */}
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <View style={styles.cardHeading}>
-                  <Droplets size={17} color={Colors.hydration} />
-                  <Text style={styles.cardTitle}>Water Intake</Text>
-                </View>
-                <Text style={styles.headerMuted}>
-                  {isToday ? 'Today' : dateLabel(selectedDate, false)}
-                </Text>
-              </View>
-
-              <View style={styles.splitRow}>
-                <WaterDroplet
-                  size={DROPLET_SIZE}
-                  progress={data.health.waterProgress}>
-                  <Text style={styles.dropletValue}>
+                <View style={styles.metric}>
+                  <View
+                    style={[
+                      styles.metricIcon,
+                      { backgroundColor: Accents.blue.tint },
+                    ]}>
+                    <Droplets size={16} color={Colors.hydration} />
+                  </View>
+                  <Text style={styles.metricValue}>
                     {formatWater(data.health.entry.waterMl)}
                   </Text>
-                  <Text style={styles.dropletGoal}>
+                  <Text style={styles.metricLabel}>Water</Text>
+                  <Text style={styles.metricGoal}>
                     of {formatWater(data.health.goals.waterGoalMl)}
                   </Text>
-                  <Text style={styles.dropletPercent}>
-                    {data.health.waterPercent}%
-                  </Text>
-                </WaterDroplet>
-
-                <View style={styles.splitText}>
-                  <Text style={styles.quickAddLabel}>Quick Add</Text>
-                  {QUICK_ADDS.map((amount, index) => {
-                    // The larger amounts are picked out, matching the
-                    // reference: the two people reach for least get the louder
-                    // treatment.
-                    const emphasised = index >= 2;
-                    return (
-                      <TouchableOpacity
-                        key={amount}
-                        style={[
-                          styles.quickChip,
-                          emphasised && styles.quickChipEmphasised,
-                        ]}
-                        onPress={() => void addWater(amount)}
-                        activeOpacity={0.7}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Add ${formatWater(amount)} of water`}>
-                        <Plus
-                          size={11}
-                          strokeWidth={2.6}
-                          color={
-                            emphasised ? Accents.pink.main : Colors.hydration
-                          }
-                        />
-                        <Text
-                          style={[
-                            styles.quickLabel,
-                            emphasised && styles.quickLabelEmphasised,
-                          ]}>
-                          {formatWater(amount)}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
                 </View>
               </View>
-
-              <Text style={styles.cardNote}>
-                {data.health.waterRemainingMl > 0
-                  ? `${formatWater(data.health.waterRemainingMl)} left to reach your goal`
-                  : 'You have reached your goal for the day'}
-              </Text>
             </View>
 
             {/* ------------------------------------------- Today's Plan */}
@@ -910,34 +806,43 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   headerMuted: { ...Typography.label, color: Colors.textMuted },
-  cardNote: {
-    ...Typography.label,
-    fontSize: 11,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginTop: Spacing.md,
-  },
   emptyNote: {
     ...Typography.label,
     fontSize: 11,
     color: Colors.textMuted,
     marginBottom: Spacing.sm,
   },
-  cardFooter: { marginTop: Spacing.md, alignItems: 'center' },
-  footerStrong: {
-    ...Typography.optionLabel,
-    fontSize: 14,
-    color: Colors.textPrimary,
-  },
-  footerMuted: {
-    ...Typography.label,
-    fontSize: 11,
-    color: Colors.primary,
-    marginTop: 2,
-  },
 
   splitRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  splitText: { flex: 1 },
+
+  metricRow: { flexDirection: 'row', alignItems: 'center' },
+  metric: { flex: 1, alignItems: 'center', gap: 2 },
+  metricIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: Radius.round,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.xs,
+  },
+  metricValue: {
+    ...Typography.largeNumber,
+    fontSize: 26,
+    lineHeight: 31,
+    color: Colors.textPrimary,
+  },
+  metricLabel: {
+    ...Typography.label,
+    fontSize: 11,
+    color: Colors.textSecondary,
+  },
+  metricGoal: { ...Typography.label, fontSize: 10, color: Colors.textMuted },
+  metricDivider: {
+    width: StyleSheet.hairlineWidth,
+    alignSelf: 'stretch',
+    backgroundColor: Colors.border,
+    marginHorizontal: Spacing.md,
+  },
 
   ringValue: {
     ...Typography.largeNumber,
@@ -947,13 +852,6 @@ const styles = StyleSheet.create({
   },
   ringUnit: { ...Typography.label, fontSize: 10, color: Colors.textSecondary },
   ringCaption: { ...Typography.label, fontSize: 9, color: Colors.textMuted },
-  ringPercent: {
-    ...Typography.label,
-    fontSize: 10,
-    fontWeight: '700',
-    color: Colors.primary,
-    marginTop: 2,
-  },
 
   macros: { flex: 1, gap: Spacing.md },
   macro: { gap: Spacing.xs },
@@ -992,51 +890,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.onPrimary,
   },
-
-  dropletValue: {
-    ...Typography.largeNumber,
-    fontSize: 19,
-    lineHeight: 23,
-    color: Colors.textPrimary,
-  },
-  dropletGoal: { ...Typography.label, fontSize: 9, color: Colors.textSecondary },
-  dropletPercent: {
-    ...Typography.label,
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.hydration,
-    marginTop: 2,
-  },
-  quickAddLabel: {
-    ...Typography.label,
-    fontWeight: '700',
-    color: Colors.primary,
-    marginBottom: Spacing.sm,
-    textAlign: 'center',
-  },
-  quickChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.xs,
-    backgroundColor: Colors.surfaceMuted,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingVertical: Spacing.sm,
-    marginBottom: Spacing.sm,
-  },
-  quickChipEmphasised: {
-    backgroundColor: Accents.pink.tint,
-    borderColor: Accents.pink.tint,
-  },
-  quickLabel: {
-    ...Typography.label,
-    fontSize: 11,
-    fontWeight: '600',
-    color: Colors.hydration,
-  },
-  quickLabelEmphasised: { color: Accents.pink.main },
 
   sectionHeader: {
     flexDirection: 'row',
