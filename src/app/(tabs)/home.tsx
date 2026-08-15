@@ -1,286 +1,811 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { HeartPulse, Menu } from 'lucide-react-native';
-import { MotiView } from 'moti';
-import React, { useCallback, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
+  Bell,
+  Briefcase,
+  CalendarDays,
+  ChevronDown,
+  ChevronRight,
+  CircleCheck,
+  Droplets,
+  Dumbbell,
+  Flame,
+  Footprints,
+  Heart,
+  type LucideIcon,
+  Moon,
+  Pill,
+  Plus,
+  Smile,
+  Sparkles,
+  TrendingUp,
+  Trophy,
+  User,
+  Utensils,
+  Zap,
+} from 'lucide-react-native';
+import { MotiView } from 'moti';
+import { useCallback, useState } from 'react';
+import {
+  Alert,
   SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
   TouchableOpacity,
+  View,
 } from 'react-native';
 
-import AnimatedPressable from '../../components/AnimatedPressable';
 import Avatar from '../../components/Avatar';
+import CalendarSheet from '../../components/CalendarSheet';
 import FloatingNav from '../../components/FloatingNav';
+import GradientRing from '../../components/GradientRing';
 import ProfileDrawer from '../../components/ProfileDrawer';
+import Sparkline from '../../components/Sparkline';
+import { EmptyState, ErrorNotice, LoadingState } from '../../components/ui';
+import VitalsSheet from '../../components/VitalsSheet';
+import WaterDroplet from '../../components/WaterDroplet';
+import WeekBars from '../../components/WeekBars';
 import {
+  Accent,
+  Accents,
   Colors,
   Gradients,
-  Spacing,
+  Motion,
   Radius,
-  Typography,
   Shadow,
+  Spacing,
+  Typography,
 } from '../../constants/theme';
 import {
-  DEFAULT_STEP_GOAL,
-  DEFAULT_WATER_GOAL_ML,
-  HealthEntry,
-  HealthGoals,
+  DashboardData,
+  Insight,
+  PlanCard,
+  PlanKind,
+  getDashboard,
+} from '../../services/dashboard';
+import { startOfToday, toDateString } from '../../services/dates';
+import { errorMessage } from '../../services/errors';
+import {
   formatSteps,
-  getTodayHealth,
+  formatWater,
+  setWaterMl,
   summariseHealth,
 } from '../../services/health';
-import { useProfileSummary } from '../../services/profile';
+import { firstNameOf, useProfileSummary } from '../../services/profile';
+import {
+  VitalField,
+  VitalPatch,
+  isVitalsEmpty,
+  setVital,
+} from '../../services/vitals';
 
+/** Diameter of the calorie and step rings. */
+const RING_SIZE = 118;
+/** Rendered width of the water droplet gauge. */
+const DROPLET_SIZE = 104;
+/** The amounts the water quick-add row offers, in millilitres. */
+const QUICK_ADDS = [250, 500, 750, 1000];
+/** Size of a Health Overview sparkline. */
+const SPARK_WIDTH = 72;
+const SPARK_HEIGHT = 24;
 
-// TODO: replace with the real score once it is computed from logged data.
-const PLACEHOLDER_HEALTH_SCORE = 82;
+/** Colours the three macro bars, in the order the Nutrition card lists them. */
+const MACRO_COLORS = [
+  Accents.violet.main,
+  Accents.blue.main,
+  Accents.pink.main,
+] as const;
 
+/** Icon and accent for each Today's Plan card, keyed by where it came from. */
+const PLAN_STYLES: Record<PlanKind, { icon: LucideIcon; accent: Accent }> = {
+  medicine: { icon: Pill, accent: Accents.violet },
+  hydration: { icon: Droplets, accent: Accents.blue },
+  task: { icon: CircleCheck, accent: Accents.green },
+};
+
+/** Icon and accent for each Health Overview row. */
+const VITAL_STYLES: Record<VitalField, { icon: LucideIcon; accent: Accent }> = {
+  heartRate: { icon: Heart, accent: Accents.rose },
+  sleepMinutes: { icon: Moon, accent: Accents.violet },
+  stress: { icon: Smile, accent: Accents.green },
+  energy: { icon: Zap, accent: Accents.amber },
+};
+
+/** Icon per planner category, so a workout does not look like a meeting. */
+const TASK_ICONS: Record<string, LucideIcon> = {
+  Fitness: Dumbbell,
+  Work: Briefcase,
+  Personal: User,
+};
+
+/** Renders the date pill's label, e.g. `Today, Aug 15` or `Thu, Aug 14`. */
+function dateLabel(date: Date, isToday: boolean): string {
+  const dayAndMonth = date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+  });
+  if (isToday) return `Today, ${dayAndMonth}`;
+  const weekday = date.toLocaleDateString(undefined, { weekday: 'short' });
+  return `${weekday}, ${dayAndMonth}`;
+}
+
+/** Picks the greeting for the time of day. */
+function greetingFor(now: Date): string {
+  const hour = now.getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+/**
+ * The line under the greeting, chosen from how the day is actually going.
+ *
+ * The reference shows a fixed "You're doing amazing!". Earning it means the
+ * praise still means something on a day that deserves it.
+ */
+function headlineFor(data: DashboardData | null): string {
+  if (!data) return ' ';
+  if (data.health.allGoalsMet) return "You're doing amazing!";
+  if (data.streak >= 3) return `${data.streak} days strong!`;
+  if (data.health.stepProgress >= 0.5) return "You're over halfway there!";
+  if (data.isToday) return "Let's make today count!";
+  return 'Here is how that day went.';
+}
+
+/** Where a Today's Plan card sends you when tapped. */
+function planRoute(kind: PlanKind) {
+  if (kind === 'medicine') return '/(tabs)/medicine' as const;
+  if (kind === 'hydration') return '/(tabs)/health' as const;
+  return '/(tabs)/planner' as const;
+}
+
+/**
+ * Home — the dashboard: one day's nutrition, activity, hydration, schedule and
+ * vitals, in the order the reference design lays them out.
+ *
+ * Every figure comes from the database through `getDashboard`, which composes
+ * the six domain services into a single round of requests. The date pill
+ * governs the whole screen rather than any one card, so no two widgets can end
+ * up describing different days.
+ *
+ * The reference is a wide layout that pairs Steps with Water and Nutrition with
+ * a second water readout. On a phone those pairs are stacked and the duplicate
+ * water block is dropped — the same information, once, at a legible size.
+ */
 export default function HomeScreen() {
   const router = useRouter();
-  // One cached read for both the photo and the name the user set on the
-  // Personal Information screen.
+  // One cached read for both the photo and the name set on Personal Information.
   const profile = useProfileSummary();
-  const healthScore = PLACEHOLDER_HEALTH_SCORE;
+
+  const [selectedDate, setSelectedDate] = useState(() => startOfToday());
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [editingVital, setEditingVital] = useState<VitalField | null>(null);
 
-  // Steps and water come from the Health tab's `health_entries`; Sleep, BPM and
-  // Calories below are still placeholders with nothing logging them yet.
-  const [entry, setEntry] = useState<HealthEntry>({
-    date: '',
-    steps: 0,
-    waterMl: 0,
-  });
-  const [goals, setGoals] = useState<HealthGoals>({
-    stepGoal: DEFAULT_STEP_GOAL,
-    waterGoalMl: DEFAULT_WATER_GOAL_ML,
-  });
+  const dateKey = toDateString(selectedDate);
+  const isToday = dateKey === toDateString(startOfToday());
 
-  // Refetched on focus so returning from the Health tab shows what was just
-  // logged rather than the figure this screen mounted with.
+  /** Loads every figure on the screen for the selected day. */
+  const load = useCallback(async () => {
+    try {
+      setError(null);
+      setData(await getDashboard(dateKey));
+    } catch (err) {
+      setError(errorMessage(err, 'Could not load your dashboard.'));
+    } finally {
+      setLoading(false);
+    }
+  }, [dateKey]);
+
+  // Refetched on focus so returning from Health, Medicine or the Planner shows
+  // what was just logged rather than the figures this screen mounted with.
   useFocusEffect(
     useCallback(() => {
-      const loadHealth = async () => {
-        try {
-          const { entry: today, goals: targets } = await getTodayHealth();
-          setEntry(today);
-          setGoals(targets);
-        } catch (err) {
-          // Home is a dashboard, not the place to log health — a failure here
-          // leaves the tiles at zero rather than blocking the whole screen.
-          console.error('Error fetching health data:', err);
-        }
-      };
-      void loadHealth();
-    }, [])
+      void load();
+    }, [load])
   );
 
-  const health = summariseHealth(entry, goals);
+  /**
+   * Adds to the running water total and saves it, then reloads so the droplet,
+   * the hydration plan card and the insights all move together. A failure puts
+   * the stored figures back.
+   */
+  const addWater = async (deltaMl: number) => {
+    if (!data) return;
+    const previous = data;
+    const next = Math.max(0, data.health.entry.waterMl + deltaMl);
 
-  const metrics = [
-    { label: 'Steps', value: formatSteps(entry.steps), unit: 'Steps' },
-    { label: 'Sleep', value: '7h', unit: 'Hours' },
-    { label: 'BPM', value: '72', unit: 'Heart Rate' },
-    { label: 'Calories', value: '392', unit: 'Kcal' },
-  ];
+    // Painted before the write resolves so a tap feels instant; the reload
+    // afterwards is what moves the plan card and the insights with it.
+    setData({
+      ...data,
+      health: summariseHealth(
+        { ...data.health.entry, waterMl: next },
+        data.health.goals
+      ),
+    });
 
-  const todaysPlan = [
-    {
-      id: '1',
-      icon: '💊',
-      title: 'Morning Medication',
-      subtitle: '2 Medicines',
-      time: '8:00 AM',
-      completed: true,
-    },
-    {
-      id: '2',
-      icon: '🍎',
-      title: 'Breakfast',
-      subtitle: 'Oatmeal with fruits',
-      time: 'Completed',
-      completed: true,
-    },
-    {
-      id: '3',
-      icon: '💧',
-      title: 'Drink Water',
-      subtitle: `${health.glasses} of ${health.goalGlasses} glasses`,
-      time: `${health.waterPercent}%`,
-      completed: health.waterRemainingMl === 0,
-    },
-  ];
+    try {
+      await setWaterMl(next, dateKey);
+      await load();
+    } catch (err) {
+      setData(previous);
+      Alert.alert(
+        'Could not save',
+        errorMessage(err, 'Could not save your water intake.')
+      );
+    }
+  };
+
+  /** Saves one logged vital and refreshes the card's readings and sparklines. */
+  const saveVital = async (patch: VitalPatch) => {
+    try {
+      await setVital(patch, dateKey);
+      await load();
+    } catch (err) {
+      Alert.alert(
+        'Could not save',
+        errorMessage(err, 'Could not save that reading.')
+      );
+    }
+  };
+
+  const pendingDoses = data
+    ? data.doses.filter((dose) => dose.status === 'pending').length
+    : 0;
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        bounces={false}>
-        {/* Header */}
+        showsVerticalScrollIndicator={false}>
+        {/* ------------------------------------------------------- Header */}
         <MotiView
           from={{ opacity: 0, translateY: -8 }}
           animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 300 }}
+          transition={{ type: 'timing', duration: Motion.fast }}
           style={styles.header}>
-          {/* The hamburger is the only way into the account menu now that
-              Profile has left the bottom bar. */}
+          <View style={styles.headerText}>
+            <Text style={styles.greeting} numberOfLines={1}>
+              {greetingFor(new Date())}
+              {profile ? `, ${firstNameOf(profile.name)}` : ''}! 👋
+            </Text>
+            <Text style={styles.headline} numberOfLines={1}>
+              {headlineFor(data)}
+            </Text>
+          </View>
+
+          {/* The dot marks doses still due, so the bell reports something real
+              rather than standing in for a notification centre we don't have. */}
           <TouchableOpacity
-            style={styles.headerIconButton}
-            onPress={() => setProfileOpen(true)}
-            activeOpacity={0.7}
+            style={styles.bell}
+            onPress={() => router.push('/(tabs)/medicine')}
             accessibilityRole="button"
-            accessibilityLabel="Open profile menu">
-            <Menu size={20} color={Colors.textSecondary} />
+            accessibilityLabel={
+              pendingDoses > 0
+                ? `${pendingDoses} doses still due today`
+                : 'No doses due'
+            }>
+            <Bell size={18} color={Colors.textSecondary} />
+            {pendingDoses > 0 && <View style={styles.bellDot} />}
           </TouchableOpacity>
 
-          {/* The hamburger and the avatar are the same width, so the wordmark
-              lands dead centre without absolute positioning. */}
-          <View style={styles.brand}>
-            <HeartPulse size={26} color={Colors.primary} strokeWidth={2.2} />
-            <Text style={styles.wordmark}>OneLife</Text>
-          </View>
-
-          <Avatar uri={profile?.avatarUrl ?? null} name={profile?.name} />
+          <TouchableOpacity
+            onPress={() => setProfileOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Open profile menu">
+            <Avatar uri={profile?.avatarUrl ?? null} name={profile?.name} />
+          </TouchableOpacity>
         </MotiView>
 
-        {/* Health Score Card */}
-        <MotiView
-          from={{ opacity: 0, translateY: 16 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 320, delay: 60 }}
-          style={styles.healthScoreCard}>
-          <LinearGradient
-            colors={Gradients.primary}
-            start={Gradients.diagonal.start}
-            end={Gradients.diagonal.end}
-            style={styles.healthScoreGradient}>
-            {/* Score dial. A true arc needs react-native-svg, which isn't a
-                dependency yet — this is the ring track plus the numeral. */}
-            <View style={styles.ringContainer}>
-              <Text style={styles.ringValue}>{healthScore}</Text>
-            </View>
-            <View style={styles.healthScoreText}>
-              <Text style={styles.healthScoreLabel}>Health Score</Text>
-              <Text style={styles.healthScoreTitle}>⭐ Excellent</Text>
-              <Text style={styles.healthScoreSubtitle}>
-                You&apos;re doing great! Keep tracking to maintain your streak.
-              </Text>
-            </View>
-          </LinearGradient>
-        </MotiView>
+        {/* --------------------------------------------------- Date picker */}
+        <TouchableOpacity
+          style={styles.datePill}
+          onPress={() => setCalendarOpen(true)}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel={`${dateLabel(selectedDate, isToday)}. Change date.`}>
+          <CalendarDays size={16} color={Colors.primary} />
+          <Text style={styles.dateLabel}>
+            {dateLabel(selectedDate, isToday)}
+          </Text>
+          <ChevronDown size={16} color={Colors.textSecondary} />
+        </TouchableOpacity>
 
-        {/* Metrics Grid */}
-        <View style={styles.metricsGrid}>
-          {metrics.map((metric, index) => (
-            <MotiView
-              key={index}
-              from={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{
-                type: 'timing',
-                duration: 280,
-                delay: 120 + index * 40,
-              }}
-              style={styles.metricCard}>
-              <Text style={styles.metricLabel}>{metric.label}</Text>
-              <Text style={styles.metricValue}>{metric.value}</Text>
-            </MotiView>
-          ))}
-        </View>
+        <ErrorNotice message={error} onRetry={() => void load()} />
 
-        {/* Today's Plan */}
-        <View style={styles.todaysPlanContainer}>
-          <View style={styles.todaysPlanHeader}>
-            <Text style={styles.todaysPlanTitle}>Today&apos;s Plan</Text>
-            <AnimatedPressable onPress={() => router.push('/(tabs)/planner')}>
-              <Text style={styles.viewAllLink}>View all</Text>
-            </AnimatedPressable>
-          </View>
-
-          {todaysPlan.map((item, index) => (
-            <MotiView
-              key={item.id}
-              from={{ opacity: 0, translateX: -12 }}
-              animate={{ opacity: 1, translateX: 0 }}
-              transition={{
-                type: 'timing',
-                duration: 260,
-                delay: 160 + index * 50,
-              }}
-              style={styles.planItem}>
-              <View style={styles.planItemIconContainer}>
-                <Text style={styles.planItemIcon}>{item.icon}</Text>
+        {loading || !data ? (
+          <LoadingState color={Colors.primary} />
+        ) : (
+          <MotiView
+            from={{ opacity: 0, translateY: 12 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: 'timing', duration: Motion.base }}>
+            {/* ------------------------------------------------- Streak */}
+            {data.streak > 0 && (
+              <View style={styles.streakCard}>
+                <View style={styles.streakIcon}>
+                  <Sparkles size={16} color={Accents.violet.main} />
+                </View>
+                <View style={styles.streakText}>
+                  <Text style={styles.streakTitle}>
+                    {data.streak} Day Streak
+                  </Text>
+                  <Text style={styles.streakBody}>
+                    Keep it up! Consistency brings results.
+                  </Text>
+                </View>
+                <View style={styles.streakFlame}>
+                  <Flame size={20} color={Accents.orange.main} />
+                </View>
               </View>
-              <View style={styles.planItemContent}>
-                <Text style={styles.planItemTitle}>{item.title}</Text>
-                <Text style={styles.planItemSubtitle}>{item.subtitle}</Text>
+            )}
+
+            {/* ---------------------------------------------- Nutrition */}
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <View style={styles.cardHeading}>
+                  <Utensils size={17} color={Colors.primary} />
+                  <Text style={styles.cardTitle}>Nutrition</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.headerAction}
+                  onPress={() => router.push('/log-meal')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Log a meal">
+                  <Text style={styles.headerActionLabel}>Log meal</Text>
+                  <ChevronRight size={14} color={Colors.primary} />
+                </TouchableOpacity>
               </View>
-              <Text
-                style={[
-                  styles.planItemTime,
-                  item.completed && styles.planItemTimeDone,
-                ]}>
-                {item.time}
-              </Text>
-              {item.completed && (
-                <View style={styles.checkmark}>
-                  <Text style={styles.checkmarkText}>✓</Text>
+
+              {data.nutrition.empty ? (
+                <EmptyState
+                  icon={Utensils}
+                  title="Nothing logged yet"
+                  subtitle={`Your budget for the day is ${data.nutrition.targets.calories.toLocaleString()} kcal.`}>
+                  <TouchableOpacity
+                    style={styles.emptyAction}
+                    onPress={() => router.push('/log-meal')}
+                    accessibilityRole="button">
+                    <Plus size={14} color={Colors.onPrimary} strokeWidth={2.6} />
+                    <Text style={styles.emptyActionLabel}>Log a meal</Text>
+                  </TouchableOpacity>
+                </EmptyState>
+              ) : (
+                <View style={styles.splitRow}>
+                  <GradientRing
+                    size={RING_SIZE}
+                    thickness={11}
+                    progress={data.nutrition.calorieProgress}
+                    colors={Gradients.activity}>
+                    <Text style={styles.ringValue}>
+                      {data.nutrition.caloriesLeft.toLocaleString()}
+                    </Text>
+                    <Text style={styles.ringUnit}>kcal left</Text>
+                    <Text style={styles.ringCaption}>
+                      of {data.nutrition.targets.calories.toLocaleString()}
+                    </Text>
+                  </GradientRing>
+
+                  <View style={styles.macros}>
+                    {data.nutrition.macros.map((macro, index) => (
+                      <View key={macro.key} style={styles.macro}>
+                        <View style={styles.macroHeader}>
+                          <View
+                            style={[
+                              styles.macroDot,
+                              { backgroundColor: MACRO_COLORS[index] },
+                            ]}
+                          />
+                          <Text style={styles.macroLabel}>{macro.label}</Text>
+                          <Text style={styles.macroValue}>
+                            {macro.eaten} / {macro.target}g
+                          </Text>
+                        </View>
+                        <View style={styles.macroTrack}>
+                          <View
+                            style={[
+                              styles.macroFill,
+                              {
+                                width: `${macro.progress * 100}%`,
+                                backgroundColor: MACRO_COLORS[index],
+                              },
+                            ]}
+                          />
+                        </View>
+                      </View>
+                    ))}
+                  </View>
                 </View>
               )}
-            </MotiView>
-          ))}
-        </View>
+            </View>
 
-        {/* Spacer for floating nav */}
-        <View style={{ height: 120 }} />
+            {/* -------------------------------------------------- Steps */}
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <View style={styles.cardHeading}>
+                  <Footprints size={17} color={Colors.primary} />
+                  <Text style={styles.cardTitle}>Steps</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.headerAction}
+                  onPress={() => router.push('/(tabs)/health')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open the Health tab">
+                  <Text style={styles.headerActionLabel}>Details</Text>
+                  <ChevronRight size={14} color={Colors.primary} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.splitRow}>
+                <GradientRing
+                  size={RING_SIZE}
+                  thickness={11}
+                  progress={data.health.stepProgress}
+                  colors={Gradients.activity}>
+                  <Text style={styles.ringValue}>
+                    {formatSteps(data.health.entry.steps)}
+                  </Text>
+                  <Text style={styles.ringUnit}>Steps</Text>
+                  <Text style={styles.ringPercent}>
+                    {data.health.stepPercent}% of goal
+                  </Text>
+                </GradientRing>
+
+                <View style={styles.splitText}>
+                  <WeekBars chart={data.chart} />
+                </View>
+              </View>
+
+              <View style={styles.cardFooter}>
+                <Text style={styles.footerStrong}>
+                  {data.health.stepsRemaining > 0
+                    ? `${formatSteps(data.health.stepsRemaining)} steps left`
+                    : 'Goal reached'}
+                </Text>
+                <Text style={styles.footerMuted}>
+                  Goal: {formatSteps(data.health.goals.stepGoal)} steps
+                </Text>
+              </View>
+            </View>
+
+            {/* -------------------------------------------------- Water */}
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <View style={styles.cardHeading}>
+                  <Droplets size={17} color={Colors.hydration} />
+                  <Text style={styles.cardTitle}>Water Intake</Text>
+                </View>
+                <Text style={styles.headerMuted}>
+                  {isToday ? 'Today' : dateLabel(selectedDate, false)}
+                </Text>
+              </View>
+
+              <View style={styles.splitRow}>
+                <WaterDroplet
+                  size={DROPLET_SIZE}
+                  progress={data.health.waterProgress}>
+                  <Text style={styles.dropletValue}>
+                    {formatWater(data.health.entry.waterMl)}
+                  </Text>
+                  <Text style={styles.dropletGoal}>
+                    of {formatWater(data.health.goals.waterGoalMl)}
+                  </Text>
+                  <Text style={styles.dropletPercent}>
+                    {data.health.waterPercent}%
+                  </Text>
+                </WaterDroplet>
+
+                <View style={styles.splitText}>
+                  <Text style={styles.quickAddLabel}>Quick Add</Text>
+                  {QUICK_ADDS.map((amount, index) => {
+                    // The larger amounts are picked out, matching the
+                    // reference: the two people reach for least get the louder
+                    // treatment.
+                    const emphasised = index >= 2;
+                    return (
+                      <TouchableOpacity
+                        key={amount}
+                        style={[
+                          styles.quickChip,
+                          emphasised && styles.quickChipEmphasised,
+                        ]}
+                        onPress={() => void addWater(amount)}
+                        activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Add ${formatWater(amount)} of water`}>
+                        <Plus
+                          size={11}
+                          strokeWidth={2.6}
+                          color={
+                            emphasised ? Accents.pink.main : Colors.hydration
+                          }
+                        />
+                        <Text
+                          style={[
+                            styles.quickLabel,
+                            emphasised && styles.quickLabelEmphasised,
+                          ]}>
+                          {formatWater(amount)}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              <Text style={styles.cardNote}>
+                {data.health.waterRemainingMl > 0
+                  ? `${formatWater(data.health.waterRemainingMl)} left to reach your goal`
+                  : 'You have reached your goal for the day'}
+              </Text>
+            </View>
+
+            {/* ------------------------------------------- Today's Plan */}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>
+                {isToday ? "Today's Plan" : 'That Day'}
+              </Text>
+              <TouchableOpacity
+                onPress={() => router.push('/(tabs)/planner')}
+                accessibilityRole="button">
+                <Text style={styles.headerActionLabel}>See All</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.planRow}>
+              {data.plan.map((card) => (
+                <PlanTile
+                  key={card.id}
+                  card={card}
+                  onPress={() => router.push(planRoute(card.kind))}
+                />
+              ))}
+            </ScrollView>
+
+            {/* --------------------------------------- Health Overview */}
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <View style={styles.cardHeading}>
+                  <TrendingUp size={17} color={Colors.primary} />
+                  <Text style={styles.cardTitle}>Health Overview</Text>
+                </View>
+                <Text style={styles.headerMuted}>Tap to log</Text>
+              </View>
+
+              {isVitalsEmpty(data.vitals) && (
+                <Text style={styles.emptyNote}>
+                  Nothing logged for this day yet — tap a row to add a reading.
+                </Text>
+              )}
+
+              {data.vitalRows.map((row, index) => {
+                const style = VITAL_STYLES[row.field];
+                const Icon = style.icon;
+                return (
+                  <TouchableOpacity
+                    key={row.field}
+                    style={[
+                      styles.vitalRow,
+                      index > 0 && styles.vitalRowDivided,
+                    ]}
+                    onPress={() => setEditingVital(row.field)}
+                    activeOpacity={0.6}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${row.label}: ${row.value ?? 'not logged'}. Tap to log.`}>
+                    <View
+                      style={[
+                        styles.vitalIcon,
+                        { backgroundColor: style.accent.tint },
+                      ]}>
+                      <Icon size={15} color={style.accent.main} />
+                    </View>
+                    <Text style={styles.vitalLabel}>{row.label}</Text>
+                    <Text
+                      style={[
+                        styles.vitalValue,
+                        row.value === null && styles.vitalValueEmpty,
+                      ]}>
+                      {row.value ?? '—'}
+                    </Text>
+                    <Sparkline
+                      values={row.series}
+                      width={SPARK_WIDTH}
+                      height={SPARK_HEIGHT}
+                      color={style.accent.main}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* --------------------------------------------- Insights */}
+            {data.insights.length > 0 && (
+              <View style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <View style={styles.cardHeading}>
+                    <Sparkles size={17} color={Colors.primary} />
+                    <Text style={styles.cardTitle}>Insights for You</Text>
+                  </View>
+                </View>
+
+                {data.insights.map((insight) => (
+                  <InsightTile key={insight.id} insight={insight} />
+                ))}
+              </View>
+            )}
+
+            {/* -------------------------------------------- Motivation */}
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => router.push('/(tabs)/health')}
+              accessibilityRole="button"
+              accessibilityLabel="Open the Health tab">
+              <LinearGradient
+                colors={Gradients.activity}
+                start={Gradients.horizontal.start}
+                end={Gradients.horizontal.end}
+                style={styles.banner}>
+                <View style={styles.bannerIcon}>
+                  <Trophy size={22} color={Colors.onPrimary} />
+                </View>
+                <View style={styles.bannerText}>
+                  <Text style={styles.bannerTitle}>
+                    Small steps every day lead to big changes.
+                  </Text>
+                  <Text style={styles.bannerBody}>
+                    You&apos;re building a better, healthier you!
+                  </Text>
+                </View>
+                <ChevronRight size={18} color={Colors.onPrimaryMuted} />
+              </LinearGradient>
+            </TouchableOpacity>
+          </MotiView>
+        )}
+
+        <View style={{ height: Spacing.navClearance }} />
       </ScrollView>
 
-      {/* Floating Nav */}
-      <FloatingNav />
+      <CalendarSheet
+        visible={calendarOpen}
+        selectedDate={selectedDate}
+        onSelect={(date) => {
+          setSelectedDate(date);
+          setCalendarOpen(false);
+        }}
+        onClose={() => setCalendarOpen(false)}
+      />
+
+      <VitalsSheet
+        field={editingVital}
+        entry={
+          data?.vitals ?? {
+            date: dateKey,
+            heartRate: null,
+            sleepMinutes: null,
+            stress: null,
+            energy: null,
+          }
+        }
+        onClose={() => setEditingVital(null)}
+        onSave={(patch) => void saveVital(patch)}
+      />
 
       <ProfileDrawer
         visible={profileOpen}
         onClose={() => setProfileOpen(false)}
       />
+
+      <FloatingNav />
     </SafeAreaView>
   );
 }
 
+/** One card in the horizontally scrolling Today's Plan strip. */
+function PlanTile({ card, onPress }: { card: PlanCard; onPress: () => void }) {
+  const style = PLAN_STYLES[card.kind];
+  const Icon =
+    card.kind === 'task' ? (TASK_ICONS[card.subtitle] ?? style.icon) : style.icon;
+
+  return (
+    <TouchableOpacity
+      style={styles.planTile}
+      onPress={onPress}
+      activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={`${card.title}. ${card.subtitle}. ${card.status}.`}>
+      <View style={[styles.planIcon, { backgroundColor: style.accent.tint }]}>
+        <Icon size={16} color={style.accent.main} />
+      </View>
+      <View style={styles.planText}>
+        <Text style={styles.planTitle} numberOfLines={1}>
+          {card.title}
+        </Text>
+        <Text style={styles.planSubtitle} numberOfLines={1}>
+          {card.subtitle}
+        </Text>
+        <Text
+          style={[styles.planStatus, card.done && styles.planStatusDone]}
+          numberOfLines={1}>
+          {card.status}
+        </Text>
+      </View>
+      <ChevronRight size={15} color={Colors.textMuted} />
+    </TouchableOpacity>
+  );
+}
+
+/** One tile in the Insights card, with an optional progress bar and delta. */
+function InsightTile({ insight }: { insight: Insight }) {
+  return (
+    <View style={styles.insight}>
+      <View style={styles.insightIcon}>
+        {insight.progress === undefined ? (
+          <CircleCheck size={16} color={Accents.violet.main} />
+        ) : (
+          <TrendingUp size={16} color={Accents.violet.main} />
+        )}
+      </View>
+
+      <View style={styles.insightText}>
+        <Text style={styles.insightTitle}>{insight.title}</Text>
+        <Text style={styles.insightBody}>{insight.body}</Text>
+
+        {insight.progress !== undefined && (
+          <View style={styles.insightBarRow}>
+            <View style={styles.insightTrack}>
+              <View
+                style={[
+                  styles.insightFill,
+                  { width: `${insight.progress * 100}%` },
+                ]}
+              />
+            </View>
+            {insight.delta !== undefined && (
+              <Text
+                style={[
+                  styles.insightDelta,
+                  insight.delta < 0 && styles.insightDeltaDown,
+                ]}>
+                {insight.delta >= 0 ? '▲' : '▼'} {Math.abs(insight.delta)}%
+              </Text>
+            )}
+          </View>
+        )}
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
+  container: { flex: 1, backgroundColor: Colors.background },
   scrollContent: {
-    paddingHorizontal: Spacing.xxl,
-    paddingTop: Spacing.xxl,
-    paddingBottom: Spacing.xxl,
+    paddingHorizontal: Spacing.screen,
+    paddingTop: Spacing.lg,
   },
+
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.xxl,
+    gap: Spacing.md,
+    marginBottom: Spacing.lg,
   },
-  brand: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-  },
-  wordmark: {
-    ...Typography.heading,
-    fontSize: 24,
-    lineHeight: 30,
+  headerText: { flex: 1 },
+  greeting: { ...Typography.secondary, color: Colors.textSecondary },
+  headline: {
+    ...Typography.screenTitle,
+    fontSize: 23,
+    lineHeight: 29,
     color: Colors.textPrimary,
-    letterSpacing: -0.5,
   },
-  headerIconButton: {
+  bell: {
     width: 40,
     height: 40,
     borderRadius: Radius.round,
@@ -289,147 +814,389 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     justifyContent: 'center',
     alignItems: 'center',
+    ...Shadow.card,
   },
-  healthScoreCard: {
-    marginBottom: Spacing.xl,
-    borderRadius: Radius.xl,
-    overflow: 'hidden',
-    ...Shadow.glow,
-  },
-  healthScoreGradient: {
-    flexDirection: 'row',
-    gap: Spacing.lg,
-    padding: Spacing.xl,
-  },
-  ringContainer: {
-    width: 70,
-    height: 70,
+  bellDot: {
+    position: 'absolute',
+    top: 9,
+    right: 10,
+    width: 8,
+    height: 8,
     borderRadius: Radius.round,
-    borderWidth: 6,
-    borderColor: Colors.onPrimaryFaint,
-    justifyContent: 'center',
+    backgroundColor: Colors.error,
+    borderWidth: 1.5,
+    borderColor: Colors.surface,
+  },
+
+  datePill: {
+    flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: Spacing.sm,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.round,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    marginBottom: Spacing.lg,
+    ...Shadow.card,
   },
-  ringValue: {
-    ...Typography.scoreValue,
-    color: Colors.onPrimary,
+  dateLabel: {
+    ...Typography.caption,
+    fontWeight: '700',
+    color: Colors.primary,
   },
-  healthScoreText: {
-    flex: 1,
+
+  streakCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    backgroundColor: Accents.violet.tint,
+    borderRadius: Radius.card,
+    padding: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  streakIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: Radius.round,
+    backgroundColor: Colors.surface,
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  healthScoreLabel: {
-    ...Typography.label,
-    color: Colors.onPrimaryMuted,
-    marginBottom: Spacing.xs,
+  streakText: { flex: 1 },
+  streakTitle: {
+    ...Typography.optionLabel,
+    fontSize: 15,
+    color: Colors.textPrimary,
   },
-  healthScoreTitle: {
-    ...Typography.cardTitle,
-    color: Colors.onPrimary,
+  streakBody: {
+    ...Typography.label,
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  streakFlame: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.round,
+    backgroundColor: Accents.orange.tint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  card: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    ...Shadow.card,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
+  },
+  cardHeading: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  cardTitle: { ...Typography.cardTitle, fontSize: 16, color: Colors.primary },
+  headerAction: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  headerActionLabel: {
+    ...Typography.label,
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+  headerMuted: { ...Typography.label, color: Colors.textMuted },
+  cardNote: {
+    ...Typography.label,
+    fontSize: 11,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginTop: Spacing.md,
+  },
+  emptyNote: {
+    ...Typography.label,
+    fontSize: 11,
+    color: Colors.textMuted,
     marginBottom: Spacing.sm,
   },
-  healthScoreSubtitle: {
-    ...Typography.secondary,
-    color: Colors.onPrimaryMuted,
-    lineHeight: 22,
+  cardFooter: { marginTop: Spacing.md, alignItems: 'center' },
+  footerStrong: {
+    ...Typography.optionLabel,
+    fontSize: 14,
+    color: Colors.textPrimary,
   },
-  metricsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.md,
-    marginBottom: Spacing.xxl,
-  },
-  metricCard: {
-    flexGrow: 1,
-    flexBasis: '46%',
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: Spacing.md,
-    alignItems: 'center',
-    ...Shadow.card,
-  },
-  metricLabel: {
+  footerMuted: {
     ...Typography.label,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.xs,
-  },
-  metricValue: {
-    ...Typography.largeNumber,
-    color: Colors.textPrimary,
-  },
-  todaysPlanContainer: {
-    marginBottom: Spacing.xl,
-  },
-  todaysPlanHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  todaysPlanTitle: {
-    ...Typography.sectionTitle,
-    color: Colors.textPrimary,
-  },
-  viewAllLink: {
-    ...Typography.secondary,
+    fontSize: 11,
     color: Colors.primary,
-    fontWeight: '600',
+    marginTop: 2,
   },
-  planItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    ...Shadow.card,
-  },
-  planItemIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: Radius.tile,
-    backgroundColor: Colors.primaryTint,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  planItemIcon: {
+
+  splitRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  splitText: { flex: 1 },
+
+  ringValue: {
+    ...Typography.largeNumber,
     fontSize: 22,
-  },
-  planItemContent: {
-    flex: 1,
-  },
-  planItemTitle: {
-    ...Typography.body,
+    lineHeight: 27,
     color: Colors.textPrimary,
   },
-  planItemSubtitle: {
+  ringUnit: { ...Typography.label, fontSize: 10, color: Colors.textSecondary },
+  ringCaption: { ...Typography.label, fontSize: 9, color: Colors.textMuted },
+  ringPercent: {
     ...Typography.label,
-    color: Colors.textSecondary,
-    marginTop: Spacing.xs,
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.primary,
+    marginTop: 2,
   },
-  planItemTime: {
+
+  macros: { flex: 1, gap: Spacing.md },
+  macro: { gap: Spacing.xs },
+  macroHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  macroDot: { width: 7, height: 7, borderRadius: Radius.round },
+  macroLabel: {
     ...Typography.label,
+    fontSize: 11,
+    flex: 1,
+    color: Colors.textPrimary,
+  },
+  macroValue: {
+    ...Typography.label,
+    fontSize: 10,
     color: Colors.textSecondary,
   },
-  planItemTimeDone: {
+  macroTrack: {
+    height: 5,
+    borderRadius: Radius.round,
+    backgroundColor: Colors.surfaceSunken,
+    overflow: 'hidden',
+  },
+  macroFill: { height: 5, borderRadius: Radius.round },
+
+  emptyAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.round,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+  },
+  emptyActionLabel: {
+    ...Typography.caption,
+    fontWeight: '700',
+    color: Colors.onPrimary,
+  },
+
+  dropletValue: {
+    ...Typography.largeNumber,
+    fontSize: 19,
+    lineHeight: 23,
+    color: Colors.textPrimary,
+  },
+  dropletGoal: { ...Typography.label, fontSize: 9, color: Colors.textSecondary },
+  dropletPercent: {
+    ...Typography.label,
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.hydration,
+    marginTop: 2,
+  },
+  quickAddLabel: {
+    ...Typography.label,
+    fontWeight: '700',
+    color: Colors.primary,
+    marginBottom: Spacing.sm,
+    textAlign: 'center',
+  },
+  quickChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+    backgroundColor: Colors.surfaceMuted,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingVertical: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  quickChipEmphasised: {
+    backgroundColor: Accents.pink.tint,
+    borderColor: Accents.pink.tint,
+  },
+  quickLabel: {
+    ...Typography.label,
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.hydration,
+  },
+  quickLabelEmphasised: { color: Accents.pink.main },
+
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
+  },
+  sectionTitle: { ...Typography.sectionTitle, color: Colors.textPrimary },
+
+  planRow: {
+    gap: Spacing.md,
+    paddingBottom: Spacing.lg,
+    paddingRight: Spacing.xs,
+  },
+  planTile: {
+    width: 210,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: Spacing.md,
+    ...Shadow.card,
+  },
+  planIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.tile,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  planText: { flex: 1 },
+  planTitle: {
+    ...Typography.optionLabel,
+    fontSize: 13,
+    color: Colors.textPrimary,
+  },
+  planSubtitle: {
+    ...Typography.label,
+    fontSize: 10,
+    color: Colors.textSecondary,
+  },
+  planStatus: {
+    ...Typography.label,
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.primary,
+    marginTop: 1,
+  },
+  planStatusDone: { color: Colors.success },
+
+  vitalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.sm,
+  },
+  vitalRowDivided: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Colors.border,
+  },
+  vitalIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: Radius.round,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vitalLabel: { ...Typography.caption, flex: 1, color: Colors.textPrimary },
+  vitalValue: {
+    ...Typography.label,
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  vitalValueEmpty: { color: Colors.textMuted, fontWeight: '500' },
+
+  insight: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    backgroundColor: Colors.surfaceMuted,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  insightIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: Radius.round,
+    backgroundColor: Accents.violet.tint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  insightText: { flex: 1 },
+  insightTitle: {
+    ...Typography.optionLabel,
+    fontSize: 13,
+    color: Colors.textPrimary,
+  },
+  insightBody: {
+    ...Typography.label,
+    fontSize: 11,
+    lineHeight: 16,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  insightBarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+  },
+  insightTrack: {
+    flex: 1,
+    height: 5,
+    borderRadius: Radius.round,
+    backgroundColor: Colors.surfaceSunken,
+    overflow: 'hidden',
+  },
+  insightFill: {
+    height: 5,
+    borderRadius: Radius.round,
+    backgroundColor: Accents.violet.main,
+  },
+  insightDelta: {
+    ...Typography.label,
+    fontSize: 10,
+    fontWeight: '700',
     color: Colors.success,
   },
-  checkmark: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: Colors.success,
-    justifyContent: 'center',
+  insightDeltaDown: { color: Colors.error },
+
+  banner: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: Spacing.md,
+    borderRadius: Radius.card,
+    padding: Spacing.lg,
+    ...Shadow.glow,
   },
-  checkmarkText: {
-    color: 'white',
-    fontSize: 13,
-    fontWeight: '600',
+  bannerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: Radius.round,
+    backgroundColor: Colors.onPrimaryFaint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bannerText: { flex: 1 },
+  bannerTitle: {
+    ...Typography.optionLabel,
+    fontSize: 14,
+    color: Colors.onPrimary,
+  },
+  bannerBody: {
+    ...Typography.label,
+    fontSize: 11,
+    color: Colors.onPrimaryMuted,
+    marginTop: 2,
   },
 });
