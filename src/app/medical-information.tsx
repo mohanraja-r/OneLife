@@ -22,6 +22,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import AppHeader from '../components/AppHeader';
 import { MemberInitials, memberSubtitle } from '../components/family/shared';
 import {
   BottomSheet,
@@ -194,21 +195,7 @@ export default function MedicalInformationScreen() {
           lastUpdated={lastUpdated}
         />
       ) : (
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Go back">
-            <ArrowLeft size={24} color={Colors.textPrimary} strokeWidth={2.2} />
-          </TouchableOpacity>
-          <View style={styles.headerText}>
-            <Text style={styles.headerTitle}>Medical Info</Text>
-            <Text style={styles.headerSubtitle}>
-              Keep your health data up to date
-            </Text>
-          </View>
-        </View>
+        <AppHeader title="Medical Info" />
       )}
 
       {!record ? (
@@ -803,20 +790,6 @@ function Blank({ text }: { text: string }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    paddingHorizontal: Spacing.screen,
-    paddingVertical: Spacing.sm,
-  },
-  headerText: { flex: 1 },
-  headerTitle: { ...Typography.screenTitle, color: Colors.textPrimary },
-  headerSubtitle: {
-    ...Typography.caption,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
   loading: { flex: 1, paddingHorizontal: Spacing.screen },
   content: {
     paddingHorizontal: Spacing.screen,

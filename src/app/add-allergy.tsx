@@ -1,6 +1,6 @@
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Check, Trash2 } from 'lucide-react-native';
+import { Check, Trash2 } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import AppHeader from '../components/AppHeader';
 import PrimaryButton from '../components/PrimaryButton';
 import { DateTimeSpinnerSheet, ErrorNotice } from '../components/ui';
 import {
@@ -213,25 +214,20 @@ export default function AddAllergyScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Go back">
-          <ArrowLeft size={24} color={Colors.textPrimary} strokeWidth={2.2} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{id ? 'Edit allergy' : 'Add allergy'}</Text>
-        {!!id && (
-          <TouchableOpacity
-            onPress={confirmDelete}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Remove this allergy">
-            <Trash2 size={21} color={Colors.danger} strokeWidth={1.9} />
-          </TouchableOpacity>
-        )}
-      </View>
+      <AppHeader
+        title={id ? 'Edit allergy' : 'Add allergy'}
+        action={
+          id ? (
+            <TouchableOpacity
+              onPress={confirmDelete}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Remove this allergy">
+              <Trash2 size={21} color={Colors.danger} strokeWidth={1.9} />
+            </TouchableOpacity>
+          ) : undefined
+        }
+      />
 
       <KeyboardAvoidingView
         style={styles.fill}
@@ -417,14 +413,6 @@ export default function AddAllergyScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   fill: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    paddingHorizontal: Spacing.screen,
-    height: 52,
-  },
-  headerTitle: { ...Typography.cardTitle, color: Colors.textPrimary, flex: 1 },
   content: {
     paddingHorizontal: Spacing.screen,
     paddingTop: Spacing.lg,

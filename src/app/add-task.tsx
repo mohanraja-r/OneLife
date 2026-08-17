@@ -14,7 +14,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Colors, Spacing, Radius, Typography } from '../constants/theme';
+import AppHeader from '../components/AppHeader';
+import { Colors, Spacing, Radius } from '../constants/theme';
 import { parseDateString, toDateString } from '../services/dates';
 import { errorMessage } from '../services/errors';
 import { addTask, updateTask, deleteTask, getTaskById, TaskCategory, RepeatOption } from '../services/planner';
@@ -127,15 +128,16 @@ export default function AddTaskScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.headerAction}>Cancel</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{isEditing ? 'Edit Task' : 'New Task'}</Text>
-        <TouchableOpacity onPress={() => void handleSave()} disabled={saving}>
-          <Text style={[styles.headerAction, styles.headerActionBold]}>{saving ? '...' : 'Add'}</Text>
-        </TouchableOpacity>
-      </View>
+      <AppHeader
+        title={isEditing ? 'Edit Task' : 'New Task'}
+        action={
+          <TouchableOpacity onPress={() => void handleSave()} disabled={saving}>
+            <Text style={[styles.headerAction, styles.headerActionBold]}>
+              {saving ? '...' : 'Add'}
+            </Text>
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView contentContainerStyle={styles.content}>
         <TextInput
@@ -237,14 +239,6 @@ export default function AddTaskScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    height: 52,
-  },
-  headerTitle: { ...Typography.heading, color: Colors.textPrimary },
   headerAction: { fontSize: 15, color: Colors.accent },
   headerActionBold: { fontWeight: '700' },
   content: { padding: Spacing.md },

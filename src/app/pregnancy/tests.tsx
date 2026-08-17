@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 
 import AnimatedPressable from '../../components/AnimatedPressable';
-import PregnancyHeader from '../../components/pregnancy/PregnancyHeader';
+import AppHeader from '../../components/AppHeader';
 import { ErrorNotice, LoadingState } from '../../components/ui';
 import type { TestKind } from '../../constants/pregnancyTests';
 import {
@@ -127,7 +127,7 @@ export default function TestsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <PregnancyHeader title="Tests & Scans" />
+      <AppHeader title="Tests & Scans" />
 
       <View style={styles.segmented}>
         {(['upcoming', 'completed'] as Tab[]).map((item) => {

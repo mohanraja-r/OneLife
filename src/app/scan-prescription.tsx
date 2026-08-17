@@ -5,7 +5,6 @@ import { StatusBar } from 'expo-status-bar';
 import {
   Camera,
   Check,
-  ChevronLeft,
   CircleCheck,
   Images,
   Pencil,
@@ -28,6 +27,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import AppHeader from '../components/AppHeader';
 import PrimaryButton from '../components/PrimaryButton';
 import { ChipOption, ChipRow } from '../components/ui';
 import {
@@ -191,16 +191,10 @@ export default function ScanPrescriptionScreen() {
     <View style={styles.container}>
       <StatusBar style="dark" />
 
-      <View style={[styles.header, { paddingTop: insets.top + Spacing.sm }]}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="Go back">
-          <ChevronLeft size={26} color={Colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Scan prescription</Text>
-        <View style={styles.headerSpacer} />
+      {/* This screen draws under the status bar, so the inset lands here
+          rather than on a SafeAreaView. */}
+      <View style={{ paddingTop: insets.top }}>
+        <AppHeader title="Scan prescription" />
       </View>
 
       <ScrollView
@@ -461,18 +455,6 @@ function deriveDefaultTimes(frequency: string): string[] {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.screen,
-    paddingBottom: Spacing.md,
-  },
-  headerTitle: {
-    ...Typography.heading,
-    color: Colors.textPrimary,
-  },
-  headerSpacer: { width: 26 },
   content: {
     paddingHorizontal: Spacing.screen,
     paddingTop: Spacing.sm,

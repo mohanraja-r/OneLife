@@ -13,8 +13,8 @@ import {
 } from 'react-native';
 
 import AnimatedPressable from '../../components/AnimatedPressable';
+import AppHeader from '../../components/AppHeader';
 import GradientRing from '../../components/GradientRing';
-import PregnancyHeader from '../../components/pregnancy/PregnancyHeader';
 import { ErrorNotice, LoadingState } from '../../components/ui';
 import {
   Accents,
@@ -215,7 +215,7 @@ export default function KicksScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <PregnancyHeader
+      <AppHeader
         title="Kick Tracker"
         action={
           <AnimatedPressable onPress={() => setTab('why')} haptic={false}>

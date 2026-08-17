@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import AppHeader from '../components/AppHeader';
 import { Colors, Spacing } from '../constants/theme';
 
 // Full chat interface is built in its own phase (Phase G). Placeholder for
@@ -8,6 +9,8 @@ import { Colors, Spacing } from '../constants/theme';
 export default function AIAssistantScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      <AppHeader title="AI Assistant" />
+
       <View style={styles.content}>
         <Text style={styles.placeholder}>AI Assistant chat — coming in Phase G.</Text>
       </View>
