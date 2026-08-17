@@ -1,7 +1,6 @@
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
 import {
-  ArrowLeft,
   Check,
   ChevronRight,
   Smartphone,
@@ -22,6 +21,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import AppHeader from '../components/AppHeader';
 import PrimaryButton from '../components/PrimaryButton';
 import { ChipRow, DateTimeSpinnerSheet } from '../components/ui';
 import type { ChipOption } from '../components/ui';
@@ -173,16 +173,7 @@ export default function AddFamilyMemberScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Go back">
-          <ArrowLeft size={24} color={Colors.textPrimary} strokeWidth={2.2} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add family member</Text>
-      </View>
+      <AppHeader title="Add family member" />
 
       <KeyboardAvoidingView
         style={styles.fill}
@@ -304,14 +295,6 @@ export default function AddFamilyMemberScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   fill: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    paddingHorizontal: Spacing.screen,
-    height: 52,
-  },
-  headerTitle: { ...Typography.cardTitle, color: Colors.textPrimary },
   content: {
     paddingHorizontal: Spacing.screen,
     paddingTop: Spacing.lg,

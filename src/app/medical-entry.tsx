@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Trash2 } from 'lucide-react-native';
+import { Trash2 } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import AppHeader from '../components/AppHeader';
 import PrimaryButton from '../components/PrimaryButton';
 import { ChipRow, ErrorNotice } from '../components/ui';
 import type { ChipOption } from '../components/ui';
@@ -297,27 +298,20 @@ export default function MedicalEntryScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Go back">
-          <ArrowLeft size={24} color={Colors.textPrimary} strokeWidth={2.2} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          {id ? titles.edit : titles.add}
-        </Text>
-        {!!id && (
-          <TouchableOpacity
-            onPress={confirmDelete}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Remove this record">
-            <Trash2 size={21} color={Colors.danger} strokeWidth={1.9} />
-          </TouchableOpacity>
-        )}
-      </View>
+      <AppHeader
+        title={id ? titles.edit : titles.add}
+        action={
+          id ? (
+            <TouchableOpacity
+              onPress={confirmDelete}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Remove this record">
+              <Trash2 size={21} color={Colors.danger} strokeWidth={1.9} />
+            </TouchableOpacity>
+          ) : undefined
+        }
+      />
 
       <KeyboardAvoidingView
         style={styles.fill}
@@ -527,14 +521,6 @@ function Field({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   fill: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    paddingHorizontal: Spacing.screen,
-    height: 52,
-  },
-  headerTitle: { ...Typography.cardTitle, color: Colors.textPrimary, flex: 1 },
   content: {
     paddingHorizontal: Spacing.screen,
     paddingTop: Spacing.lg,

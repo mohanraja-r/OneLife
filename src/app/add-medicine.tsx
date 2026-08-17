@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ChevronLeft, Plus, Trash2 } from 'lucide-react-native';
+import { Plus, Trash2 } from 'lucide-react-native';
 import { MotiView } from 'moti';
 import { useEffect, useState } from 'react';
 import {
@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import AppHeader from '../components/AppHeader';
 import PrimaryButton from '../components/PrimaryButton';
 import TimePickerField from '../components/TimePickerField';
 import { ChipOption, ChipRow, LoadingState } from '../components/ui';
@@ -220,28 +221,23 @@ export default function AddMedicineScreen() {
     <View style={styles.container}>
       <StatusBar style="dark" />
 
-      <View style={[styles.header, { paddingTop: insets.top + Spacing.sm }]}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="Go back">
-          <ChevronLeft size={26} color={Colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          {isEditing ? 'Edit Medicine' : 'Add Medicine'}
-        </Text>
-        {isEditing ? (
-          <TouchableOpacity
-            onPress={handleDelete}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Delete medicine">
-            <Trash2 size={20} color={Colors.danger} strokeWidth={2} />
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.headerSpacer} />
-        )}
+      {/* This screen draws under the status bar, so the inset lands here
+          rather than on a SafeAreaView. */}
+      <View style={{ paddingTop: insets.top }}>
+        <AppHeader
+          title={isEditing ? 'Edit Medicine' : 'Add Medicine'}
+          action={
+            isEditing ? (
+              <TouchableOpacity
+                onPress={handleDelete}
+                hitSlop={12}
+                accessibilityRole="button"
+                accessibilityLabel="Delete medicine">
+                <Trash2 size={20} color={Colors.danger} strokeWidth={2} />
+              </TouchableOpacity>
+            ) : undefined
+          }
+        />
       </View>
 
       {loading ? (
@@ -407,18 +403,6 @@ export default function AddMedicineScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   flex: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.screen,
-    paddingBottom: Spacing.md,
-  },
-  headerTitle: {
-    ...Typography.heading,
-    color: Colors.textPrimary,
-  },
-  headerSpacer: { width: 26 },
   content: {
     paddingHorizontal: Spacing.screen,
     paddingTop: Spacing.sm,

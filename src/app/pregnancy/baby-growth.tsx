@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 
 import AnimatedPressable from '../../components/AnimatedPressable';
-import PregnancyHeader from '../../components/pregnancy/PregnancyHeader';
+import AppHeader from '../../components/AppHeader';
 import { ErrorNotice, LoadingState } from '../../components/ui';
 import { weekDetail } from '../../constants/pregnancyWeeks';
 import {
@@ -83,7 +83,7 @@ export default function BabyGrowthScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <PregnancyHeader title="Baby Growth" />
+      <AppHeader title="Baby Growth" />
 
       <ScrollView
         contentContainerStyle={styles.content}

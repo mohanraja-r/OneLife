@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 
 import AnimatedPressable from '../../components/AnimatedPressable';
-import PregnancyHeader from '../../components/pregnancy/PregnancyHeader';
+import AppHeader from '../../components/AppHeader';
 import { ErrorNotice, LoadingState } from '../../components/ui';
 import {
   Accents,
@@ -175,7 +175,7 @@ export default function MemoriesScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <PregnancyHeader title="Save Memories" />
+      <AppHeader title="Save Memories" />
 
       <ScrollView
         contentContainerStyle={styles.content}

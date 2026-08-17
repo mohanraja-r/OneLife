@@ -23,6 +23,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AnimatedPressable from '../../components/AnimatedPressable';
+import AppHeader from '../../components/AppHeader';
 import CalendarSheet from '../../components/CalendarSheet';
 import FloatingNav from '../../components/FloatingNav';
 import { EmptyState, ErrorNotice, LoadingState } from '../../components/ui';
@@ -229,6 +230,17 @@ export default function PlannerScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      <AppHeader
+        title="Planner"
+        action={
+          <AnimatedPressable
+            onPress={() => setCalendarOpen(true)}
+            style={styles.calendarButton}>
+            <CalendarDays size={18} color={Colors.primary} strokeWidth={2} />
+          </AnimatedPressable>
+        }
+      />
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -239,15 +251,6 @@ export default function PlannerScreen() {
             tintColor={Colors.primary}
           />
         }>
-        <View style={styles.header}>
-          <Text style={styles.screenTitle}>Planner</Text>
-          <AnimatedPressable
-            onPress={() => setCalendarOpen(true)}
-            style={styles.calendarButton}>
-            <CalendarDays size={18} color={Colors.primary} strokeWidth={2} />
-          </AnimatedPressable>
-        </View>
-
         {/* Hero: greeting over the brand gradient, with the week strip inset
             into its lower edge the way the reference design has it. */}
         <MotiView
@@ -486,16 +489,6 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.lg,
   },
 
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.xl,
-  },
-  screenTitle: {
-    ...Typography.screenTitle,
-    color: Colors.textPrimary,
-  },
   calendarButton: {
     width: 40,
     height: 40,

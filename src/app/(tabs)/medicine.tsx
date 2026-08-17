@@ -24,6 +24,7 @@ import {
 
 import AddMedicineSheet from '../../components/AddMedicineSheet';
 import AnimatedPressable from '../../components/AnimatedPressable';
+import AppHeader from '../../components/AppHeader';
 import FloatingNav from '../../components/FloatingNav';
 import { EmptyState, ErrorNotice, LoadingState } from '../../components/ui';
 import {
@@ -47,7 +48,6 @@ import {
   nextPendingDose,
   setDoseStatus,
 } from '../../services/medicine';
-import { supabase } from '../../services/supabase';
 
 /** Name fragments that earn a medicine its own icon and accent in the list. */
 const GLYPHS: { match: string[]; icon: LucideIcon; accent: Accent }[] = [
@@ -86,7 +86,6 @@ function glyphFor(
 
 export default function MedicineScreen() {
   const router = useRouter();
-  const [userName, setUserName] = useState('there');
   const [doses, setDoses] = useState<ScheduledDose[]>([]);
   const [summary, setSummary] = useState<AdherenceSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -112,29 +111,10 @@ export default function MedicineScreen() {
     }
   }, []);
 
-  /** Reads the signed-in user's first name for the greeting. */
-  const loadName = useCallback(async () => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const user = sessionData.session?.user;
-    if (!user) return;
-
-    // Untyped until DB types are generated — declare the selected column.
-    const { data } = await supabase
-      .from('profiles')
-      .select('name')
-      .eq('id', user.id)
-      .maybeSingle()
-      .overrideTypes<{ name: string | null }>();
-
-    const name = data?.name ?? user.email?.split('@')[0];
-    if (name) setUserName(name.split(' ')[0]);
-  }, []);
-
   useFocusEffect(
     useCallback(() => {
       load();
-      loadName();
-    }, [load, loadName])
+    }, [load])
   );
 
   /** Marks a dose taken (or back to pending) and refreshes the screen. */
@@ -161,32 +141,19 @@ export default function MedicineScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
-        <MotiView
-          from={{ opacity: 0, translateY: -8 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: Motion.slow }}
-          style={styles.header}>
-          <View style={styles.greeting}>
-            <LinearGradient
-              colors={Gradients.avatar}
-              start={Gradients.diagonal.start}
-              end={Gradients.diagonal.end}
-              style={styles.avatar}
-            />
-            <View>
-              <Text style={styles.greetingSubtext}>Good morning,</Text>
-              <Text style={styles.greetingName}>{userName}! 👋</Text>
-            </View>
-          </View>
+      <AppHeader
+        title="Medicine"
+        action={
           <View style={styles.bellButton}>
             <Bell size={18} color={Colors.textSecondary} />
             {!!nextDose && <View style={styles.bellDot} />}
           </View>
-        </MotiView>
+        }
+      />
 
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}>
         <Text style={styles.sectionTitle}>Today&apos;s Overview</Text>
 
         {loading ? (
@@ -418,31 +385,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: Spacing.screen,
-    paddingTop: Spacing.xxl,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.xxl,
-  },
-  greeting: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.lg,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.round,
-  },
-  greetingSubtext: {
-    ...Typography.secondary,
-    color: Colors.textSecondary,
-  },
-  greetingName: {
-    ...Typography.cardTitle,
-    color: Colors.textPrimary,
   },
   bellButton: {
     width: 40,

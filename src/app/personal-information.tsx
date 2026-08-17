@@ -2,7 +2,6 @@ import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import {
-  ArrowLeft,
   Camera,
   ChevronRight,
   Images,
@@ -24,6 +23,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import AppHeader from '../components/AppHeader';
 import PrimaryButton from '../components/PrimaryButton';
 import {
   BottomSheet,
@@ -291,16 +291,7 @@ export default function PersonalInformationScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Go back">
-          <ArrowLeft size={24} color={Colors.textPrimary} strokeWidth={2.2} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Personal Information</Text>
-      </View>
+      <AppHeader title="Personal Information" />
 
       {!draft ? (
         <View style={styles.loading}>
@@ -530,14 +521,6 @@ export default function PersonalInformationScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   fill: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    paddingHorizontal: Spacing.screen,
-    height: 52,
-  },
-  headerTitle: { ...Typography.cardTitle, color: Colors.textPrimary },
   loading: { flex: 1, paddingHorizontal: Spacing.screen },
   content: {
     paddingHorizontal: Spacing.screen,

@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 
 import AnimatedPressable from '../../components/AnimatedPressable';
+import AppHeader from '../../components/AppHeader';
 import GradientRing from '../../components/GradientRing';
-import PregnancyHeader from '../../components/pregnancy/PregnancyHeader';
 import { ErrorNotice, LoadingState } from '../../components/ui';
 import {
   BagSide,
@@ -146,7 +146,7 @@ export default function HospitalBagScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <PregnancyHeader
+      <AppHeader
         title="Hospital Bag"
         action={
           <AnimatedPressable onPress={() => void shareList()} haptic={false}>

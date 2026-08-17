@@ -26,6 +26,7 @@ import {
   View,
 } from 'react-native';
 
+import AppHeader from '../../components/AppHeader';
 import CalendarSheet from '../../components/CalendarSheet';
 import FloatingNav from '../../components/FloatingNav';
 import GradientRing from '../../components/GradientRing';
@@ -322,10 +323,11 @@ export default function HealthScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <AppHeader title="Health" />
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Health</Text>
 
         {/* Date strip: arrows either side of the calendar pill. */}
         <View style={styles.dateStrip}>
@@ -690,9 +692,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   scrollContent: {
     paddingHorizontal: Spacing.screen,
-    paddingTop: Spacing.xxl,
   },
-  title: { ...Typography.screenTitle, color: Colors.textPrimary },
 
   dateStrip: {
     flexDirection: 'row',
