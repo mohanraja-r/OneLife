@@ -19,7 +19,7 @@ import {
 } from 'react-native';
 
 import AnimatedPressable from '../../components/AnimatedPressable';
-import PregnancyHeader from '../../components/pregnancy/PregnancyHeader';
+import AppHeader from '../../components/AppHeader';
 import { ErrorNotice, LoadingState } from '../../components/ui';
 import {
   AVOID_FOODS,
@@ -199,7 +199,7 @@ export default function DietScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <PregnancyHeader title="Diet Chart" />
+      <AppHeader title="Diet Chart" />
 
       <ScrollView
         contentContainerStyle={styles.content}

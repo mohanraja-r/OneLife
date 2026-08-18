@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 
+import AppHeader from '../../components/AppHeader';
 import FloatingNav from '../../components/FloatingNav';
 import { ErrorNotice, LoadingState } from '../../components/ui';
 import CyclePanel from '../../components/women/CyclePanel';
@@ -274,10 +275,11 @@ export default function WomenScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <AppHeader title="Women's Health" />
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Women&apos;s Health</Text>
 
         <View style={styles.segmented}>
           {TABS.map((item) => {
@@ -356,9 +358,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   scrollContent: {
     paddingHorizontal: Spacing.screen,
-    paddingTop: Spacing.xxl,
   },
-  title: { ...Typography.screenTitle, color: Colors.textPrimary },
   segmented: {
     flexDirection: 'row',
     gap: Spacing.sm,

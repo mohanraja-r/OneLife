@@ -3,7 +3,6 @@ import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import type { LucideIcon } from 'lucide-react-native';
 import {
-  ChevronLeft,
   ChevronRight,
   Clock,
   Droplet,
@@ -23,13 +22,13 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import AddMedicineSheet from '../components/AddMedicineSheet';
 import AnimatedPressable from '../components/AnimatedPressable';
+import AppHeader from '../components/AppHeader';
 import {
   ChipOption,
   ChipRow,
@@ -145,16 +144,10 @@ export default function MedicinesScreen() {
     <View style={styles.container}>
       <StatusBar style="dark" />
 
-      <View style={[styles.header, { paddingTop: insets.top + Spacing.sm }]}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="Go back">
-          <ChevronLeft size={26} color={Colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Medicines</Text>
-        <View style={styles.headerSpacer} />
+      {/* This screen draws under the status bar, so the inset lands here
+          rather than on a SafeAreaView. */}
+      <View style={{ paddingTop: insets.top }}>
+        <AppHeader title="My Medicines" />
       </View>
 
       <ScrollView
@@ -293,18 +286,6 @@ export default function MedicinesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.screen,
-    paddingBottom: Spacing.md,
-  },
-  headerTitle: {
-    ...Typography.heading,
-    color: Colors.textPrimary,
-  },
-  headerSpacer: { width: 26 },
   content: {
     paddingHorizontal: Spacing.screen,
     paddingTop: Spacing.sm,

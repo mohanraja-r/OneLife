@@ -13,8 +13,8 @@ import {
 } from 'react-native';
 
 import AnimatedPressable from '../../components/AnimatedPressable';
+import AppHeader from '../../components/AppHeader';
 import GradientRing from '../../components/GradientRing';
-import PregnancyHeader from '../../components/pregnancy/PregnancyHeader';
 import WeightChart, {
   WeightChartLegend,
 } from '../../components/pregnancy/WeightChart';
@@ -114,7 +114,7 @@ export default function WeightScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <PregnancyHeader title="Weight Tracker" />
+      <AppHeader title="Weight Tracker" />
 
       <ScrollView
         contentContainerStyle={styles.content}

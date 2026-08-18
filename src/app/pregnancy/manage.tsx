@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 
 import AnimatedPressable from '../../components/AnimatedPressable';
-import PregnancyHeader from '../../components/pregnancy/PregnancyHeader';
+import AppHeader from '../../components/AppHeader';
 import {
   DateTimeSpinnerSheet,
   ErrorNotice,
@@ -229,7 +229,7 @@ export default function ManageScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <PregnancyHeader title="Manage" />
+      <AppHeader title="Manage" />
 
       <ScrollView
         contentContainerStyle={styles.content}

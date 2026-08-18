@@ -1,6 +1,5 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import {
-  ArrowLeft,
   Bell,
   Check,
   Pill,
@@ -20,6 +19,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import AppHeader from '../components/AppHeader';
 import {
   adherenceAccent,
   MemberInitials,
@@ -169,27 +169,20 @@ export default function FamilyMemberScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Go back">
-          <ArrowLeft size={24} color={Colors.textPrimary} strokeWidth={2.2} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          {member?.name ?? 'Family member'}
-        </Text>
-        {!!member && (
-          <TouchableOpacity
-            onPress={confirmRemove}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={`Remove ${member.name}`}>
-            <Trash2 size={21} color={Colors.danger} strokeWidth={1.9} />
-          </TouchableOpacity>
-        )}
-      </View>
+      <AppHeader
+        title={member?.name ?? 'Family member'}
+        action={
+          member ? (
+            <TouchableOpacity
+              onPress={confirmRemove}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={`Remove ${member.name}`}>
+              <Trash2 size={21} color={Colors.danger} strokeWidth={1.9} />
+            </TouchableOpacity>
+          ) : undefined
+        }
+      />
 
       {!member ? (
         <View style={styles.loading}>
@@ -392,14 +385,6 @@ function DoseStatusPill({ status }: { status: ScheduledDose['status'] }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    paddingHorizontal: Spacing.screen,
-    height: 52,
-  },
-  headerTitle: { ...Typography.cardTitle, color: Colors.textPrimary, flex: 1 },
   loading: { flex: 1, paddingHorizontal: Spacing.screen },
   content: {
     paddingHorizontal: Spacing.screen,

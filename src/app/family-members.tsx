@@ -1,7 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import {
-  ArrowLeft,
   ChevronRight,
   Clock,
   Plus,
@@ -21,6 +20,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import AppHeader from '../components/AppHeader';
 import {
   MemberInitials,
   nameWithRelationship,
@@ -94,24 +94,18 @@ export default function FamilyMembersScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Go back">
-          <ArrowLeft size={24} color={Colors.textPrimary} strokeWidth={2.2} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Family Members</Text>
-        <TouchableOpacity
-          style={styles.headerIcon}
-          onPress={() => router.push('/add-family-member')}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Add a family member">
-          <Plus size={23} color={Colors.textPrimary} strokeWidth={2.2} />
-        </TouchableOpacity>
-      </View>
+      <AppHeader
+        title="Family Members"
+        action={
+          <TouchableOpacity
+            onPress={() => router.push('/add-family-member')}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Add a family member">
+            <Plus size={23} color={Colors.textPrimary} strokeWidth={2.2} />
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -321,15 +315,6 @@ function RosterRow({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    paddingHorizontal: Spacing.screen,
-    height: 52,
-  },
-  headerTitle: { ...Typography.cardTitle, color: Colors.textPrimary, flex: 1 },
-  headerIcon: { padding: Spacing.xs },
   content: {
     paddingHorizontal: Spacing.screen,
     paddingTop: Spacing.md,

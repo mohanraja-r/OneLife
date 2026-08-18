@@ -1,7 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import {
-  ArrowLeft,
   ChevronRight,
   Heart,
   Info,
@@ -23,6 +22,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import AppHeader from '../components/AppHeader';
 import {
   adherenceStatus,
   MemberInitials,
@@ -84,24 +84,18 @@ export default function FamilyScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Go back">
-          <ArrowLeft size={24} color={Colors.textPrimary} strokeWidth={2.2} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Family</Text>
-        <TouchableOpacity
-          style={styles.headerIcon}
-          onPress={() => router.push('/join-family')}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Enter an invite code">
-          <Ticket size={21} color={Colors.textPrimary} strokeWidth={1.9} />
-        </TouchableOpacity>
-      </View>
+      <AppHeader
+        title="Family"
+        action={
+          <TouchableOpacity
+            onPress={() => router.push('/join-family')}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Enter an invite code">
+            <Ticket size={21} color={Colors.textPrimary} strokeWidth={1.9} />
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -383,15 +377,6 @@ function PersonRow({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    paddingHorizontal: Spacing.screen,
-    height: 52,
-  },
-  headerTitle: { ...Typography.heading, color: Colors.textPrimary, flex: 1 },
-  headerIcon: { padding: Spacing.xs },
   content: {
     paddingHorizontal: Spacing.screen,
     paddingTop: Spacing.md,

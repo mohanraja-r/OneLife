@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, ChevronRight, Plus, Sparkles, UtensilsCrossed } from 'lucide-react-native';
+import { ChevronRight, Plus, Sparkles, UtensilsCrossed } from 'lucide-react-native';
 import { MotiView } from 'moti';
 import { useMemo, useState } from 'react';
 import {
@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import AppHeader from '../components/AppHeader';
 import EditMealItemSheet from '../components/EditMealItemSheet';
 import PrimaryButton from '../components/PrimaryButton';
 import ProgressRing from '../components/ProgressRing';
@@ -203,17 +204,7 @@ export default function ConfirmMealScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Go back">
-          <ArrowLeft size={24} color={Colors.textPrimary} strokeWidth={2.2} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Confirm Meal</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <AppHeader title="Confirm Meal" />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Meal identity */}
@@ -362,15 +353,6 @@ export default function ConfirmMealScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    paddingHorizontal: Spacing.screen,
-    height: 52,
-  },
-  headerTitle: { ...Typography.cardTitle, color: Colors.textPrimary },
-  headerSpacer: { flex: 1 },
   content: {
     paddingHorizontal: Spacing.screen,
     paddingTop: Spacing.md,
