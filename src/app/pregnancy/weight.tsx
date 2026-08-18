@@ -183,6 +183,30 @@ export default function WeightScreen() {
             </LinearGradient>
 
             {/* ----------------------------------------------------- Chart */}
+            {/* The baseline is what everything else is measured from, so when it
+                is missing the screen asks for it outright. Showing the chart and
+                a row of dashes instead made a successful save look like a failed
+                one. */}
+            {!summary.hasBaseline && (
+              <View style={styles.baselineCard}>
+                <Text style={styles.baselineTitle}>
+                  Add your pre-pregnancy weight
+                </Text>
+                <Text style={styles.baselineBody}>
+                  Your gain, the recommended range and the chart are all measured
+                  from the weight you started at — so none of them can be worked
+                  out until you add it.
+                </Text>
+                <AnimatedPressable
+                  onPress={() => setEditing('baseline')}
+                  style={styles.baselineButton}>
+                  <Text style={styles.baselineButtonText}>
+                    Set starting weight
+                  </Text>
+                </AnimatedPressable>
+              </View>
+            )}
+
             <Text style={styles.sectionTitle}>Weight progress</Text>
 
             <View
@@ -190,17 +214,27 @@ export default function WeightScreen() {
               onLayout={(event: LayoutChangeEvent) =>
                 setChartWidth(event.nativeEvent.layout.width - Spacing.lg * 2)
               }>
-              <WeightChartLegend />
-              {chartWidth > 0 && (
-                <WeightChart
-                  points={summary.points}
-                  band={summary.band}
-                  width={chartWidth}
-                />
-              )}
-              {summary.points.length === 0 && (
+              {summary.hasBaseline ? (
+                <>
+                  <WeightChartLegend />
+                  {chartWidth > 0 && (
+                    <WeightChart
+                      points={summary.points}
+                      band={summary.band}
+                      width={chartWidth}
+                    />
+                  )}
+                  {summary.points.length === 0 && (
+                    <Text style={styles.chartEmpty}>
+                      No weights logged yet. Add one to start the chart.
+                    </Text>
+                  )}
+                </>
+              ) : (
                 <Text style={styles.chartEmpty}>
-                  No weights logged yet. Add one to start the chart.
+                  {summary.points.length === 0
+                    ? 'The chart starts once you add a starting weight and log one reading.'
+                    : `${summary.points.length} reading${summary.points.length === 1 ? '' : 's'} saved. Add your starting weight to plot them.`}
                 </Text>
               )}
             </View>
@@ -237,12 +271,6 @@ export default function WeightScreen() {
               </View>
             </View>
 
-            {summary.prePregnancyKg === null && (
-              <Text style={styles.baselineHint}>
-                Set your pre-pregnancy weight to see your gain and the
-                recommended range for your BMI.
-              </Text>
-            )}
 
             {/* ----------------------------------------------- Recent logs */}
             {recent.length > 0 && (
@@ -393,11 +421,35 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
   },
   statDivider: { width: 1, height: 32, backgroundColor: Colors.border },
-  baselineHint: {
+  baselineCard: {
+    backgroundColor: Accents.amber.tint,
+    borderRadius: Radius.card,
+    padding: Spacing.lg,
+    marginTop: Spacing.lg,
+  },
+  baselineTitle: {
+    ...Typography.optionLabel,
+    fontSize: 15,
+    color: Accents.amber.dark,
+  },
+  baselineBody: {
     ...Typography.label,
-    color: Colors.textMuted,
-    marginTop: Spacing.md,
+    color: Colors.textSecondary,
+    marginTop: Spacing.xs,
     lineHeight: 17,
+  },
+  baselineButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.round,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    marginTop: Spacing.md,
+  },
+  baselineButtonText: {
+    ...Typography.label,
+    fontWeight: '700',
+    color: Accents.amber.dark,
   },
   logsCard: {
     backgroundColor: Colors.surface,

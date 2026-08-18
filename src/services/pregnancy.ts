@@ -41,8 +41,8 @@ export interface WeightPoint {
   /** Gestational week the reading was taken at. */
   week: number;
   weightKg: number;
-  /** Gain over the pre-pregnancy baseline. */
-  gainKg: number;
+  /** Gain over the pre-pregnancy baseline; null until a baseline exists. */
+  gainKg: number | null;
 }
 
 /** The recommended gain band for one gestational week. */
@@ -54,6 +54,13 @@ export interface GainBand {
 
 /** Everything the weight screen renders. */
 export interface WeightSummary {
+  /**
+   * False until a pre-pregnancy weight exists. Nothing on this screen can be
+   * computed without it — gain, the band and the goal are all measured from it —
+   * so the screen shows a prompt rather than a row of dashes that look like a
+   * failed save.
+   */
+  hasBaseline: boolean;
   /** Null until she records a pre-pregnancy weight. */
   prePregnancyKg: number | null;
   currentKg: number | null;
@@ -290,8 +297,19 @@ export function gainBand(bmi: number | null): GainBand[] {
 function describeStatus(
   gainKg: number | null,
   week: number,
-  total: { minKg: number; maxKg: number }
+  total: { minKg: number; maxKg: number },
+  hasBaseline: boolean,
+  hasReadings: boolean
 ): { status: WeightStatus; label: string } {
+  // These two cases used to share one message, which meant that after logging a
+  // weight with no baseline set the screen still read "log a weight to start
+  // tracking" — telling her to do the thing she had just done.
+  if (!hasBaseline) {
+    return { status: 'unknown', label: 'Add your pre-pregnancy weight' };
+  }
+  if (!hasReadings) {
+    return { status: 'unknown', label: 'Log a weight to start tracking' };
+  }
   if (gainKg === null) {
     return { status: 'unknown', label: 'Log a weight to start tracking' };
   }
@@ -334,9 +352,12 @@ export function summariseWeight(
       date: log.date,
       week: weekOn(record.dueDate, log.date),
       weightKg: log.weightKg,
+      // Without a baseline there is no gain to state. Zero used to stand in
+      // here, which drew every reading flat along the axis as though she had
+      // gained nothing at all.
       gainKg:
         baseline === null
-          ? 0
+          ? null
           : Number((log.weightKg - baseline).toFixed(1)),
     }));
 
@@ -348,7 +369,13 @@ export function summariseWeight(
       : Number((currentKg - baseline).toFixed(1));
 
   const week = weekOn(record.dueDate, toDateString(asOf ?? startOfToday()));
-  const { status, label } = describeStatus(gainKg, week, total);
+  const { status, label } = describeStatus(
+    gainKg,
+    week,
+    total,
+    baseline !== null,
+    points.length > 0
+  );
 
   // The goal is the midpoint of the recommended range rather than either end —
   // a single number has to be shown somewhere, and the middle is the least
@@ -356,6 +383,7 @@ export function summariseWeight(
   const midpointGain = (total.minKg + total.maxKg) / 2;
 
   return {
+    hasBaseline: baseline !== null,
     prePregnancyKg: baseline,
     currentKg,
     gainKg,

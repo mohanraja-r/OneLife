@@ -23,7 +23,7 @@ import LogSheet, {
 import PregnancyPanel, {
   PregnancySetup,
 } from '../../components/women/PregnancyPanel';
-import { totalItemsFor } from '../../constants/hospitalBag';
+import { allItemIds, totalItemsFor } from '../../constants/hospitalBag';
 import {
   Accents,
   Colors,
@@ -150,20 +150,36 @@ export default function WomenScreen() {
     const nextTest = scheduleTests(pregnancy).find(
       (test) => test.status !== 'done'
     );
-    const packed = pregnancy.bag.packed.length;
+
+    // Counted against the catalogue rather than the stored array's length, so a
+    // stored id that no longer exists cannot push the tile past the total or
+    // make it disagree with the hospital-bag screen's own count.
+    const catalogue = new Set(allItemIds());
+    const packed = pregnancy.bag.packed.filter((id) => catalogue.has(id)).length;
     const totalItems = totalItemsFor('mom') + totalItemsFor('baby');
 
+    /** `In 1 day` / `In 9 days`, or the state when it is no longer ahead. */
+    const testLabel = () => {
+      if (!nextTest) return 'All done';
+      // Overdue reads as "Due now" if it goes through the days-away branch,
+      // which hides a missed test behind a reassuring phrase.
+      if (nextTest.status === 'overdue') return 'Overdue';
+      if (nextTest.daysAway <= 0) return 'Due now';
+      return `In ${nextTest.daysAway} day${nextTest.daysAway === 1 ? '' : 's'}`;
+    };
+
     return {
-      weight: gain === null ? 'Add your weight' : `${gain > 0 ? '+' : ''}${gain} kg`,
+      weight:
+        pregnancy.prePregnancyWeightKg === null
+          ? 'Add starting weight'
+          : gain === null
+            ? 'Log your weight'
+            : `${gain > 0 ? '+' : ''}${gain} kg`,
       kicks:
         kicks.totalKicks > 0
           ? `${kicks.totalKicks} today`
           : 'Not counted today',
-      tests: nextTest
-        ? nextTest.daysAway <= 0
-          ? 'Due now'
-          : `In ${nextTest.daysAway} days`
-        : 'All done',
+      tests: testLabel(),
       bag: `${packed} of ${totalItems} packed`,
       memories:
         memoryCount === 0

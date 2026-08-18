@@ -195,11 +195,17 @@ export const CYCLE_LOGS: LogKind[] = [
   'ovulation',
 ];
 
-/** The Pregnancy tab's log row, in the order it is drawn. */
+/**
+ * The Pregnancy tab's log row, in the order it is drawn.
+ *
+ * Weight and kicks are deliberately absent: both have their own screen now, and
+ * neither is a single number. Weight only means anything measured against the
+ * pre-pregnancy baseline and the recommended band, and a kick count is a timed
+ * session rather than a daily total. A quick-log shortcut for either would let
+ * someone record a figure the real screen then contradicts.
+ */
 export const PREGNANCY_LOGS: LogKind[] = [
-  'weight',
   'symptoms',
-  'kicks',
   'mood',
   'sleep',
   'notes',

@@ -63,35 +63,38 @@ interface Feature {
 }
 
 /**
- * The six pregnancy features, in the order the reference design lays them out.
- * Each tile's subtitle is filled in at render time from live data, which is
- * what stops the grid reading as a plain menu.
+ * The six pregnancy features.
+ *
+ * Labels wrap naturally rather than carrying hard line breaks: forcing every
+ * label onto two lines left the one-word ones ("Memories") short, and against a
+ * fixed tile height that read as the content floating at the top of the card.
+ * Two across gives each label the room to sit on one line at most widths.
  */
 const FEATURES: Feature[] = [
   {
     key: 'weight',
-    label: 'Weight\ntracker',
+    label: 'Weight tracker',
     icon: TrendingUp,
     accent: Accents.violet,
     route: '/pregnancy/weight',
   },
   {
     key: 'kicks',
-    label: 'Kick\ntracker',
+    label: 'Kick tracker',
     icon: Footprints,
     accent: Accents.pink,
     route: '/pregnancy/kicks',
   },
   {
     key: 'tests',
-    label: 'Tests &\nscans',
+    label: 'Tests & scans',
     icon: Stethoscope,
     accent: Accents.blue,
     route: '/pregnancy/tests',
   },
   {
     key: 'bag',
-    label: 'Hospital\nbag',
+    label: 'Hospital bag',
     icon: ShoppingBag,
     accent: Accents.orange,
     route: '/pregnancy/hospital-bag',
@@ -105,7 +108,7 @@ const FEATURES: Feature[] = [
   },
   {
     key: 'diet',
-    label: 'Diet\nchart',
+    label: 'Diet chart',
     icon: Salad,
     accent: Accents.green,
     route: '/pregnancy/diet',
@@ -297,13 +300,16 @@ function DeliveredCard({ record }: { record: PregnancyRecord }) {
   );
 }
 
-/** Which log tiles already hold a value for today. */
+/**
+ * Which log tiles already hold a value for today.
+ *
+ * Only covers what `PREGNANCY_LOGS` actually draws — weight and kicks moved to
+ * their own screens and are no longer quick-logged here.
+ */
 function loggedKinds(today: PregnancyLog | null): Set<LogKind> {
   const done = new Set<LogKind>();
   if (!today) return done;
-  if (typeof today.weightKg === 'number') done.add('weight');
   if (today.symptoms?.length) done.add('symptoms');
-  if (typeof today.kicks === 'number') done.add('kicks');
   if (today.mood) done.add('mood');
   if (typeof today.sleepHours === 'number') done.add('sleep');
   if (today.notes) done.add('notes');
@@ -405,6 +411,7 @@ export default function PregnancyPanel({
       </AnimatedPressable>
 
       {/* ---------------------------------------------------- Feature grid */}
+      <SectionHeader title="Your pregnancy" />
       <View style={styles.grid}>
         {FEATURES.map((feature, index) => {
           const Icon = feature.icon;
@@ -413,8 +420,8 @@ export default function PregnancyPanel({
           return (
             <MotiView
               key={feature.key}
-              from={{ opacity: 0, scale: 0.94 }}
-              animate={{ opacity: 1, scale: 1 }}
+              from={{ opacity: 0, translateY: 10 }}
+              animate={{ opacity: 1, translateY: 0 }}
               transition={{
                 type: 'timing',
                 duration: Motion.fast,
@@ -424,19 +431,32 @@ export default function PregnancyPanel({
               <AnimatedPressable
                 onPress={() => router.push(feature.route)}
                 style={styles.tile}>
-                <View
-                  style={[
-                    styles.tileIcon,
-                    { backgroundColor: feature.accent.tint },
-                  ]}>
-                  <Icon size={19} color={feature.accent.main} strokeWidth={2} />
+                <View style={styles.tileTop}>
+                  <View
+                    style={[
+                      styles.tileIcon,
+                      { backgroundColor: feature.accent.tint },
+                    ]}>
+                    <Icon
+                      size={20}
+                      color={feature.accent.main}
+                      strokeWidth={2.1}
+                    />
+                  </View>
+                  <ChevronRight size={15} color={Colors.textMuted} />
                 </View>
-                <Text style={styles.tileLabel}>{feature.label}</Text>
-                {!!value && (
-                  <Text style={styles.tileValue} numberOfLines={1}>
-                    {value}
-                  </Text>
-                )}
+
+                <Text style={styles.tileLabel} numberOfLines={2}>
+                  {feature.label}
+                </Text>
+
+                {/* The accent carries the value, which is the theme's rule —
+                    icon tile and highlighted figure share one colour. */}
+                <Text
+                  style={[styles.tileValue, { color: feature.accent.dark }]}
+                  numberOfLines={1}>
+                  {value ?? '—'}
+                </Text>
               </AnimatedPressable>
             </MotiView>
           );
@@ -548,20 +568,25 @@ const styles = StyleSheet.create({
   dueRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.xs,
+    gap: Spacing.sm,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
     paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    marginTop: Spacing.md,
   },
-  dueText: { ...Typography.label, color: Colors.textSecondary },
+  // Takes the slack so the Manage chip is pushed to the right edge.
+  dueText: { ...Typography.label, color: Colors.textSecondary, flex: 1 },
   manageChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
     backgroundColor: Colors.primaryTint,
     borderRadius: Radius.round,
-    paddingVertical: 3,
-    paddingHorizontal: Spacing.sm,
-    marginLeft: Spacing.xs,
+    paddingVertical: 4,
+    paddingHorizontal: Spacing.md,
   },
   manageText: {
     ...Typography.label,
@@ -573,41 +598,43 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.md,
-    marginTop: Spacing.xs,
   },
-  // Three across. The basis is deliberately under a third so three cells plus
-  // their two gaps always fit the row — a flat 31.5% overflows on a narrow
-  // screen and drops the third tile onto the next line. `flexGrow` then spreads
-  // whatever is left over, so the row fills edge to edge at any width.
-  gridCell: { flexBasis: '30%', flexGrow: 1 },
+  // Two across, at a basis under half so both cells plus the gap always fit the
+  // row. `flexGrow` spreads the remainder, so the pair fills edge to edge at any
+  // width. Cells in a wrapped row stretch by default, which is what keeps the
+  // two cards in each row the same height without a hard-coded minimum.
+  gridCell: { flexBasis: '46%', flexGrow: 1 },
   tile: {
+    flex: 1,
     backgroundColor: Colors.surface,
-    borderRadius: Radius.lg,
+    borderRadius: Radius.card,
     borderWidth: 1,
     borderColor: Colors.border,
-    paddingVertical: Spacing.lg,
-    paddingHorizontal: Spacing.md,
-    minHeight: 104,
+    padding: Spacing.lg,
     ...Shadow.card,
   },
+  tileTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
+  },
   tileIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: Radius.md,
+    width: 40,
+    height: 40,
+    borderRadius: Radius.tile,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: Spacing.sm,
   },
   tileLabel: {
-    ...Typography.label,
-    fontWeight: '700',
+    ...Typography.optionLabel,
+    fontSize: 14,
+    lineHeight: 19,
     color: Colors.textPrimary,
-    lineHeight: 15,
   },
   tileValue: {
     ...Typography.label,
-    fontSize: 10.5,
-    color: Colors.textSecondary,
+    fontWeight: '700',
     marginTop: 3,
   },
   tipCard: {

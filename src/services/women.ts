@@ -820,15 +820,19 @@ export async function setDietRegion(region: DietRegion): Promise<void> {
   if (error) throw error;
 }
 
-/** Packs or unpacks one hospital-bag item, returning the new packed set. */
-export async function toggleBagItem(itemId: string): Promise<string[]> {
+/**
+ * Writes the complete set of packed hospital-bag item ids.
+ *
+ * Takes the whole set rather than toggling one id, because toggling meant
+ * reading the stored array, changing one entry and writing it back — and two
+ * taps in quick succession both read the same array, so the second write
+ * dropped the first item. Sending the full intended state makes a late write
+ * harmless instead of destructive.
+ */
+export async function savePackedItems(packed: string[]): Promise<void> {
   const userId = await requireUserId();
   const record = await getPregnancy();
   if (!record) throw new Error('Set a due date before packing your bag.');
-
-  const packed = record.bag.packed.includes(itemId)
-    ? record.bag.packed.filter((id) => id !== itemId)
-    : [...record.bag.packed, itemId];
 
   const { error } = await supabase
     .from('pregnancy_data')
@@ -836,7 +840,6 @@ export async function toggleBagItem(itemId: string): Promise<string[]> {
     .eq('user_id', userId);
 
   if (error) throw error;
-  return packed;
 }
 
 /**

@@ -1,7 +1,7 @@
 import { useFocusEffect } from 'expo-router';
 import { Check, ChevronDown, ChevronRight, Share2 } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -34,7 +34,7 @@ import { errorMessage } from '../../services/errors';
 import {
   PregnancyRecord,
   getPregnancy,
-  toggleBagItem,
+  savePackedItems,
 } from '../../services/women';
 
 /**
@@ -52,6 +52,10 @@ export default function HospitalBagScreen() {
   const [error, setError] = useState<string | null>(null);
   // Held locally so a tick responds instantly rather than after a round trip.
   const [packed, setPacked] = useState<string[]>([]);
+  // The synchronous copy each tap derives its change from.
+  const packedRef = useRef<string[]>([]);
+  // Serialises the writes so they can never land out of order.
+  const writeChain = useRef<Promise<void>>(Promise.resolve());
 
   /** Loads the pregnancy record and the packed set stored on it. */
   const load = useCallback(async () => {
@@ -59,7 +63,9 @@ export default function HospitalBagScreen() {
       setError(null);
       const pregnancy = await getPregnancy();
       setRecord(pregnancy);
-      setPacked(pregnancy?.bag.packed ?? []);
+      const stored = pregnancy?.bag.packed ?? [];
+      packedRef.current = stored;
+      setPacked(stored);
     } catch (err) {
       setError(errorMessage(err, 'Could not load your hospital bag.'));
     } finally {
@@ -91,20 +97,34 @@ export default function HospitalBagScreen() {
 
   const overall = total === 0 ? 0 : packed.length / total;
 
-  /** Ticks an item, writing through to the record. */
-  const toggle = async (itemId: string) => {
-    // Optimistic: the checkbox flips now, and reverts only if the write fails.
-    const next = packedSet.has(itemId)
-      ? packed.filter((id) => id !== itemId)
-      : [...packed, itemId];
+  /**
+   * Ticks an item, writing the whole packed set through to the record.
+   *
+   * The next state is derived from a ref rather than from React state: state
+   * updates are batched, so two quick taps would both compute their change from
+   * the same stale array and the second would drop the first.
+   *
+   * Writes are chained end to end for the same reason — two overlapping updates
+   * can otherwise land out of order, leaving the row holding the earlier set.
+   */
+  const toggle = (itemId: string) => {
+    const current = packedRef.current;
+    const next = current.includes(itemId)
+      ? current.filter((id) => id !== itemId)
+      : [...current, itemId];
+
+    packedRef.current = next;
     setPacked(next);
 
-    try {
-      await toggleBagItem(itemId);
-    } catch (err) {
-      setPacked(packed);
-      setError(errorMessage(err, 'Could not save that change.'));
-    }
+    writeChain.current = writeChain.current
+      .then(() => savePackedItems(next))
+      .catch((err: unknown) => {
+        // Revert to whatever the server last accepted, not to this tap's
+        // predecessor — by now several taps may have queued behind it.
+        packedRef.current = current;
+        setPacked(current);
+        setError(errorMessage(err, 'Could not save that change.'));
+      });
   };
 
   /** Shares everything still unpacked, as plain text. */
@@ -251,7 +271,7 @@ export default function HospitalBagScreen() {
                         return (
                           <AnimatedPressable
                             key={item.id}
-                            onPress={() => void toggle(item.id)}
+                            onPress={() => toggle(item.id)}
                             style={styles.item}>
                             <View
                               style={[

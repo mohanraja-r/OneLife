@@ -31,7 +31,12 @@ import {
   Spacing,
   Typography,
 } from '../../constants/theme';
-import { parseDateString, startOfToday, toDateString } from '../../services/dates';
+import {
+  daysBetween,
+  parseDateString,
+  startOfToday,
+  toDateString,
+} from '../../services/dates';
 import { errorMessage } from '../../services/errors';
 import { ScheduledTest, scheduleTests } from '../../services/pregnancy';
 import {
@@ -66,7 +71,11 @@ function statusLine(test: ScheduledTest): string {
     return `Done on ${parseDateString(test.doneDate).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`;
   }
   if (test.status === 'overdue') {
-    return `Was due ${Math.abs(test.daysAway)} days ago`;
+    // Counted from the day the window closed, not from its midpoint — the
+    // midpoint sits weeks earlier on a long window, which overstated how late
+    // a test actually was.
+    const late = daysBetween(parseDateString(test.windowEnd), startOfToday());
+    return `Window closed ${late} day${late === 1 ? '' : 's'} ago`;
   }
   if (test.status === 'due') return 'Due now';
   if (test.daysAway === 1) return 'Due tomorrow';

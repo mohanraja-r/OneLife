@@ -41,10 +41,16 @@ export default function WeightChart({ points, band, width, height = 220 }: Props
   const plotWidth = Math.max(0, width - PAD_LEFT - PAD_RIGHT);
   const plotHeight = height - PAD_TOP - PAD_BOTTOM;
 
+  // Only readings with a known gain can be plotted — a reading taken before a
+  // baseline exists has no vertical position on this axis.
+  const plotted = points.filter(
+    (point): point is WeightPoint & { gainKg: number } => point.gainKg !== null
+  );
+
   // The y-axis has to clear both the band and anything logged above it, so a
   // gain outside the recommended range is still drawn rather than clipped.
   const maxBand = band.length ? band[band.length - 1].maxKg : 16;
-  const maxPoint = points.reduce((top, point) => Math.max(top, point.gainKg), 0);
+  const maxPoint = plotted.reduce((top, point) => Math.max(top, point.gainKg), 0);
   const yMax = Math.max(4, Math.ceil(Math.max(maxBand, maxPoint) / 4) * 4);
 
   /** Horizontal position for a gestational week. */
@@ -66,12 +72,12 @@ export default function WeightChart({ points, band, width, height = 220 }: Props
       ].join(' ')
     : '';
 
-  const linePoints = points
+  const linePoints = plotted
     .map((point) => `${x(point.week)},${y(point.gainKg)}`)
     .join(' ');
 
   const yTicks = [0, yMax / 4, yMax / 2, (yMax * 3) / 4, yMax];
-  const latest = points[points.length - 1] ?? null;
+  const latest = plotted[plotted.length - 1] ?? null;
 
   return (
     <View>
@@ -119,7 +125,7 @@ export default function WeightChart({ points, band, width, height = 220 }: Props
           />
         )}
 
-        {points.length > 1 && (
+        {plotted.length > 1 && (
           <Polyline
             points={linePoints}
             fill="none"
@@ -130,7 +136,7 @@ export default function WeightChart({ points, band, width, height = 220 }: Props
           />
         )}
 
-        {points.map((point) => (
+        {plotted.map((point) => (
           <Circle
             key={point.date}
             cx={x(point.week)}

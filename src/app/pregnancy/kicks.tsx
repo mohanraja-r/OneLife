@@ -1,6 +1,7 @@
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from 'expo-router';
-import { Info, Play, Square } from 'lucide-react-native';
+import { Info, Square } from 'lucide-react-native';
 import { MotiView } from 'moti';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -14,7 +15,6 @@ import {
 
 import AnimatedPressable from '../../components/AnimatedPressable';
 import AppHeader from '../../components/AppHeader';
-import GradientRing from '../../components/GradientRing';
 import { ErrorNotice, LoadingState } from '../../components/ui';
 import {
   Accents,
@@ -58,20 +58,17 @@ function formatDuration(totalSeconds: number): string {
   return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
 }
 
-/** `mm:ss`, for the live timer under the ring. */
-function formatClock(totalSeconds: number): string {
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-}
-
 /**
  * Kick Tracker — a counting session, the history behind it, and what the count
  * actually means.
  *
- * Counting only starts once she taps Start. Without that, a tap landing while
- * the screen is simply open would corrupt the session, and the figure this
- * screen produces is one people make decisions on.
+ * One control: the circle. The first tap opens a session and counts as the first
+ * movement, and every tap after it adds one, with no upper limit.
+ *
+ * The session is still timed, because "ten movements in two hours" is the whole
+ * point of the guidance — but the clock is not shown while counting. A number
+ * ticking up beside the count invited watching it, and the duration only
+ * actually matters once the session is read back, which is where it appears.
  */
 export default function KicksScreen() {
   const [tab, setTab] = useState<Tab>('counter');
@@ -87,16 +84,51 @@ export default function KicksScreen() {
   // and rebuilt on every tick.
   const activeRef = useRef<KickSession | null>(null);
   activeRef.current = active;
+  // Guards the gap between the first tap and the session existing.
+  const startingRef = useRef(false);
 
   /** Loads recent sessions and picks up any that was left running. */
   const load = useCallback(async () => {
     try {
       setError(null);
       const recent = await getKickSessions(30);
-      setSessions(recent);
+      const open = recent.filter((session) => session.endedAt === null);
 
-      const open = recent.find((session) => session.endedAt === null);
-      if (open) setActive(open);
+      // A session is only worth resuming while it could still plausibly be the
+      // one she is in the middle of: today, and inside the counting window.
+      // Anything older is an abandoned session — reopening it used to restore a
+      // days-old elapsed time, which immediately tripped the two-hour
+      // low-movement warning and its alarming copy.
+      const resumable = open.find(
+        (session) =>
+          session.date === toDateString(startOfToday()) &&
+          Date.now() - new Date(session.startedAt).getTime() <
+            KICK_WINDOW_MINUTES * 60 * 1000
+      );
+
+      const abandoned = open.filter((session) => session.id !== resumable?.id);
+      if (abandoned.length > 0) {
+        // Close them out so they settle into history rather than surfacing
+        // again on the next visit.
+        await Promise.all(
+          abandoned.map((session) =>
+            session.kickCount === 0
+              ? deleteKickSession(session.id)
+              : endKickSession(
+                  session.id,
+                  new Date(
+                    session.kickTimes[session.kickTimes.length - 1] ??
+                      session.startedAt
+                  )
+                )
+          )
+        );
+        setSessions(await getKickSessions(30));
+      } else {
+        setSessions(recent);
+      }
+
+      setActive(resumable ?? null);
     } catch (err) {
       setError(errorMessage(err, 'Could not load your kick history.'));
     } finally {
@@ -138,35 +170,47 @@ export default function KicksScreen() {
   const reachedTarget = count >= KICK_TARGET;
   const pastWindow = elapsed >= KICK_WINDOW_MINUTES * 60;
 
-  /** Opens a session. */
-  const start = async () => {
-    try {
-      setSaving(true);
-      const session = await startKickSession();
-      setActive(session);
-    } catch (err) {
-      setError(errorMessage(err, 'Could not start a session.'));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  /** Records one kick against the open session. */
+  /**
+   * Records one kick, opening a session first if none is running.
+   *
+   * The circle is the only control needed to begin: a separate Start button made
+   * the first movement a two-tap job, and the tap you make when you feel a kick
+   * is itself the thing being counted, so it is counted.
+   *
+   * There is no upper limit. Ten is the figure the guidance is written around,
+   * but movements past it are still movements and stopping the counter at ten
+   * would throw away a real record of them.
+   */
   const tap = async () => {
     const session = activeRef.current;
-    if (!session || reachedTarget) return;
 
     try {
+      if (!session) {
+        // Two fast taps before the first session exists would otherwise open
+        // two sessions and split the count between them.
+        if (startingRef.current) return;
+        startingRef.current = true;
+
+        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        const fresh = await startKickSession();
+        const withFirst = await recordKick(fresh);
+        setActive(withFirst);
+        startingRef.current = false;
+        return;
+      }
+
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       const updated = await recordKick(session);
       setActive(updated);
 
-      if (updated.kickCount >= KICK_TARGET) {
+      // Fires once, as the tenth lands — not on every tap after it.
+      if (updated.kickCount === KICK_TARGET) {
         void Haptics.notificationAsync(
           Haptics.NotificationFeedbackType.Success
         );
       }
     } catch (err) {
+      startingRef.current = false;
       setError(errorMessage(err, 'Could not record that kick.'));
     }
   };
@@ -262,29 +306,29 @@ export default function KicksScreen() {
               <View>
                 <Text style={styles.prompt}>
                   {active
-                    ? 'Tap the circle each time you feel a movement'
-                    : 'Track your baby’s activity'}
+                    ? 'Tap each time you feel a movement'
+                    : 'Tap the circle to start counting'}
                 </Text>
 
-                <View style={styles.ringWrap}>
+                {/* A plain filled circle, not a progress ring. The count has no
+                    ceiling now, so there was no honest fraction for an arc to
+                    represent — it filled to ten and then sat there while the
+                    number kept climbing past it. */}
+                <View style={styles.counterWrap}>
                   <AnimatedPressable
                     onPress={() => void tap()}
                     haptic={false}
-                    style={styles.ringPress}>
-                    <GradientRing
-                      size={230}
-                      thickness={12}
-                      progress={count / KICK_TARGET}
+                    style={styles.counterPress}>
+                    <LinearGradient
                       colors={Gradients.activity}
-                      trackColor={Colors.surfaceSunken}>
+                      start={Gradients.diagonal.start}
+                      end={Gradients.diagonal.end}
+                      style={styles.counter}>
                       <Text style={styles.kickCount}>{count}</Text>
                       <Text style={styles.kickLabel}>
                         {count === 1 ? 'Kick' : 'Kicks'}
                       </Text>
-                      <Text style={styles.kickTime}>
-                        {active ? formatClock(elapsed) : 'Not started'}
-                      </Text>
-                    </GradientRing>
+                    </LinearGradient>
                   </AnimatedPressable>
                 </View>
 
@@ -293,11 +337,12 @@ export default function KicksScreen() {
                 {reachedTarget ? (
                   <View style={[styles.resultCard, styles.resultGood]}>
                     <Text style={styles.resultTitle}>
-                      {KICK_TARGET} kicks in {formatDuration(elapsed)}
+                      {count} kicks in {formatDuration(elapsed)}
                     </Text>
                     <Text style={styles.resultBody}>
-                      That&apos;s a normal, healthy pattern. Tap finish to save
-                      this session.
+                      You reached {KICK_TARGET} — that&apos;s a normal, healthy
+                      pattern. Keep tapping for as long as you like, or finish to
+                      save this session.
                     </Text>
                   </View>
                 ) : pastWindow ? (
@@ -315,17 +360,19 @@ export default function KicksScreen() {
                   </View>
                 ) : active ? (
                   <Text style={styles.hint}>
-                    Counting up to {KICK_TARGET} movements. Most babies get
+                    Counting towards {KICK_TARGET} movements. Most babies get
                     there well inside two hours.
                   </Text>
                 ) : (
                   <Text style={styles.hint}>
-                    Pick a time when your baby is usually active, and sit or lie
-                    somewhere comfortable before you start.
+                    Pick a time when your baby is usually active, then sit or lie
+                    somewhere comfortable. Your first tap starts the timer.
                   </Text>
                 )}
 
-                {active ? (
+                {/* Only Finish. Starting is the circle's job, so a Start button
+                    would just be a second way to do the same thing. */}
+                {active && (
                   <AnimatedPressable
                     onPress={confirmStop}
                     style={[styles.cta, accentShadow(Accents.pink.main)]}>
@@ -337,20 +384,6 @@ export default function KicksScreen() {
                     />
                     <Text style={styles.ctaText}>
                       {saving ? 'Saving…' : 'Finish session'}
-                    </Text>
-                  </AnimatedPressable>
-                ) : (
-                  <AnimatedPressable
-                    onPress={() => void start()}
-                    style={[styles.cta, accentShadow(Accents.pink.main)]}>
-                    <Play
-                      size={16}
-                      color={Colors.textInverse}
-                      strokeWidth={2.6}
-                      fill={Colors.textInverse}
-                    />
-                    <Text style={styles.ctaText}>
-                      {saving ? 'Starting…' : 'Start timer'}
                     </Text>
                   </AnimatedPressable>
                 )}
@@ -519,19 +552,26 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     textAlign: 'center',
   },
-  ringWrap: { alignItems: 'center', marginTop: Spacing.xl },
-  ringPress: { borderRadius: Radius.round },
-  kickCount: {
-    fontSize: 60,
-    fontWeight: '700',
-    lineHeight: 68,
-    color: Colors.textPrimary,
+  counterWrap: { alignItems: 'center', marginTop: Spacing.xl },
+  counterPress: { borderRadius: Radius.round },
+  counter: {
+    width: 230,
+    height: 230,
+    borderRadius: Radius.round,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Shadow.glow,
   },
-  kickLabel: { ...Typography.caption, color: Colors.textSecondary },
-  kickTime: {
-    ...Typography.label,
-    color: Accents.pink.main,
-    marginTop: Spacing.xs,
+  kickCount: {
+    fontSize: 76,
+    fontWeight: '700',
+    lineHeight: 86,
+    color: Colors.onPrimary,
+  },
+  kickLabel: {
+    ...Typography.caption,
+    color: Colors.onPrimaryMuted,
+    marginTop: -Spacing.xs,
   },
   hint: {
     ...Typography.caption,
