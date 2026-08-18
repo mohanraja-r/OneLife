@@ -1,8 +1,19 @@
 import { Stack } from 'expo-router';
 
+// `index` must stay the stack's initial route: it is the boot screen that
+// decides between onboarding and the tabs. Without this the first
+// <Stack.Screen> declared below would become the initial route and the app
+// would launch into that screen instead.
+export const unstable_settings = {
+  initialRouteName: 'index',
+};
+
 export default function RootLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="onboarding" />
       <Stack.Screen name="add-medicine" options={{ presentation: 'modal' }} />
       <Stack.Screen
         name="scan-prescription"
