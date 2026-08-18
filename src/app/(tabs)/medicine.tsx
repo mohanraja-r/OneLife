@@ -113,7 +113,7 @@ export default function MedicineScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      load();
+      void load();
     }, [load])
   );
 

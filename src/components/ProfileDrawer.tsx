@@ -171,7 +171,7 @@ export default function ProfileDrawer({ visible, onClose }: Props) {
 
     setLoggingOut(false);
     onClose();
-    router.replace('/signup');
+    router.replace({ pathname: '/signup', params: { mode: 'login' } });
   };
 
   /** Asks for confirmation before logging out. */

@@ -123,7 +123,7 @@ export default function MedicinesScreen() {
   // Reloading on focus keeps the list correct after an edit or a delete.
   useFocusEffect(
     useCallback(() => {
-      load();
+      void load();
     }, [load])
   );
 

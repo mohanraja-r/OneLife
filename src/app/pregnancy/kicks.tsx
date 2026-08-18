@@ -191,7 +191,7 @@ export default function KicksScreen() {
         if (startingRef.current) return;
         startingRef.current = true;
 
-        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
         const fresh = await startKickSession();
         const withFirst = await recordKick(fresh);
         setActive(withFirst);
@@ -199,15 +199,15 @@ export default function KicksScreen() {
         return;
       }
 
-      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
       const updated = await recordKick(session);
       setActive(updated);
 
       // Fires once, as the tenth lands — not on every tap after it.
       if (updated.kickCount === KICK_TARGET) {
-        void Haptics.notificationAsync(
+        Haptics.notificationAsync(
           Haptics.NotificationFeedbackType.Success
-        );
+        ).catch(() => {});
       }
     } catch (err) {
       startingRef.current = false;

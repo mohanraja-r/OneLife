@@ -26,7 +26,11 @@ export default function AnimatedPressable({
   return (
     <MotiPressable
       onPress={() => {
-        if (haptic) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        if (haptic) {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
+            () => {}
+          );
+        }
         onPress?.();
       }}
       animate={({ pressed }) => {

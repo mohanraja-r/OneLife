@@ -14,6 +14,7 @@ export default function RootLayout() {
       <Stack.Screen name="index" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="onboarding" />
+      <Stack.Screen name="signup" />
       <Stack.Screen name="add-medicine" options={{ presentation: 'modal' }} />
       <Stack.Screen
         name="scan-prescription"
