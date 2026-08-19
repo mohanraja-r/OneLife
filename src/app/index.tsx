@@ -11,29 +11,33 @@ export default function Index() {
   const [decision, setDecision] = useState<RouteDecision>('loading');
 
   useEffect(() => {
-    checkRoute();
+    void checkRoute();
   }, []);
 
+  /** Decides where to send the user on launch, from session and profile. */
   const checkRoute = async () => {
-    const { data: sessionData } = await supabase.auth.getSession();
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
 
-    if (!sessionData.session) {
-      // No account yet — always start at the beginning of the 16-screen
-      // onboarding flow (account creation now happens at the END, screen 16).
+      if (!sessionData.session) {
+        // No account yet — always start at the beginning of the onboarding
+        // flow (account creation happens at the END, on the final screen).
+        setDecision('onboarding');
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, onboarding_completed_at')
+        .eq('id', sessionData.session.user.id)
+        .maybeSingle();
+
+      setDecision(profile?.onboarding_completed_at ? 'home' : 'onboarding');
+    } catch {
+      // A dropped connection used to leave this screen spinning forever,
+      // because nothing ever moved it off 'loading'. Onboarding is the safe
+      // landing: it reads nothing from the network until the last screen.
       setDecision('onboarding');
-      return;
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id, onboarding_completed_at')
-      .eq('id', sessionData.session.user.id)
-      .maybeSingle();
-
-    if (!profile || !profile.onboarding_completed_at) {
-      setDecision('onboarding');
-    } else {
-      setDecision('home');
     }
   };
 

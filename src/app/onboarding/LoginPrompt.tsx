@@ -21,7 +21,11 @@ export default function LoginPrompt({
   return (
     <View style={[s.loginRow, style]}>
       <Text style={s.loginPrompt}>Already have an account? </Text>
-      <TouchableOpacity onPress={() => router.push('/signup')} hitSlop={8}>
+      <TouchableOpacity
+        onPress={() =>
+          router.push({ pathname: '/signup', params: { mode: 'login' } })
+        }
+        hitSlop={8}>
         <Text style={[s.loginLink, { color: accent.main }]}>Log in</Text>
       </TouchableOpacity>
     </View>

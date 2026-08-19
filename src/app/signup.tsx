@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import type { LucideIcon } from 'lucide-react-native';
 // lucide v1 dropped brand marks — Globe stands in for Google.
 import {
@@ -104,7 +104,14 @@ export default function SignUpScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<Mode>('signup');
+  // Callers that already know the user has an account — logging out, the
+  // "Already have an account?" link, the post-confirmation bounce — pass
+  // ?mode=login so the screen opens on Welcome back rather than asking
+  // somebody who is already registered to create a second account.
+  const { mode: requestedMode } = useLocalSearchParams<{ mode?: string }>();
+  const [mode, setMode] = useState<Mode>(
+    requestedMode === 'login' ? 'login' : 'signup'
+  );
 
   const copy = COPY[mode];
 

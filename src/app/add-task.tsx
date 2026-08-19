@@ -61,21 +61,30 @@ export default function AddTaskScreen() {
 
   useEffect(() => {
     if (params.taskId) {
-      getTaskById(params.taskId).then((task) => {
-        if (!task) return;
-        setTitle(task.title);
-        setCategory(task.category);
-        setDate(parseDateString(task.date));
-        if (task.time) {
-          const [h, m] = task.time.split(':').map(Number);
-          const t = new Date();
-          t.setHours(h, m, 0, 0);
-          setTime(t);
-        }
-        setRepeat(task.repeat);
-        setReminder(task.reminder);
-        setNotes(task.notes ?? '');
-      });
+      void getTaskById(params.taskId)
+        .then((task) => {
+          if (!task) return;
+          setTitle(task.title);
+          setCategory(task.category);
+          setDate(parseDateString(task.date));
+          if (task.time) {
+            const [h, m] = task.time.split(':').map(Number);
+            const t = new Date();
+            t.setHours(h, m, 0, 0);
+            setTime(t);
+          }
+          setRepeat(task.repeat);
+          setReminder(task.reminder);
+          setNotes(task.notes ?? '');
+        })
+        // A failed read used to surface as nothing at all: an empty "Edit
+        // task" form that would overwrite the real task on save.
+        .catch((err: unknown) => {
+          Alert.alert(
+            'Could not load that task',
+            errorMessage(err, 'Please go back and try again.')
+          );
+        });
     }
   }, [params.taskId]);
 
