@@ -8,6 +8,7 @@ import {
   House,
   Pill,
   ScanQrCode,
+  Sparkles,
 } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -74,6 +75,14 @@ const DISC = 58;
 const COLLAR = DISC + 12;
 /** How far the collar rises above the bar's top edge. */
 const LIFT = 30;
+/** Diameter of the AI assistant button riding above the bar's right end. */
+const AI_FAB = 52;
+/**
+ * Transparent strip reserved above the bar. It has to clear the taller of the
+ * two raised controls, because Android does not deliver touches to children
+ * drawn outside their parent's bounds.
+ */
+const RESERVE = AI_FAB + Spacing.md;
 
 // Bottom tab bar: a white sheet pinned to the bottom edge with rounded top
 // corners, two icon + label tabs either side of the scanner, and the active tab
@@ -148,6 +157,23 @@ export default function FloatingNav() {
           <ScanQrCode size={28} color={Colors.textInverse} strokeWidth={2} />
         </LinearGradient>
       </TouchableOpacity>
+
+      {/* Rides in the strip above the bar's right end so it never covers a
+          tab, and outside the BlurView for the same clipping reason. */}
+      <TouchableOpacity
+        style={styles.aiFab}
+        onPress={() => router.push('/ai-assistant')}
+        activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel="Ask the AI assistant">
+        <LinearGradient
+          colors={Gradients.primary}
+          start={Gradients.diagonal.start}
+          end={Gradients.diagonal.end}
+          style={styles.aiDisc}>
+          <Sparkles size={22} color={Colors.textInverse} strokeWidth={2} />
+        </LinearGradient>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -161,7 +187,7 @@ const styles = StyleSheet.create({
     // Reserves the strip the disc overhangs into. Android does not deliver
     // touches to children outside their parent's bounds, so the disc has to
     // live inside this padding to stay tappable along its top half.
-    paddingTop: LIFT,
+    paddingTop: RESERVE,
   },
   blurContainer: {
     borderTopLeftRadius: Radius.xxl,
@@ -193,7 +219,9 @@ const styles = StyleSheet.create({
   },
   scanFab: {
     position: 'absolute',
-    top: 0,
+    // Offset so the disc keeps its LIFT above the bar now that the strip is
+    // sized for the taller AI button.
+    top: RESERVE - LIFT,
     alignSelf: 'center',
     width: COLLAR,
     height: COLLAR,
@@ -207,6 +235,20 @@ const styles = StyleSheet.create({
   scanDisc: {
     width: DISC,
     height: DISC,
+    borderRadius: Radius.round,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  aiFab: {
+    position: 'absolute',
+    top: 0,
+    right: Spacing.screen,
+    borderRadius: Radius.round,
+    ...Shadow.glow,
+  },
+  aiDisc: {
+    width: AI_FAB,
+    height: AI_FAB,
     borderRadius: Radius.round,
     justifyContent: 'center',
     alignItems: 'center',
