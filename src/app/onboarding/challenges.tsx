@@ -10,7 +10,7 @@ import {
   Users,
   Utensils,
 } from 'lucide-react-native';
-import { useState } from 'react';
+import { type JSX, useState } from 'react';
 
 import { Accent, Accents } from '../../constants/theme';
 
@@ -70,7 +70,7 @@ const OPTIONS: {
   },
 ];
 
-export default function ChallengesScreen() {
+export default function ChallengesScreen(): JSX.Element {
   const [selected, setSelected] = useState<string[]>(
     onboardingState.biggestChallenges ?? []
   );

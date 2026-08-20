@@ -7,7 +7,7 @@ import {
   UserRoundPlus,
 } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useCallback } from 'react';
+import { type JSX, useCallback } from 'react';
 import {
   Alert,
   Image,
@@ -48,7 +48,7 @@ import { revokeInvite, useFamilyOverview } from '../services/family';
  * where each row is about who someone *is* — their age, how they are connected —
  * rather than how their week of doses has gone.
  */
-export default function FamilyMembersScreen() {
+export default function FamilyMembersScreen(): JSX.Element {
   const { self, members, invites, loading, error, reload } = useFamilyOverview();
 
   useFocusEffect(

@@ -12,7 +12,7 @@ import {
   Store,
   Users,
 } from 'lucide-react-native';
-import { useState } from 'react';
+import { type JSX, useState } from 'react';
 
 import { Accent, Accents } from '../../constants/theme';
 
@@ -72,7 +72,7 @@ const SOURCES: {
   },
 ];
 
-export default function ReferralSourceScreen() {
+export default function ReferralSourceScreen(): JSX.Element {
   const [selected, setSelected] = useState<string | null>(
     onboardingState.referralSource ?? null
   );

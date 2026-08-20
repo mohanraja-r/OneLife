@@ -1,5 +1,6 @@
 import { CalendarHeart, Droplet } from 'lucide-react-native';
 import { MotiView } from 'moti';
+import type { JSX } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import {
@@ -78,7 +79,7 @@ export default function CyclePanel({
   today,
   onPickLog,
   onSeeAll,
-}: Props) {
+}: Props): JSX.Element {
   const {
     hasData,
     cycleDay,

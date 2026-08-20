@@ -1,4 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
+import type { JSX } from 'react';
 import { Image, StyleSheet, Text } from 'react-native';
 
 import { Colors, Gradients, Radius, Typography } from '../constants/theme';
@@ -18,7 +19,7 @@ interface Props {
  * The user's profile photo, falling back to their initials on the brand
  * gradient when they have not set one.
  */
-export default function Avatar({ uri, name, size = 40 }: Props) {
+export default function Avatar({ uri, name, size = 40 }: Props): JSX.Element {
   const shape = { width: size, height: size, borderRadius: Radius.round };
 
   if (uri) {

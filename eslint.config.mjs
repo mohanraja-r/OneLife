@@ -35,6 +35,8 @@ export default [
   {
     ignores: [
       'node_modules/',
+      '.expo/',
+      'expo-env.d.ts',
       'dist/',
       'build/',
       'coverage/',
@@ -50,6 +52,20 @@ export default [
     ],
   },
   {
+    // Applies everywhere: eslint-plugin-react warns on every file it lints if
+    // it cannot work out which React version to target.
+    settings: {
+      react: {
+        version: 'detect',
+      },
+    },
+  },
+  {
+    // Type-aware linting only covers the app's own TypeScript, the files
+    // tsconfig.json actually includes.
+    files: ['**/*.ts', '**/*.tsx'],
+    ignores: ['supabase/functions/**'],
+
     plugins: {
       react: fixupPluginRules(react),
       'react-hooks': fixupPluginRules(reactHooks),
@@ -160,9 +176,74 @@ export default [
       'react-hooks/exhaustive-deps': 'error',
 
       // ✅ Accessibility Rules
+      // React Native, not the DOM: `autoFocus` on a TextInput is the standard
+      // way to open a screen with the keyboard up, and carries none of the
+      // focus-stealing problems the browser rule is written for.
+      'jsx-a11y/no-autofocus': 'off',
       'jsx-a11y/no-static-element-interactions': 'warn',
       'jsx-a11y/click-events-have-key-events': 'warn',
       'jsx-a11y/anchor-is-valid': 'error',
+    },
+  },
+
+  // Plain JavaScript tooling files (babel.config.js, eslint.config.mjs,
+  // scripts/) are outside tsconfig.json, so they are parsed without type
+  // information and the type-aware rules have to be switched off for them.
+  ...fixupConfigRules(
+    compat.extends('plugin:@typescript-eslint/disable-type-checked')
+  ).map((config) => ({
+    ...config,
+    files: ['**/*.js', '**/*.mjs', '**/*.cjs'],
+  })),
+  {
+    files: ['**/*.js', '**/*.mjs', '**/*.cjs'],
+
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+      ecmaVersion: 'latest',
+    },
+
+    rules: {
+      // Node tooling scripts legitimately use CommonJS and print to stdout.
+      '@typescript-eslint/no-require-imports': 'off',
+      'no-console': 'off',
+    },
+  },
+  {
+    // Expo/Babel config files are CommonJS, unlike the ESM lint config.
+    files: ['**/*.js', '**/*.cjs'],
+    languageOptions: { sourceType: 'commonjs' },
+  },
+
+  // Supabase edge functions are Deno, not React Native: they are excluded from
+  // the app's tsconfig, import their dependencies from URLs, and run against
+  // Deno's globals. Lint them without type information and without the
+  // Node/bundler module resolution the rest of the app uses.
+  ...fixupConfigRules(
+    compat.extends('plugin:@typescript-eslint/disable-type-checked')
+  ).map((config) => ({
+    ...config,
+    files: ['supabase/functions/**/*.ts'],
+  })),
+  {
+    files: ['supabase/functions/**/*.ts'],
+
+    languageOptions: {
+      parser: tsParser,
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      globals: {
+        ...globals.browser,
+        Deno: 'readonly',
+      },
+    },
+
+    rules: {
+      // Deno resolves `https://` imports at run time; the Node resolver cannot.
+      'import/no-unresolved': 'off',
+      'no-console': ['error', { allow: ['warn', 'error'] }],
     },
   },
 ];

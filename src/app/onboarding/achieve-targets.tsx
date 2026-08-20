@@ -11,7 +11,7 @@ import {
   Trophy,
   Users,
 } from 'lucide-react-native';
-import { useState } from 'react';
+import { type JSX, useState } from 'react';
 
 import { Accent, Accents } from '../../constants/theme';
 
@@ -77,7 +77,7 @@ const OPTIONS: {
   },
 ];
 
-export default function AchieveTargetsScreen() {
+export default function AchieveTargetsScreen(): JSX.Element {
   const [selected, setSelected] = useState<string[]>(
     onboardingState.achieveTargets ?? []
   );

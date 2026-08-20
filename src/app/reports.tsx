@@ -1,10 +1,11 @@
+import type { JSX } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AppHeader from '../components/AppHeader';
 import { Colors, Spacing } from '../constants/theme';
 
-export default function ReportsScreen() {
+export default function ReportsScreen(): JSX.Element {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <AppHeader title="Reports & Exports" />

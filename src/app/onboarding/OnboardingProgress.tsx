@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
+import type { JSX } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import {
@@ -31,7 +32,7 @@ export default function OnboardingProgress({
   onBack,
   accent = Accents.violet,
   hideLabel = false,
-}: Props) {
+}: Props): JSX.Element {
   const progress = Math.min(Math.max(step / TOTAL_STEPS, 0), 1);
 
   return (

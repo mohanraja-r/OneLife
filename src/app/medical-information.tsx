@@ -10,7 +10,7 @@ import {
   ScanLine,
   Users,
 } from 'lucide-react-native';
-import { useCallback, useRef, useState } from 'react';
+import { type JSX, useCallback, useRef, useState } from 'react';
 import {
   Alert,
   Linking,
@@ -94,7 +94,7 @@ const SEVERITY_TONE: Record<Allergy['severity'], { bg: string; fg: string }> = {
   mild: { bg: Colors.surfaceSunken, fg: Colors.textSecondary },
 };
 
-export default function MedicalInformationScreen() {
+export default function MedicalInformationScreen(): JSX.Element {
   const { memberId } = useLocalSearchParams<{ memberId?: string }>();
 
   const [tab, setTab] = useState<Tab>('mine');

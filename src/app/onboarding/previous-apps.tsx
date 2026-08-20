@@ -11,7 +11,7 @@ import {
   Watch,
 } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useState } from 'react';
+import { type JSX, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import { Accent, Accents, Motion } from '../../constants/theme';
@@ -32,7 +32,7 @@ const APP_OPTIONS: { name: string; icon: LucideIcon; iconAccent: Accent }[] = [
   { name: 'Other', icon: Ellipsis, iconAccent: Accents.neutral },
 ];
 
-export default function PreviousAppsScreen() {
+export default function PreviousAppsScreen(): JSX.Element {
   const [usedBefore, setUsedBefore] = useState<boolean | null>(
     onboardingState.usedPreviousApp ?? null
   );

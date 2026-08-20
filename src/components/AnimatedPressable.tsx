@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { MotiPressable } from 'moti/interactions';
-import { ReactNode } from 'react';
+import { type JSX, ReactNode } from 'react';
 import { StyleProp, ViewStyle } from 'react-native';
 
 interface AnimatedPressableProps {
@@ -22,7 +22,7 @@ export default function AnimatedPressable({
   onPress,
   style,
   haptic = true,
-}: AnimatedPressableProps) {
+}: AnimatedPressableProps): JSX.Element {
   return (
     <MotiPressable
       onPress={() => {

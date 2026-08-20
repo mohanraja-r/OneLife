@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { type JSX, useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import type { Measure } from '../../constants/measures';
@@ -43,7 +43,7 @@ export default function MeasureSheet<U extends string>({
   unit,
   accent = Accents.violet,
   onSave,
-}: Props<U>) {
+}: Props<U>): JSX.Element {
   const [draftUnit, setDraftUnit] = useState<U>(unit);
   // Held in the active unit's own domain (centimetres, total inches, kg, lb),
   // because that is what the ruler walks in.

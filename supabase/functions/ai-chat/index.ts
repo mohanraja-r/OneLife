@@ -17,6 +17,22 @@ interface AIChatRequest {
   };
 }
 
+/**
+ * The slice of the Anthropic Messages API response these functions read: either
+ * an error envelope or a list of content blocks. Kept local to each function so
+ * they stay independently deployable.
+ */
+interface AnthropicContentBlock {
+  type: string;
+  text?: string;
+}
+
+interface AnthropicResponse {
+  type?: string;
+  error?: { message?: string };
+  content?: AnthropicContentBlock[];
+}
+
 /** AI Chat function that provides health advice and personal data search capabilities. */
 serve(async (req) => {
   try {
@@ -50,7 +66,7 @@ serve(async (req) => {
       }),
     });
 
-    const data = await response.json();
+    const data = (await response.json()) as AnthropicResponse;
 
     if (!response.ok || data.type === 'error') {
       console.error('Anthropic API error:', JSON.stringify(data));
@@ -63,7 +79,7 @@ serve(async (req) => {
       );
     }
 
-    const textBlock = data.content?.find((b: any) => b.type === 'text');
+    const textBlock = data.content?.find((b) => b.type === 'text');
 
     if (!textBlock?.text) {
       return new Response(

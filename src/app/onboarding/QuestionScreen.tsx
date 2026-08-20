@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { ReactNode } from 'react';
+import { type JSX, ReactNode } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -46,7 +46,7 @@ export default function QuestionScreen({
   buttonLabel,
   onContinue,
   continueDisabled = false,
-}: Props) {
+}: Props): JSX.Element {
   return (
     <SafeAreaView style={s.container}>
       <OnboardingProgress step={step} accent={accent} />
@@ -91,7 +91,7 @@ export function StaggeredOption({
 }: {
   index: number;
   children: ReactNode;
-}) {
+}): JSX.Element {
   return (
     <MotiView
       from={{ opacity: 0, translateY: 12 }}

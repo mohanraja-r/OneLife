@@ -1,4 +1,5 @@
 import { Tabs } from 'expo-router';
+import type { JSX } from 'react';
 
 // Tab navigator for the main destinations. The built-in tab bar is hidden
 // because navigation is rendered by the shared <FloatingNav /> pill inside
@@ -10,7 +11,7 @@ import { Tabs } from 'expo-router';
 // Women's Health row on the Profile screen, which only users whose profile
 // gender is `woman` see. The screen itself redirects anyone else who reaches
 // the route directly.
-export default function TabLayout() {
+export default function TabLayout(): JSX.Element {
   return (
     <Tabs
       screenOptions={{

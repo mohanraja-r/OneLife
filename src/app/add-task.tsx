@@ -1,6 +1,6 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState, useEffect } from 'react';
+import { type JSX, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -43,7 +43,7 @@ function formatTimeDisplay(d: Date) {
   return d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
-export default function AddTaskScreen() {
+export default function AddTaskScreen(): JSX.Element {
   const params = useLocalSearchParams<{ taskId?: string; date?: string }>();
   const isEditing = !!params.taskId;
 

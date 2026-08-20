@@ -1,5 +1,5 @@
 import { MotiView } from 'moti';
-import { ReactNode } from 'react';
+import { type JSX, ReactNode } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -56,7 +56,7 @@ export default function BottomSheet({
   grabberGap = Spacing.xl,
   onDismiss,
   children,
-}: Props) {
+}: Props): JSX.Element {
   const insets = useSafeAreaInsets();
 
   const body = (

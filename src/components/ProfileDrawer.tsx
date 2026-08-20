@@ -19,7 +19,7 @@ import {
   X,
 } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useEffect, useMemo, useState } from 'react';
+import { type JSX, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -118,7 +118,7 @@ interface Props {
  * menu on a panel covering 75% of the screen, sliding in from the left edge
  * over a dimmed backdrop that closes it on tap.
  */
-export default function ProfileDrawer({ visible, onClose }: Props) {
+export default function ProfileDrawer({ visible, onClose }: Props): JSX.Element {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   // The same cached read the header uses, so an edit made on the Personal

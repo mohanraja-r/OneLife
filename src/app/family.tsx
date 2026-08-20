@@ -10,7 +10,7 @@ import {
   Users,
 } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useCallback } from 'react';
+import { type JSX, useCallback } from 'react';
 import {
   Alert,
   Image,
@@ -55,7 +55,7 @@ const PREVIEW_COUNT = 4;
  * signed-in user, so doses taken is the only thing it can honestly say about
  * how a family is doing.
  */
-export default function FamilyScreen() {
+export default function FamilyScreen(): JSX.Element {
   const { self, members, invites, score, loading, error, reload } =
     useFamilyOverview();
 

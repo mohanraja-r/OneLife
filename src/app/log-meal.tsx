@@ -9,7 +9,7 @@ import {
   UtensilsCrossed,
 } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useState } from 'react';
+import { type JSX, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -35,7 +35,7 @@ import {
 import { errorMessage } from '../services/errors';
 import { identifyMeal } from '../services/meals';
 
-export default function LogMealScreen() {
+export default function LogMealScreen(): JSX.Element {
   const [identifying, setIdentifying] = useState(false);
 
   /** Opens the camera or the photo library, then hands the shot to the AI and

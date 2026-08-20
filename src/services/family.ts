@@ -464,22 +464,27 @@ export async function revokeInvite(inviteId: string): Promise<void> {
   invalidateFamily();
 }
 
+/** One row of `lookup_family_invite`'s result set. */
+interface LookupInviteRow {
+  invite_id: string;
+  caregiver_name: string | null;
+  relationship: string | null;
+}
+
 /**
  * Resolves an invite code to who sent it, so the invitee can see who they are
  * about to share with before deciding. Returns null for an unknown, expired or
  * already-used code.
  */
 export async function lookupInvite(code: string): Promise<InviteSender | null> {
-  const { data, error } = await supabase.rpc('lookup_family_invite', {
+  // The untyped client types every rpc() result as `any`, so the row shape is
+  // declared here instead.
+  const response = await supabase.rpc('lookup_family_invite', {
     invite_code: code.trim(),
   });
-  if (error) throw error;
+  if (response.error) throw response.error;
 
-  const [row] = (data ?? []) as {
-    invite_id: string;
-    caregiver_name: string | null;
-    relationship: string | null;
-  }[];
+  const [row] = (response.data ?? []) as LookupInviteRow[];
   if (!row) return null;
 
   return {
@@ -497,13 +502,13 @@ export async function lookupInvite(code: string): Promise<InviteSender | null> {
  * `family_links`' caregiver-only insert rule.
  */
 export async function acceptInvite(code: string): Promise<string> {
-  const { data, error } = await supabase.rpc('accept_family_invite', {
+  const response = await supabase.rpc('accept_family_invite', {
     invite_code: code.trim(),
   });
-  if (error) throw error;
+  if (response.error) throw response.error;
 
   invalidateFamily();
-  return data as string;
+  return response.data as string;
 }
 
 /** Fetches the people who can see the signed-in user's medicine adherence. */

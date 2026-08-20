@@ -3,7 +3,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from 'expo-router';
 import { Camera, ImagePlus, Lock, Trash2 } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useCallback, useMemo, useState } from 'react';
+import { type JSX, useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -53,7 +53,7 @@ const MAX_PHOTOS = 4;
  * says so plainly at the bottom — it is the one feature storing personal
  * pictures, and being explicit about who can see them is worth the space.
  */
-export default function MemoriesScreen() {
+export default function MemoriesScreen(): JSX.Element {
   const [record, setRecord] = useState<PregnancyRecord | null>(null);
   const [memories, setMemories] = useState<Memory[]>([]);
   const [signed, setSigned] = useState<Record<string, string>>({});

@@ -8,7 +8,7 @@ import {
   TrendingDown,
   TrendingUp,
 } from 'lucide-react-native';
-import { useState } from 'react';
+import { type JSX, useState } from 'react';
 
 import { Accent, Accents } from '../../constants/theme';
 
@@ -56,7 +56,7 @@ const OPTIONS: {
   },
 ];
 
-export default function GoalScreen() {
+export default function GoalScreen(): JSX.Element {
   const [selected, setSelected] = useState<Goal | null>(
     onboardingState.goal ?? null
   );

@@ -7,7 +7,7 @@ import {
   Images,
   Trash2,
 } from 'lucide-react-native';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { type JSX, useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -99,7 +99,7 @@ function DetailRow({
   );
 }
 
-export default function PersonalInformationScreen() {
+export default function PersonalInformationScreen(): JSX.Element {
   const [draft, setDraft] = useState<PersonalDetails | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);

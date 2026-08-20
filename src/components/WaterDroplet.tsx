@@ -1,4 +1,4 @@
-import { ReactNode, useMemo } from 'react';
+import { type JSX, ReactNode, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Svg, {
   ClipPath,
@@ -95,7 +95,7 @@ interface Props {
  * to that silhouette. The library is already in the bundle as
  * lucide-react-native's peer dependency, so this costs nothing at runtime.
  */
-export default function WaterDroplet({ size, progress, children }: Props) {
+export default function WaterDroplet({ size, progress, children }: Props): JSX.Element {
   const filled = Math.min(Math.max(progress, 0), 1);
   // Measured down from the droplet's tip, so 0% leaves the body empty and 100%
   // covers it exactly.

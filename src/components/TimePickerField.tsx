@@ -1,6 +1,6 @@
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { ChevronDown, Clock, X } from 'lucide-react-native';
-import { useState } from 'react';
+import { type JSX, useState } from 'react';
 import {
   Platform,
   StyleSheet,
@@ -29,7 +29,7 @@ interface Props {
  * equivalent, so the wheel is presented in a sheet styled like the rest of the
  * app. Either way the value that comes back is always a valid `HH:MM`.
  */
-export default function TimePickerField({ value, onChange, onRemove }: Props) {
+export default function TimePickerField({ value, onChange, onRemove }: Props): JSX.Element {
   const [sheetOpen, setSheetOpen] = useState(false);
 
   /** Opens the platform's time picker for this slot. */

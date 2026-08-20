@@ -25,7 +25,7 @@ import {
   Zap,
 } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useCallback, useState } from 'react';
+import { type JSX, useCallback, useState } from 'react';
 import {
   Alert,
   SafeAreaView,
@@ -152,7 +152,7 @@ function planRoute(kind: PlanKind) {
  * and the Health tab it links to is where those numbers get logged and
  * broken down.
  */
-export default function HomeScreen() {
+export default function HomeScreen(): JSX.Element {
   const router = useRouter();
   // One cached read for both the photo and the name set on Personal Information.
   const profile = useProfileSummary();

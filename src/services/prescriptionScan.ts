@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { invokeEdgeFunction } from './supabase';
 
 export interface ScannedMedicine {
   name: string;
@@ -17,10 +17,8 @@ export async function scanPrescription(
   imageBase64: string,
   mediaType: string
 ): Promise<ScanPrescriptionResult> {
-  const { data, error } = await supabase.functions.invoke('scan-prescription', {
-    body: { imageBase64, mediaType },
+  return invokeEdgeFunction<ScanPrescriptionResult>('scan-prescription', {
+    imageBase64,
+    mediaType,
   });
-
-  if (error) throw error;
-  return data as ScanPrescriptionResult;
 }

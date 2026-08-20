@@ -1,4 +1,5 @@
 import type { LucideIcon } from 'lucide-react-native';
+import type { JSX } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import {
@@ -32,7 +33,7 @@ export default function EmptyState({
   subtitle,
   accent = Accents.violet,
   children,
-}: Props) {
+}: Props): JSX.Element {
   return (
     <View style={styles.card}>
       <View style={[styles.tile, { backgroundColor: accent.tint }]}>

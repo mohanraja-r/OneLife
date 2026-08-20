@@ -8,7 +8,7 @@ import {
   Stethoscope,
   UsersRound,
 } from 'lucide-react-native';
-import { useState } from 'react';
+import { type JSX, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Accent, Accents } from '../../constants/theme';
@@ -52,7 +52,7 @@ const OPTIONS: {
   },
 ];
 
-export default function ProfessionalGuidanceScreen() {
+export default function ProfessionalGuidanceScreen(): JSX.Element {
   const [selected, setSelected] = useState<ProfessionalGuidance | null>(
     onboardingState.professionalGuidance ?? null
   );

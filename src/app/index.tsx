@@ -1,5 +1,5 @@
 import { Redirect } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { type JSX, useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 
 import { Colors } from '../constants/theme';
@@ -7,7 +7,7 @@ import { supabase } from '../services/supabase';
 
 type RouteDecision = 'loading' | 'onboarding' | 'home';
 
-export default function Index() {
+export default function Index(): JSX.Element {
   const [decision, setDecision] = useState<RouteDecision>('loading');
 
   useEffect(() => {

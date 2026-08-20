@@ -1,6 +1,6 @@
 import { Redirect, useFocusEffect } from 'expo-router';
 import { MotiView } from 'moti';
-import { useCallback, useMemo, useState } from 'react';
+import { type JSX, useCallback, useMemo, useState } from 'react';
 import {
   Alert,
   SafeAreaView,
@@ -72,7 +72,7 @@ const TABS: { id: Tab; label: string }[] = [
  * for users whose profile gender is `woman`. This screen redirects anyone else
  * who opens the route directly.
  */
-export default function WomenScreen() {
+export default function WomenScreen(): JSX.Element {
   const profile = useProfileSummary();
   const [tab, setTab] = useState<Tab>('cycle');
   const [entries, setEntries] = useState<CycleEntry[]>([]);

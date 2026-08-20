@@ -1,7 +1,7 @@
 import { useFocusEffect } from 'expo-router';
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useCallback, useMemo, useState } from 'react';
+import { type JSX, useCallback, useMemo, useState } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -42,7 +42,7 @@ const LAST_WEEK = 40;
  * Opens on the current week but is browsable, because "what happens next" is
  * the question people actually come here with.
  */
-export default function BabyGrowthScreen() {
+export default function BabyGrowthScreen(): JSX.Element {
   const [record, setRecord] = useState<PregnancyRecord | null>(null);
   const [week, setWeek] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);

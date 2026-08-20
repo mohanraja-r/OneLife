@@ -9,7 +9,7 @@ import {
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useCallback, useMemo, useState } from 'react';
+import { type JSX, useCallback, useMemo, useState } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -148,7 +148,7 @@ function Section({
  * Rendered from structured content rather than shown as an image, so it reflows
  * on a phone, works with text scaling and can be read aloud.
  */
-export default function DietScreen() {
+export default function DietScreen(): JSX.Element {
   const [record, setRecord] = useState<PregnancyRecord | null>(null);
   const [region, setRegion] = useState<DietRegion>('north');
   const [mode, setMode] = useState<DietMode>('non_veg');

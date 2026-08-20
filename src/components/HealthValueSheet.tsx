@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { type JSX, useEffect, useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { Colors } from '../constants/theme';
@@ -67,7 +67,7 @@ export default function HealthValueSheet({
   initialValue,
   onClose,
   onSave,
-}: Props) {
+}: Props): JSX.Element {
   const [text, setText] = useState('');
   const [error, setError] = useState<string | null>(null);
 

@@ -1,4 +1,5 @@
 import { Stack } from 'expo-router';
+import type { JSX } from 'react';
 
 // `index` must stay the stack's initial route: it is the boot screen that
 // decides between onboarding and the tabs. Without this the first
@@ -8,7 +9,7 @@ export const unstable_settings = {
   initialRouteName: 'index',
 };
 
-export default function RootLayout() {
+export default function RootLayout(): JSX.Element {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />

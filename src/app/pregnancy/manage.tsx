@@ -8,7 +8,7 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useCallback, useState } from 'react';
+import { type JSX, useCallback, useState } from 'react';
 import {
   Alert,
   Platform,
@@ -69,7 +69,7 @@ const OUTCOMES: { id: BabyOutcome; label: string; emoji: string }[] = [
  * irreversible. Grouping them here means the destructive action is somewhere
  * deliberate rather than one stray tap away from the daily screens.
  */
-export default function ManageScreen() {
+export default function ManageScreen(): JSX.Element {
   const [record, setRecord] = useState<PregnancyRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

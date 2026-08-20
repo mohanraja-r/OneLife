@@ -2,7 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Plus, Trash2 } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useEffect, useState } from 'react';
+import { type JSX, useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -87,7 +87,7 @@ function endDateAfter(days: number): string {
   return toDateString(end);
 }
 
-export default function AddMedicineScreen() {
+export default function AddMedicineScreen(): JSX.Element {
   const insets = useSafeAreaInsets();
   // `memberId` arrives when the form is opened from a managed family member's
   // profile — the medicine is then filed under them rather than the caregiver.

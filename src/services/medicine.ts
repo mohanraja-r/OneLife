@@ -289,10 +289,10 @@ export async function getMedicineById(
     .from('medicines')
     .select('*')
     .eq('id', medicineId)
-    .maybeSingle();
+    .maybeSingle<MedicineRow>();
 
   if (error) throw error;
-  return data ? toMedicine(data as MedicineRow) : null;
+  return data ? toMedicine(data) : null;
 }
 
 /**
@@ -314,10 +314,10 @@ export async function addMedicine(
       member_id: memberId,
     })
     .select()
-    .single();
+    .single<MedicineRow>();
 
   if (error) throw error;
-  return toMedicine(data as MedicineRow);
+  return toMedicine(data);
 }
 
 /** Applies a partial edit to a medicine and returns the updated row. */
@@ -330,10 +330,10 @@ export async function updateMedicine(
     .update(toRow(input))
     .eq('id', medicineId)
     .select()
-    .single();
+    .single<MedicineRow>();
 
   if (error) throw error;
-  return toMedicine(data as MedicineRow);
+  return toMedicine(data);
 }
 
 /** Deletes a medicine along with its dose history. */

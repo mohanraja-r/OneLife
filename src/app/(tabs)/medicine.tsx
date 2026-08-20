@@ -13,7 +13,7 @@ import {
   Sun,
 } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useCallback, useState } from 'react';
+import { type JSX, useCallback, useState } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -84,7 +84,7 @@ function glyphFor(
   };
 }
 
-export default function MedicineScreen() {
+export default function MedicineScreen(): JSX.Element {
   const router = useRouter();
   const [doses, setDoses] = useState<ScheduledDose[]>([]);
   const [summary, setSummary] = useState<AdherenceSummary | null>(null);

@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import {
   StyleProp,
   StyleSheet,
@@ -39,7 +40,7 @@ export default function ChipRow<T extends string | number>({
   onChange,
   wrap = false,
   style,
-}: Props<T>) {
+}: Props<T>): JSX.Element {
   return (
     <View style={[styles.row, wrap && styles.wrap, style]}>
       {options.map((option) => {

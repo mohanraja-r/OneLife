@@ -10,7 +10,7 @@ import {
   Thermometer,
   Weight,
 } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { type JSX, useEffect, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -242,7 +242,7 @@ export default function LogSheet({
   initialValue,
   onClose,
   onSave,
-}: Props) {
+}: Props): JSX.Element | null {
   const [choice, setChoice] = useState<string | null>(null);
   const [selection, setSelection] = useState<string[]>([]);
   const [text, setText] = useState('');

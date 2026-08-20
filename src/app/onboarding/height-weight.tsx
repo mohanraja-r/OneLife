@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { Ruler, Weight } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useState } from 'react';
+import { type JSX, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -67,7 +67,7 @@ function UnitToggle<T extends string>({
   );
 }
 
-export default function HeightWeightScreen() {
+export default function HeightWeightScreen(): JSX.Element {
   const [heightUnit, setHeightUnit] = useState<HeightUnit>(
     onboardingState.heightUnit ?? 'cm'
   );

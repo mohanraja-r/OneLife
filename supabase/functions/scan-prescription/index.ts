@@ -10,6 +10,22 @@ interface ScanPrescriptionRequest {
   mediaType: string; // e.g. "image/jpeg"
 }
 
+/**
+ * The slice of the Anthropic Messages API response these functions read: either
+ * an error envelope or a list of content blocks. Kept local to each function so
+ * they stay independently deployable.
+ */
+interface AnthropicContentBlock {
+  type: string;
+  text?: string;
+}
+
+interface AnthropicResponse {
+  type?: string;
+  error?: { message?: string };
+  content?: AnthropicContentBlock[];
+}
+
 // Extracts structured medicine data from a photographed prescription.
 // The app always shows this for review before inserting anything into the
 // medicines table — never auto-added, since handwriting/OCR misreads on a
@@ -48,12 +64,12 @@ Return ONLY valid JSON, no other text, no markdown fences.`,
     }),
   });
 
-  const data = await response.json();
-  const textBlock = data.content?.find((b: any) => b.type === 'text');
+  const data = (await response.json()) as AnthropicResponse;
+  const textBlock = data.content?.find((b) => b.type === 'text');
 
-  let parsed;
+  let parsed: unknown;
   try {
-    parsed = JSON.parse(textBlock?.text ?? '{}');
+    parsed = JSON.parse(textBlock?.text ?? '{}') as unknown;
   } catch {
     parsed = { medicines: [], error: 'Could not parse prescription. Try a clearer photo.' };
   }

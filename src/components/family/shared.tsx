@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { Accent } from '../../constants/theme';
@@ -98,7 +99,7 @@ interface AdherenceBarProps {
 }
 
 /** A member's seven-day adherence as a graded numeral over a thin track. */
-export function AdherenceBar({ percent, compact = false }: AdherenceBarProps) {
+export function AdherenceBar({ percent, compact = false }: AdherenceBarProps): JSX.Element {
   const accent = adherenceAccent(percent);
 
   return (
@@ -130,7 +131,7 @@ export function MemberInitials({
 }: {
   name: string;
   size?: number;
-}) {
+}): JSX.Element {
   return (
     <View
       style={[

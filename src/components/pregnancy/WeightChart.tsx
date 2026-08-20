@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, {
   Circle,
@@ -37,7 +38,7 @@ const PAD_BOTTOM = 26;
  * whether a gain is normal, whereas a line sitting inside a shaded range says
  * it at a glance — and says it without ever printing a verdict.
  */
-export default function WeightChart({ points, band, width, height = 220 }: Props) {
+export default function WeightChart({ points, band, width, height = 220 }: Props): JSX.Element {
   const plotWidth = Math.max(0, width - PAD_LEFT - PAD_RIGHT);
   const plotHeight = height - PAD_TOP - PAD_BOTTOM;
 
@@ -177,7 +178,7 @@ export default function WeightChart({ points, band, width, height = 220 }: Props
 }
 
 /** The colour key beneath the chart. */
-export function WeightChartLegend() {
+export function WeightChartLegend(): JSX.Element {
   return (
     <View style={styles.legend}>
       <View style={styles.legendItem}>

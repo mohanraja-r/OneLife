@@ -1,6 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import type { LucideIcon } from 'lucide-react-native';
 import { ArrowRight } from 'lucide-react-native';
+import type { JSX } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import {
@@ -38,7 +39,7 @@ export default function PrimaryButton({
   accent = Accents.violet,
   hideArrow = false,
   icon: Icon,
-}: Props) {
+}: Props): JSX.Element {
   return (
     <TouchableOpacity
       onPress={onPress}

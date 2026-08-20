@@ -2,6 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import type { LucideIcon } from 'lucide-react-native';
 import { ChevronRight, NotebookPen, ScanLine } from 'lucide-react-native';
 import { MotiView } from 'moti';
+import type { JSX } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import {
@@ -64,7 +65,7 @@ export default function AddMedicineSheet({
   onClose,
   onScan,
   onManual,
-}: Props) {
+}: Props): JSX.Element {
   /** Closes the sheet, then runs the picked option's action. */
   const choose = (key: string) => {
     onClose();

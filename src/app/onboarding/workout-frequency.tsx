@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import type { LucideIcon } from 'lucide-react-native';
 import { Activity, Flame, Footprints, Zap } from 'lucide-react-native';
-import { useState } from 'react';
+import { type JSX, useState } from 'react';
 
 import { Accent, Accents } from '../../constants/theme';
 
@@ -41,7 +41,7 @@ const OPTIONS: {
   },
 ];
 
-export default function WorkoutFrequencyScreen() {
+export default function WorkoutFrequencyScreen(): JSX.Element {
   const [selected, setSelected] = useState<WorkoutFrequency | null>(
     onboardingState.workoutFrequency ?? null
   );

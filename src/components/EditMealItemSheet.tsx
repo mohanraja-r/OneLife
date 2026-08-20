@@ -1,5 +1,5 @@
 import { Trash2 } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { type JSX, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { Colors, Radius, Spacing, Typography } from '../constants/theme';
@@ -29,7 +29,7 @@ const unitOptions = SERVING_UNITS.map((unit) => ({ label: unit, value: unit }));
  * The edit sheet behind every row on the confirm screen: rename the food,
  * correct the serving size, and adjust the four macros before saving the meal.
  */
-export default function EditMealItemSheet({ item, onSave, onDelete, onClose }: Props) {
+export default function EditMealItemSheet({ item, onSave, onDelete, onClose }: Props): JSX.Element {
   const [name, setName] = useState('');
   const [quantity, setQuantity] = useState('');
   const [unit, setUnit] = useState<string>(SERVING_UNITS[0]);

@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react-native';
 import { Check } from 'lucide-react-native';
+import type { JSX } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import { Accent, Accents, Colors } from '../../constants/theme';
@@ -36,7 +37,7 @@ export default function OptionCard({
   multiSelect,
   accent = Accents.violet,
   iconAccent,
-}: OptionCardProps) {
+}: OptionCardProps): JSX.Element {
   const iconTone = iconAccent ?? accent;
 
   return (

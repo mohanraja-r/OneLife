@@ -732,6 +732,23 @@ export function summariseCycle(entries: CycleEntry[]): CycleSummary {
 // ---------------------------------------------------------------------------
 
 /** Fetches the signed-in user's pregnancy record, or null when none is set up. */
+/**
+ * The `pregnancy_data` columns getPregnancy selects, as Postgres returns them:
+ * jsonb columns arrive already parsed but can be null, and `numeric` arrives as
+ * a string.
+ */
+interface PregnancyDataRow {
+  due_date: string;
+  checkups: Checkup[] | null;
+  logs: PregnancyLog[] | null;
+  pre_pregnancy_weight_kg: string | number | null;
+  bag: Partial<BagState> | null;
+  tests: Record<string, TestState> | null;
+  diet_region: DietRegion | null;
+  delivered_on: string | null;
+  baby_outcome: BabyOutcome | null;
+}
+
 export async function getPregnancy(): Promise<PregnancyRecord | null> {
   const userId = await requireUserId();
 
@@ -741,13 +758,13 @@ export async function getPregnancy(): Promise<PregnancyRecord | null> {
       'due_date, checkups, logs, pre_pregnancy_weight_kg, bag, tests, diet_region, delivered_on, baby_outcome'
     )
     .eq('user_id', userId)
-    .maybeSingle();
+    .maybeSingle<PregnancyDataRow>();
 
   if (error) throw error;
   if (!data) return null;
 
   const row = data;
-  const bag = (row.bag ?? {}) as Partial<BagState>;
+  const bag = row.bag ?? {};
 
   return {
     dueDate: row.due_date,
@@ -762,7 +779,7 @@ export async function getPregnancy(): Promise<PregnancyRecord | null> {
         ? null
         : Number(row.pre_pregnancy_weight_kg),
     bag: { packed: bag.packed ?? [], custom: bag.custom ?? [] },
-    tests: (row.tests ?? {}) as Record<string, TestState>,
+    tests: row.tests ?? {},
     dietRegion: row.diet_region ?? null,
     deliveredOn: row.delivered_on ?? null,
     babyOutcome: row.baby_outcome ?? null,

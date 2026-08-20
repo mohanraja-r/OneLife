@@ -12,7 +12,7 @@ import {
   ShieldCheck,
 } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useState } from 'react';
+import { type JSX, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -99,7 +99,7 @@ function SocialButton({
   );
 }
 
-export default function SignUpScreen() {
+export default function SignUpScreen(): JSX.Element {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
