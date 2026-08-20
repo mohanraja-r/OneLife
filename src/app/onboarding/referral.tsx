@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { Gift, TicketPercent } from 'lucide-react-native';
-import { useState } from 'react';
+import { type JSX, useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { Accents, Colors } from '../../constants/theme';
@@ -11,7 +11,7 @@ import { onboardingState } from './state';
 
 const accent = Accents.violet;
 
-export default function ReferralScreen() {
+export default function ReferralScreen(): JSX.Element {
   const [code, setCode] = useState(onboardingState.referralCode ?? '');
 
   /** Stores the code (when entered) and moves on — also used by the skip link. */

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { type JSX, useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { Colors, Spacing } from '../constants/theme';
@@ -58,7 +58,7 @@ interface Props {
  * slept zero minutes" are different claims and the card renders them
  * differently.
  */
-export default function VitalsSheet({ field, entry, onClose, onSave }: Props) {
+export default function VitalsSheet({ field, entry, onClose, onSave }: Props): JSX.Element {
   const [bpm, setBpm] = useState('');
   const [hours, setHours] = useState('');
   const [minutes, setMinutes] = useState('');

@@ -49,7 +49,7 @@ interface OnboardingState {
 export const onboardingState: OnboardingState = {};
 
 /** Clears every answer, so a finished or abandoned run does not leak into the next. */
-export function resetOnboardingState() {
+export function resetOnboardingState(): void {
   Object.keys(onboardingState).forEach(
     (key) => delete (onboardingState as Record<string, unknown>)[key]
   );

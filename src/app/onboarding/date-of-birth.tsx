@@ -2,7 +2,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
 import { Cake, CalendarDays } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useState } from 'react';
+import { type JSX, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { Accents, Colors, Motion, Radius } from '../../constants/theme';
@@ -22,7 +22,7 @@ function calculateAge(dob: Date): number {
   return age;
 }
 
-export default function DateOfBirthScreen() {
+export default function DateOfBirthScreen(): JSX.Element {
   const [date, setDate] = useState<Date>(
     onboardingState.dateOfBirth
       ? new Date(onboardingState.dateOfBirth)

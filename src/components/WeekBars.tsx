@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Accents, Colors, Radius, Spacing, Typography } from '../constants/theme';
@@ -22,7 +23,7 @@ function axisLabel(value: number): string {
  * gridded axis, with the viewed day picked out and the week's best day
  * carrying a callout.
  */
-export default function WeekBars({ chart }: Props) {
+export default function WeekBars({ chart }: Props): JSX.Element {
   const { bars, ceiling, peak } = chart;
 
   return (

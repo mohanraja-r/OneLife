@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { Check, Eye } from 'lucide-react-native';
-import { useCallback, useEffect, useState } from 'react';
+import { type JSX, useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -39,7 +39,7 @@ const CODE_LENGTH = 6;
  * needs the other person to agree, and to see what they are agreeing to before
  * they do. That consent is what this screen is for.
  */
-export default function JoinFamilyScreen() {
+export default function JoinFamilyScreen(): JSX.Element {
   // A shared link can drop the code straight in.
   const { code: initialCode } = useLocalSearchParams<{ code?: string }>();
 

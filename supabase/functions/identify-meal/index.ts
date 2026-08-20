@@ -13,6 +13,22 @@ interface IdentifyMealRequest {
   dietaryPreference: string;
 }
 
+/**
+ * The slice of the Anthropic Messages API response these functions read: either
+ * an error envelope or a list of content blocks. Kept local to each function so
+ * they stay independently deployable.
+ */
+interface AnthropicContentBlock {
+  type: string;
+  text?: string;
+}
+
+interface AnthropicResponse {
+  type?: string;
+  error?: { message?: string };
+  content?: AnthropicContentBlock[];
+}
+
 // Identifies food from a photo or manual text description, estimates
 // nutrition, and returns a short goal-aware suggestion. The client always
 // shows this as editable in the Confirm & Edit screen — never auto-saved,
@@ -56,7 +72,7 @@ Do not give medical advice. Return ONLY valid JSON, no markdown fences, no other
       }),
     });
 
-    const data = await response.json();
+    const data = (await response.json()) as AnthropicResponse;
 
     // Surface upstream failures instead of silently returning {}.
     // This is the fix: previously, if Anthropic returned an error object
@@ -75,7 +91,7 @@ Do not give medical advice. Return ONLY valid JSON, no markdown fences, no other
       );
     }
 
-    const textBlock = data.content?.find((b: any) => b.type === 'text');
+    const textBlock = data.content?.find((b) => b.type === 'text');
 
     if (!textBlock?.text) {
       console.error('No text block in Anthropic response:', JSON.stringify(data));
@@ -85,10 +101,10 @@ Do not give medical advice. Return ONLY valid JSON, no markdown fences, no other
       );
     }
 
-    let parsed;
+    let parsed: unknown;
     try {
-      parsed = JSON.parse(textBlock.text);
-    } catch (e) {
+      parsed = JSON.parse(textBlock.text) as unknown;
+    } catch {
       console.error('Failed to parse AI response as JSON:', textBlock.text);
       parsed = {
         items: [],

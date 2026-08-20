@@ -1,3 +1,4 @@
+import type { ViewStyle } from 'react-native';
 import { Platform } from 'react-native';
 
 /**
@@ -313,7 +314,7 @@ export const Shadow = {
 } as const;
 
 /** Colored lift matching a screen's accent — for primary buttons. */
-export const accentShadow = (color: string) =>
+export const accentShadow = (color: string): ViewStyle =>
   Platform.select({
     ios: {
       shadowColor: color,

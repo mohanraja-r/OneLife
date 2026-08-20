@@ -2,7 +2,7 @@ import DateTimePicker, {
   DateTimePickerAndroid,
 } from '@react-native-community/datetimepicker';
 import { CalendarDays } from 'lucide-react-native';
-import { useState } from 'react';
+import { type JSX, useState } from 'react';
 import {
   Platform,
   StyleSheet,
@@ -38,7 +38,7 @@ interface Props {
 }
 
 /** Bottom sheet for scheduling an antenatal appointment. */
-export default function AddCheckupSheet({ visible, onClose, onSave }: Props) {
+export default function AddCheckupSheet({ visible, onClose, onSave }: Props): JSX.Element {
   const [title, setTitle] = useState('');
   // A week out is the common case for booking the next appointment.
   const [date, setDate] = useState(() => addDays(startOfToday(), 7));

@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Radius } from '../constants/theme';
@@ -23,7 +24,7 @@ export default function Sparkline({
   height,
   color,
   thickness = 2,
-}: Props) {
+}: Props): JSX.Element {
   if (values.length < 2) return <View style={{ width, height }} />;
 
   const min = Math.min(...values);

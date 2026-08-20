@@ -10,6 +10,7 @@ import {
   ScanQrCode,
   Sparkles,
 } from 'lucide-react-native';
+import type { JSX } from 'react';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -94,7 +95,7 @@ const RESERVE = AI_FAB + Spacing.md;
 //
 // The row is built as two equal-width groups either side of a fixed centre
 // reservation rather than a five-slot row, so the disc sits at a true 50%.
-export default function FloatingNav() {
+export default function FloatingNav(): JSX.Element {
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();

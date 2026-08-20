@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { Colors, Spacing } from '../../constants/theme';
@@ -13,7 +14,7 @@ interface Props {
 export default function LoadingState({
   color = Colors.primary,
   fill = false,
-}: Props) {
+}: Props): JSX.Element {
   return (
     <View style={fill ? styles.fill : styles.inline}>
       <ActivityIndicator color={color} />

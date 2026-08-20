@@ -15,7 +15,7 @@ import {
   TrendingUp,
 } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useCallback, useMemo, useState } from 'react';
+import { type JSX, useCallback, useMemo, useState } from 'react';
 import {
   Alert,
   SafeAreaView,
@@ -121,7 +121,7 @@ function dateLabel(date: Date, isToday: boolean): string {
  * time are derived from that count and the profile's height and weight — they
  * are estimates, not measurements, and the card says so.
  */
-export default function HealthScreen() {
+export default function HealthScreen(): JSX.Element {
   const [selectedDate, setSelectedDate] = useState(() => startOfToday());
   const [entry, setEntry] = useState<HealthEntry>(EMPTY_ENTRY);
   const [goals, setGoals] = useState<HealthGoals>(EMPTY_GOALS);

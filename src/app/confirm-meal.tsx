@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { ChevronRight, Plus, Sparkles, UtensilsCrossed } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useMemo, useState } from 'react';
+import { type JSX, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -109,7 +109,7 @@ function MacroDonut({ totals }: { totals: Totals }) {
   );
 }
 
-export default function ConfirmMealScreen() {
+export default function ConfirmMealScreen(): JSX.Element {
   const params = useLocalSearchParams<{
     photoUri?: string;
     items: string;

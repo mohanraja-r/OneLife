@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { Trash2 } from 'lucide-react-native';
-import { useCallback, useEffect, useState } from 'react';
+import { type JSX, useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -120,7 +120,7 @@ function textOrNull(value: string): string | null {
   return value.trim() ? value.trim() : null;
 }
 
-export default function MedicalEntryScreen() {
+export default function MedicalEntryScreen(): JSX.Element {
   const { kind = 'condition', id, memberId } = useLocalSearchParams<{
     kind?: Kind;
     id?: string;

@@ -1,4 +1,5 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
+import type { JSX } from 'react';
 import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 
 import {
@@ -44,7 +45,7 @@ export default function DateTimeSpinnerSheet({
   onChange,
   onDone,
   doneLabel = 'Done',
-}: Props) {
+}: Props): JSX.Element {
   return (
     <BottomSheet
       visible={visible}

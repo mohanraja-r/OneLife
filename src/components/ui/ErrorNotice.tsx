@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import {
@@ -23,7 +24,7 @@ export default function ErrorNotice({
   message,
   onRetry,
   retryLabel = 'Try again',
-}: Props) {
+}: Props): JSX.Element | null {
   if (!message) return null;
 
   return (

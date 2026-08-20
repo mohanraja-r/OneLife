@@ -7,6 +7,7 @@ import {
   UserRound,
   Users,
 } from 'lucide-react-native';
+import type { JSX } from 'react';
 import React from 'react';
 
 import { Accent, Accents } from '../../constants/theme';
@@ -39,7 +40,7 @@ const GENDER_OPTIONS: {
   },
 ];
 
-export default function GenderScreen() {
+export default function GenderScreen(): JSX.Element {
   const [selected, setSelected] = React.useState<Gender | null>(
     onboardingState.gender ?? null
   );

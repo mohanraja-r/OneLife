@@ -2,7 +2,7 @@ import { getDashboard } from './dashboard';
 import { calculateMealTotals, getTodaysMeals } from './meals';
 import { getMedicalRecord, selfScope } from './medical';
 import { getAllMedicines } from './medicine';
-import { supabase } from './supabase';
+import { invokeEdgeFunction, supabase } from './supabase';
 
 /** One turn of the assistant conversation, as stored in `chat_messages`. */
 export interface ChatMessage {
@@ -174,20 +174,18 @@ export async function askAssistant(
 ): Promise<string> {
   const context = await buildAssistantContext();
 
-  const { data, error } = await supabase.functions.invoke('ai-chat', {
-    body: {
+  const result = await invokeEdgeFunction<{ content?: string; error?: string }>(
+    'ai-chat',
+    {
       message,
       conversationHistory: history.map((m) => ({
         role: m.role,
         content: m.content,
       })),
       userContext: context,
-    },
-  });
+    }
+  );
 
-  if (error) throw error;
-
-  const result = data as { content?: string; error?: string };
   if (result.error) throw new Error(result.error);
   if (!result.content) throw new Error('The assistant did not return a reply.');
 

@@ -6,7 +6,7 @@ import {
   Smartphone,
   UserRound,
 } from 'lucide-react-native';
-import { useState } from 'react';
+import { type JSX, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -103,7 +103,7 @@ function ConnectionOption({
   );
 }
 
-export default function AddFamilyMemberScreen() {
+export default function AddFamilyMemberScreen(): JSX.Element {
   const [connectionType, setConnectionType] = useState<ConnectionType>('invite');
   const [name, setName] = useState('');
   const [relationship, setRelationship] = useState('Mother');

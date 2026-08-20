@@ -16,7 +16,7 @@ import {
   TrendingUp,
 } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useState } from 'react';
+import { type JSX, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import {
@@ -208,7 +208,7 @@ export function PregnancySetup({
   onSetDueDate,
 }: {
   onSetDueDate: (date: string) => void;
-}) {
+}): JSX.Element {
   return (
     <MotiView
       from={{ opacity: 0, translateY: 14 }}
@@ -330,7 +330,7 @@ export default function PregnancyPanel({
   today,
   tileValues,
   onPickLog,
-}: Props) {
+}: Props): JSX.Element {
   // Once the birth is recorded there is no week to count, so the whole hero and
   // the daily log come out rather than being shown against a frozen date.
   if (record.deliveredOn !== null) {

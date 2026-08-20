@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { type JSX, ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 
@@ -34,7 +34,7 @@ export default function GradientRing({
   colors,
   trackColor = Colors.surfaceSunken,
   children,
-}: Props) {
+}: Props): JSX.Element {
   const filled = Math.min(Math.max(progress, 0), 1);
   // The stroke straddles the path, so the radius has to pull in by half of it
   // or the ring would be clipped by the viewBox on both sides.

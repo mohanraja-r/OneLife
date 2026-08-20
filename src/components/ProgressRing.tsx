@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { type JSX, ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Colors } from '../constants/theme';
@@ -37,7 +37,7 @@ export default function ProgressRing({
   color,
   trackColor = Colors.surfaceSunken,
   children,
-}: Props) {
+}: Props): JSX.Element {
   const filled = Math.min(Math.max(progress, 0), 1);
   const firstSweep = Math.min(filled, 0.5) * 360;
   const secondSweep = 180 + Math.max(filled - 0.5, 0) * 360;

@@ -1,7 +1,7 @@
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Check, Trash2 } from 'lucide-react-native';
-import { useCallback, useEffect, useState } from 'react';
+import { type JSX, useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -96,7 +96,7 @@ const EMPTY: AllergyInput = {
   lastVerified: null,
 };
 
-export default function AddAllergyScreen() {
+export default function AddAllergyScreen(): JSX.Element {
   const { id, memberId } = useLocalSearchParams<{
     id?: string;
     memberId?: string;

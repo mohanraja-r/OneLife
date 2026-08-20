@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
-import { useEffect, useMemo, useState } from 'react';
+import { type JSX, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import {
@@ -60,7 +60,7 @@ export default function CalendarSheet({
   selectedDate,
   onSelect,
   onClose,
-}: Props) {
+}: Props): JSX.Element {
   const [month, setMonth] = useState(() => startOfMonth(selectedDate));
   const [counts, setCounts] = useState<Record<string, number>>({});
 

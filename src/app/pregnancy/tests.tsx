@@ -8,7 +8,7 @@ import {
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useCallback, useMemo, useState } from 'react';
+import { type JSX, useCallback, useMemo, useState } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -88,7 +88,7 @@ function statusLine(test: ScheduledTest): string {
  * Sorted by the date each test actually lands on, with anything overdue first,
  * so the next thing to do is always the top thing on the screen.
  */
-export default function TestsScreen() {
+export default function TestsScreen(): JSX.Element {
   const [record, setRecord] = useState<PregnancyRecord | null>(null);
   const [tab, setTab] = useState<Tab>('upcoming');
   const [loading, setLoading] = useState(true);

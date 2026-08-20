@@ -1,7 +1,7 @@
 import { useFocusEffect } from 'expo-router';
 import { Check, ChevronDown, ChevronRight, Share2 } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { type JSX, useCallback, useMemo, useRef, useState } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -44,7 +44,7 @@ import {
  * The catalogue lives in `constants/hospitalBag`; only the ticks are stored,
  * as a set of ids on the pregnancy row.
  */
-export default function HospitalBagScreen() {
+export default function HospitalBagScreen(): JSX.Element {
   const [record, setRecord] = useState<PregnancyRecord | null>(null);
   const [side, setSide] = useState<BagSide>('mom');
   const [openCategory, setOpenCategory] = useState<string | null>(null);

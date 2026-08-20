@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { type JSX, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -18,7 +18,7 @@ import { Colors, Radius, Spacing, Typography } from '../constants/theme';
 import { errorMessage } from '../services/errors';
 import { identifyMeal } from '../services/meals';
 
-export default function LogMealManualScreen() {
+export default function LogMealManualScreen(): JSX.Element {
   const [text, setText] = useState('');
   const [identifying, setIdentifying] = useState(false);
 

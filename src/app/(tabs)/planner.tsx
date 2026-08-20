@@ -12,7 +12,7 @@ import {
   Utensils,
 } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useCallback, useMemo, useState } from 'react';
+import { type JSX, useCallback, useMemo, useState } from 'react';
 import {
   RefreshControl,
   ScrollView,
@@ -107,7 +107,7 @@ type TimelineEntry =
   | { key: string; sortKey: string; type: 'task'; task: PlannerTask }
   | { key: string; sortKey: string; type: 'context'; item: ContextItem };
 
-export default function PlannerScreen() {
+export default function PlannerScreen(): JSX.Element {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [userName, setUserName] = useState('there');
   const [tasks, setTasks] = useState<PlannerTask[]>([]);

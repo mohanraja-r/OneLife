@@ -1,5 +1,6 @@
 import { Info } from 'lucide-react-native';
 import { MotiView } from 'moti';
+import type { JSX } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import {
@@ -28,7 +29,7 @@ export function SectionHeader({
   title,
   actionLabel,
   onAction,
-}: SectionHeaderProps) {
+}: SectionHeaderProps): JSX.Element {
   return (
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -50,7 +51,7 @@ interface LogRowProps {
 }
 
 /** The horizontal "Log today" strip of circular shortcut tiles. */
-export function LogRow({ kinds, logged, onPick }: LogRowProps) {
+export function LogRow({ kinds, logged, onPick }: LogRowProps): JSX.Element {
   return (
     <ScrollView
       horizontal
@@ -100,7 +101,7 @@ export function LogRow({ kinds, logged, onPick }: LogRowProps) {
 }
 
 /** The footnote reminding the user that predictions are not medical advice. */
-export function Disclaimer({ text }: { text: string }) {
+export function Disclaimer({ text }: { text: string }): JSX.Element {
   return (
     <View style={styles.disclaimer}>
       <Info size={17} color={Colors.info} strokeWidth={2} />
@@ -119,7 +120,7 @@ export function StatLine({
   /** Right-hand text; omit when `children` renders the value instead. */
   value?: string;
   children?: React.ReactNode;
-}) {
+}): JSX.Element {
   return (
     <View style={styles.statLine}>
       <Text style={styles.statLabel} numberOfLines={1}>

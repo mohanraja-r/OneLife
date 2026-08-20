@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from 'expo-router';
 import { Info, Square } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type JSX, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   SafeAreaView,
@@ -70,7 +70,7 @@ function formatDuration(totalSeconds: number): string {
  * ticking up beside the count invited watching it, and the duration only
  * actually matters once the session is read back, which is where it appears.
  */
-export default function KicksScreen() {
+export default function KicksScreen(): JSX.Element {
   const [tab, setTab] = useState<Tab>('counter');
   const [sessions, setSessions] = useState<KickSession[]>([]);
   const [active, setActive] = useState<KickSession | null>(null);

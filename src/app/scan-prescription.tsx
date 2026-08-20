@@ -13,7 +13,7 @@ import {
   X,
 } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useState } from 'react';
+import { type JSX, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -63,7 +63,7 @@ const TIPS = [
   'Include the lines with dose and duration',
 ];
 
-export default function ScanPrescriptionScreen() {
+export default function ScanPrescriptionScreen(): JSX.Element {
   const insets = useSafeAreaInsets();
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);

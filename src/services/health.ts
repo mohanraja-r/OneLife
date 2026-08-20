@@ -157,6 +157,13 @@ export async function getHealthEntry(
   return data ? toHealthEntry(data) : emptyEntry(date);
 }
 
+/** The profile columns backing the health goals; both are null until the user
+ *  sets a goal of their own. */
+interface HealthGoalsRow {
+  step_goal: number | null;
+  water_goal_ml: number | null;
+}
+
 /** Fetches the signed-in user's step and water goals, falling back to defaults. */
 export async function getHealthGoals(): Promise<HealthGoals> {
   const userId = await requireUserId();
@@ -165,7 +172,7 @@ export async function getHealthGoals(): Promise<HealthGoals> {
     .from('profiles')
     .select('step_goal, water_goal_ml')
     .eq('id', userId)
-    .maybeSingle();
+    .maybeSingle<HealthGoalsRow>();
 
   if (error) throw error;
   if (!data) return FALLBACK_GOALS;

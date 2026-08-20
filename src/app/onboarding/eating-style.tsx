@@ -10,7 +10,7 @@ import {
   Salad,
   Wheat,
 } from 'lucide-react-native';
-import { useState } from 'react';
+import { type JSX, useState } from 'react';
 
 import { Accent, Accents } from '../../constants/theme';
 
@@ -66,7 +66,7 @@ const OPTIONS: {
   },
 ];
 
-export default function EatingStyleScreen() {
+export default function EatingStyleScreen(): JSX.Element {
   const [selected, setSelected] = useState<EatingStyle | null>(
     onboardingState.eatingStyle ?? null
   );

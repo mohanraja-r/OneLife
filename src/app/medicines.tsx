@@ -16,7 +16,7 @@ import {
   Sun,
 } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useCallback, useMemo, useState } from 'react';
+import { type JSX, useCallback, useMemo, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -97,7 +97,7 @@ function glyphFor(
   };
 }
 
-export default function MedicinesScreen() {
+export default function MedicinesScreen(): JSX.Element {
   const insets = useSafeAreaInsets();
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [query, setQuery] = useState('');

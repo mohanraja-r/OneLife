@@ -2,7 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useCallback, useMemo, useState } from 'react';
+import { type JSX, useCallback, useMemo, useState } from 'react';
 import {
   LayoutChangeEvent,
   SafeAreaView,
@@ -53,7 +53,7 @@ type Editing = 'current' | 'baseline' | null;
  * the profile height feed it. Without a height it falls back to the normal-BMI
  * range rather than showing nothing.
  */
-export default function WeightScreen() {
+export default function WeightScreen(): JSX.Element {
   const [record, setRecord] = useState<PregnancyRecord | null>(null);
   const [heightCm, setHeightCm] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);

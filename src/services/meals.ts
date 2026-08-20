@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { invokeEdgeFunction, supabase } from './supabase';
 
 export type MealSource = 'photo' | 'manual' | 'quickadd';
 
@@ -12,6 +12,14 @@ export interface MealItem {
   quantity?: number;
   /** Unit the serving is measured in — `g`, `ml`, `cup`, `piece`. */
   unit?: string;
+}
+
+/** The summed macros of one meal, in kcal and grams. */
+export interface MealTotals {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
 }
 
 /** Units the serving-size picker offers, in the order it shows them. */
@@ -34,6 +42,13 @@ export interface IdentifyMealResult {
   error?: string;
 }
 
+/** The two profile columns identifyMeal sends along so the AI can tailor its
+ *  suggestion; both are nullable until onboarding fills them in. */
+interface MealProfilePrefs {
+  goal: string | null;
+  dietary_preference: string | null;
+}
+
 // Calls the identify-meal Edge Function. Never touches the Claude API key —
 // that lives server-side only. Returns AI's best guess; nothing is saved
 // until the user confirms via saveMeal().
@@ -50,18 +65,13 @@ export async function identifyMeal(params: {
     .from('profiles')
     .select('goal, dietary_preference')
     .eq('id', userId)
-    .maybeSingle();
+    .maybeSingle<MealProfilePrefs>();
 
-  const { data, error } = await supabase.functions.invoke('identify-meal', {
-    body: {
-      ...params,
-      userGoal: profile?.goal ?? 'maintain',
-      dietaryPreference: profile?.dietary_preference ?? 'non_veg',
-    },
+  return invokeEdgeFunction<IdentifyMealResult>('identify-meal', {
+    ...params,
+    userGoal: profile?.goal ?? 'maintain',
+    dietaryPreference: profile?.dietary_preference ?? 'non_veg',
   });
-
-  if (error) throw error;
-  return data as IdentifyMealResult;
 }
 
 export interface SaveMealInput {
@@ -87,10 +97,10 @@ export async function saveMeal(input: SaveMealInput): Promise<Meal> {
       confirmed: true,
     })
     .select()
-    .single();
+    .single<Meal>();
 
   if (error) throw error;
-  return data as Meal;
+  return data;
 }
 
 export async function getTodaysMeals(): Promise<Meal[]> {
@@ -169,7 +179,7 @@ export function mealTitle(items: MealItem[]): string {
 
 /** Sums the macros across a meal's items. Takes just `items` so callers holding
  *  a draft, not a saved Meal, can use it too. */
-export function calculateMealTotals(meal: Pick<Meal, 'items'>) {
+export function calculateMealTotals(meal: Pick<Meal, 'items'>): MealTotals {
   return meal.items.reduce(
     (totals, item) => ({
       calories: totals.calories + item.calories,
@@ -230,6 +240,15 @@ export const DEFAULT_NUTRITION_TARGETS: NutritionTargets = {
   fat: 70,
 };
 
+/** The profile columns holding a user's daily nutrition targets. Each is
+ *  nullable and filled in separately by onboarding. */
+interface NutritionTargetsRow {
+  daily_calorie_target: number | null;
+  macro_protein_target: number | null;
+  macro_carbs_target: number | null;
+  macro_fat_target: number | null;
+}
+
 /** Fetches the signed-in user's calorie and macro targets from their profile. */
 export async function getNutritionTargets(): Promise<NutritionTargets> {
   const { data: sessionData } = await supabase.auth.getSession();
@@ -242,7 +261,7 @@ export async function getNutritionTargets(): Promise<NutritionTargets> {
       'daily_calorie_target, macro_protein_target, macro_carbs_target, macro_fat_target'
     )
     .eq('id', userId)
-    .maybeSingle();
+    .maybeSingle<NutritionTargetsRow>();
 
   if (error) throw error;
 

@@ -3,7 +3,7 @@ import type { LucideIcon } from 'lucide-react-native';
 // lucide v1 dropped brand marks — Globe stands in for Google.
 import { Apple, Globe, Mail, ShieldCheck } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useEffect, useState } from 'react';
+import { type JSX, useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -94,7 +94,7 @@ function SocialButton({
   );
 }
 
-export default function CreateAccountScreen() {
+export default function CreateAccountScreen(): JSX.Element {
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

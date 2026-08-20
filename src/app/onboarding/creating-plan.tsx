@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { Check, HeartPulse, Loader } from 'lucide-react-native';
 import { MotiView } from 'moti';
-import { useEffect, useState } from 'react';
+import { type JSX, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -27,7 +27,7 @@ const STEPS = [
 /** Milliseconds each checklist line takes to tick over. */
 const STEP_DURATION = 900;
 
-export default function CreatingPlanScreen() {
+export default function CreatingPlanScreen(): JSX.Element {
   const [completed, setCompleted] = useState(0);
 
   useEffect(() => {

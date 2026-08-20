@@ -6,7 +6,7 @@ import {
   Plus,
   Trash2,
 } from 'lucide-react-native';
-import { useCallback, useState } from 'react';
+import { type JSX, useCallback, useState } from 'react';
 import {
   Alert,
   Image,
@@ -54,7 +54,7 @@ import { getProfileSummary } from '../services/profile';
  * those four have no table behind them. This is the one that does — and it is
  * the reason anyone opens the screen.
  */
-export default function FamilyMemberScreen() {
+export default function FamilyMemberScreen(): JSX.Element {
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const [member, setMember] = useState<FamilyMember | null>(null);

@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Accents, Colors, Radius, Spacing, Typography } from '../constants/theme';
@@ -28,7 +29,7 @@ export default function HealthHistorySheet({
   entries,
   goals,
   onClose,
-}: Props) {
+}: Props): JSX.Element {
   // Newest first reads better in a list, but the chart wants oldest first, so
   // the reversal happens here rather than in the shared history fetch.
   const rows = [...entries].reverse();

@@ -51,10 +51,10 @@ export async function addTask(input: AddTaskInput): Promise<PlannerTask> {
       completed: false,
     })
     .select()
-    .single();
+    .single<PlannerTask>();
 
   if (error) throw error;
-  return data as PlannerTask;
+  return data;
 }
 
 export async function updateTask(id: string, updates: Partial<AddTaskInput>): Promise<PlannerTask> {
@@ -63,10 +63,10 @@ export async function updateTask(id: string, updates: Partial<AddTaskInput>): Pr
     .update(updates)
     .eq('id', id)
     .select()
-    .single();
+    .single<PlannerTask>();
 
   if (error) throw error;
-  return data as PlannerTask;
+  return data;
 }
 
 export async function deleteTask(id: string): Promise<void> {
@@ -124,8 +124,8 @@ export async function getTaskById(id: string): Promise<PlannerTask | null> {
     .from('planner_tasks')
     .select('*')
     .eq('id', id)
-    .maybeSingle();
+    .maybeSingle<PlannerTask>();
 
   if (error) throw error;
-  return data as PlannerTask | null;
+  return data;
 }

@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { HeartPulse } from 'lucide-react-native';
 import { MotiView } from 'moti';
+import type { JSX } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -18,7 +19,7 @@ import LoginPrompt from './LoginPrompt';
 
 const accent = Accents.violet;
 
-export default function WelcomeScreen() {
+export default function WelcomeScreen(): JSX.Element {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
